@@ -2,24 +2,29 @@
   "name": "gdgoc-task-management-system",
   "version": "0.1.0",
   "private": true,
-  "description": "Kanban-style Task Management System for GDGOC Club",
+  "description": "Club Task Management System with separate Member and Admin portals",
   "workspaces": [
-    "client",
-    "server"
+    "frontend/client",
+    "frontend/admin",
+    "backend"
   ],
   "scripts": {
     "dev": "npm run dev --workspaces --if-present",
-    "dev:server": "npm run dev --workspace=server",
-    "dev:client": "npm run dev --workspace=client",
+    "dev:client": "npm run dev --workspace=frontend/client",
+    "dev:admin": "npm run dev --workspace=frontend/admin",
+    "dev:backend": "npm run dev --workspace=backend",
     "build": "npm run build --workspaces --if-present",
+    "build:client": "npm run build --workspace=frontend/client",
+    "build:admin": "npm run build --workspace=frontend/admin",
+    "build:backend": "npm run build --workspace=backend",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\"",
-    "prisma:generate": "npm run prisma:generate --workspace=server",
-    "prisma:migrate": "npm run prisma:migrate --workspace=server",
-    "prisma:seed": "npm run prisma:seed --workspace=server"
+    "prisma:generate": "npm run prisma:generate --workspace=backend",
+    "prisma:migrate": "npm run prisma:migrate --workspace=backend",
+    "prisma:seed": "npm run prisma:seed --workspace=backend"
   },
   "devDependencies": {
     "prettier": "^3.5.2"

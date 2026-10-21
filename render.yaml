@@ -1,0 +1,39 @@
+services:
+  # Backend Express Service on Render
+  - type: web
+    name: gdgoc-task-management-backend
+    runtime: node
+    plan: free
+    region: oregon
+    buildCommand: npm install && npm run build:backend && npm run prisma:generate
+    startCommand: npm run start --workspace=backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: DATABASE_URL
+        fromDatabase:
+          name: gdgoc-task-postgres
+          property: connectionString
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: SYSTEM_OWNER_EMAIL
+        sync: false
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: GOOGLE_CLIENT_ID
+        sync: false
+      - key: GOOGLE_CLIENT_SECRET
+        sync: false
+      - key: GOOGLE_CALLBACK_URL
+        sync: false
+      - key: GITHUB_WEBHOOK_SECRET
+        sync: false
+
+databases:
+  - name: gdgoc-task-postgres
+    plan: free
+    region: oregon
+    databaseName: gdgoc_tasks
+    user: gdgoc_admin
