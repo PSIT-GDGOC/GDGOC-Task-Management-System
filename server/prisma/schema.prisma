@@ -1,0 +1,219 @@
+// Prisma schema for GDGOC Club Task Management System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum SystemRole {
+  USER
+  ADMIN
+  PRESIDENT
+  SYSTEM_OWNER
+}
+
+enum TaskStatus {
+  FREE
+  ASSIGNED
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskScope {
+  TEAM
+  WHOLE_CLUB
+}
+
+enum TaskAction {
+  CREATED
+  CLAIMED
+  ASSIGNED
+  REASSIGNED
+  MOVED_STATUS
+  SUBMITTED_FOR_REVIEW
+  APPROVED
+  SENT_BACK
+  UPDATED
+  DELETED
+}
+
+enum SubmissionOutcome {
+  APPROVED
+  SENT_BACK
+}
+
+model User {
+  id             String           @id @default(cuid())
+  email          String           @unique
+  name           String
+  avatarUrl      String?
+  role           SystemRole       @default(USER)
+  position       String?          // e.g. "President", "Tech Lead", "Core Member"
+  githubUsername String?          @unique
+  isActive       Boolean          @default(true) // Soft-disable / deactivation
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  // Relationships
+  teamMemberships     TeamMembership[]
+  createdTasks        Task[]           @relation("TaskCreator")
+  assignedTasks       Task[]           @relation("TaskAssignee")
+  completedTasks      Task[]           @relation("TaskCompleter")
+  approvedTasks       Task[]           @relation("TaskApprover")
+  taskActivities      TaskActivity[]   @relation("ActivityActor")
+  submissions         TaskSubmission[] @relation("TaskSubmissionMember")
+  reviewedSubmissions TaskSubmission[] @relation("TaskSubmissionReviewer")
+  createdInvitations  AdminInvitation[]@relation("InvitationCreator")
+  usedInvitations     AdminInvitation[]@relation("InvitationRedeemer")
+
+  @@index([email])
+  @@index([githubUsername])
+  @@index([role])
+}
+
+model Team {
+  id          String           @id @default(cuid())
+  name        String           @unique // e.g. "Tech", "Media", "Content"
+  slug        String           @unique // e.g. "tech", "media", "content"
+  description String?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  memberships TeamMembership[]
+  tasks       Task[]
+
+  @@index([slug])
+}
+
+model TeamMembership {
+  id         String   @id @default(cuid())
+  userId     String
+  teamId     String
+  isTeamHead Boolean  @default(false)
+  joinedAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, teamId])
+  @@index([userId])
+  @@index([teamId])
+}
+
+model Task {
+  id          String       @id @default(cuid())
+  title       String
+  description String
+  status      TaskStatus   @default(FREE)
+  priority    TaskPriority @default(MEDIUM)
+  scope       TaskScope    @default(TEAM)
+  teamId      String?      // Optional: Null if scope == WHOLE_CLUB
+  creatorId   String
+  assigneeId  String?
+  deadline    DateTime?
+  tags        String[]     @default([])
+  isDeleted   Boolean      @default(false) // Soft delete flag
+  deletedAt   DateTime?
+  completedAt DateTime?
+  completedById String?
+  approvedById  String?
+  isOnTime      Boolean?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  team        Team?            @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  creator     User             @relation("TaskCreator", fields: [creatorId], references: [id])
+  assignee    User?            @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  completedBy User?            @relation("TaskCompleter", fields: [completedById], references: [id], onDelete: SetNull)
+  approvedBy  User?            @relation("TaskApprover", fields: [approvedById], references: [id], onDelete: SetNull)
+  activities  TaskActivity[]
+  submissions TaskSubmission[]
+
+  @@index([status])
+  @@index([teamId])
+  @@index([assigneeId])
+  @@index([scope])
+  @@index([isDeleted])
+  @@index([deadline])
+}
+
+model TaskActivity {
+  id        String     @id @default(cuid())
+  taskId    String
+  actorId   String
+  action    TaskAction
+  oldValue  String?
+  newValue  String?
+  details   Json?
+  timestamp DateTime   @default(now())
+
+  task  Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  actor User @relation("ActivityActor", fields: [actorId], references: [id])
+
+  @@index([taskId])
+  @@index([actorId])
+  @@index([timestamp])
+}
+
+model TaskSubmission {
+  id            String             @id @default(cuid())
+  taskId        String
+  memberId      String
+  note          String?
+  prUrl         String?
+  submittedAt   DateTime           @default(now())
+  reviewerId    String?
+  reviewComment String?
+  outcome       SubmissionOutcome?
+  reviewedAt    DateTime?
+
+  task     Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  member   User  @relation("TaskSubmissionMember", fields: [memberId], references: [id])
+  reviewer User? @relation("TaskSubmissionReviewer", fields: [reviewerId], references: [id])
+
+  @@index([taskId])
+  @@index([memberId])
+}
+
+model AdminInvitation {
+  id               String      @id @default(cuid())
+  hashedCode       String      @unique
+  intendedRole     SystemRole  @default(ADMIN)
+  intendedPosition String?
+  intendedTeamId   String?
+  createdById      String
+  expiresAt        DateTime
+  usedById         String?
+  usedAt           DateTime?
+  revokedAt        DateTime?
+  createdAt        DateTime    @default(now())
+
+  createdBy User  @relation("InvitationCreator", fields: [createdById], references: [id])
+  usedBy    User? @relation("InvitationRedeemer", fields: [usedById], references: [id])
+
+  @@index([hashedCode])
+  @@index([expiresAt])
+}
+
+// PostgreSQL-compatible session storage schema for connect-pg-simple
+model Session {
+  sid    String   @id @map("sid")
+  sess   Json     @map("sess")
+  expire DateTime @map("expire")
+
+  @@index([expire], map: "IDX_session_expire")
+  @@map("session")
+}
