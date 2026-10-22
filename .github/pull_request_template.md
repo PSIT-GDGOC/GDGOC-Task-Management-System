@@ -8,7 +8,7 @@
 <!-- Describe what you implemented, changed, or fixed. -->
 
 ### Checklist
-- [ ] My branch is named following `feature/task-<id>` or `fix/task-<id>`.
+- [ ] My branch uses `feat/backend` for ongoing backend work or an agreed task branch name.
 - [ ] Task ID is referenced in the PR title (`[TASK-<id>] ...`).
 - [ ] Ran `npm run typecheck` without errors.
 - [ ] Ran `npm run test` and all tests passed.

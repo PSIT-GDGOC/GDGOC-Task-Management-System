@@ -6,9 +6,11 @@ This document defines the Git conventions, PR requirements, task mapping, and Gi
 
 ## 1. Branch Naming Conventions
 
-Every member's branch must reference the associated Task ID. This allows both humans and backend webhook workers to accurately map Pull Requests to tasks.
+Use **`feat/backend`** for the ongoing backend implementation. Keep database, users, teams, permissions, and subsequent backend layers together on this branch, using small descriptive commits. Do not create a branch for each backend layer. `main` remains the reviewed integration branch.
 
-### Accepted Branch Patterns:
+Create a separate task branch only when isolation is needed or the team requests one. When using a tracked task branch, include its Task ID so humans and backend webhook workers can map the Pull Request to that task.
+
+### Optional Separate Task Branch Patterns:
 - `feature/task-<task_id>`
 - `fix/task-<task_id>`
 - `chore/task-<task_id>`
@@ -45,7 +47,9 @@ Always include the Task ID in brackets:
    git checkout main
    git pull origin main
    ```
-2. **Create Feature Branch:**
+2. **Choose the Development Branch:**
+   - For ongoing backend work, switch to `feat/backend` and pull its latest changes.
+   - For a separate tracked task that needs isolation, create a task branch:
    ```bash
    git checkout -b feature/task-<task_id>
    ```
