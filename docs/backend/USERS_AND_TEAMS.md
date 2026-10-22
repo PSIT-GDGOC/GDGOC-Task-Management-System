@@ -117,7 +117,9 @@ searching cannot widen that scope. Creating, reviewing, and deleting tasks check
 the owning team's management permission. Only club managers manage club-wide
 tasks. An initial assignee must be active and belong to the task's team when the
 task is team-scoped. Claim/start/submit still require their existing assignee and
-membership conditions. Further task workflow changes are a later stage.
+membership conditions. The completed task workflow, including assignment,
+metadata edits, pagination, nontechnical submissions, and review rules, is
+documented in [Task Board workflow](TASK_WORKFLOW.md).
 
 ## Local testing and production boundary
 

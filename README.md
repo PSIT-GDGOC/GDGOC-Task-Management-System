@@ -218,6 +218,8 @@ See [database setup and verification](docs/backend/DATABASE.md) for PostgreSQL,
 Prisma migrations, seeding, Neon connection settings, and database tests.
 See [users, teams, and permissions](docs/backend/USERS_AND_TEAMS.md) for the next
 backend stage and the API contract for profile/team integration.
+See [Task Board workflow](docs/backend/TASK_WORKFLOW.md) for assignment, lifecycle
+actions, review policies, and paginated task reads.
 
 ## 🚀 Local Setup & Development Commands
 

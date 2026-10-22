@@ -1,21 +1,23 @@
-import 'dotenv/config';
 import { randomUUID } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
-import { createRequire } from 'node:module';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { PrismaClient, SystemRole } from '@prisma/client';
-import type { Express } from 'express';
 import request from 'supertest';
+import { ApiFixture, createApiFixture } from './helpers/api-fixture';
 
-const resolveModule = createRequire(`${process.cwd()}/package.json`);
-const schema = `gdgoc_test_${randomUUID().replaceAll('-', '')}`;
-let db: PrismaClient;
-let app: Express;
-let appDatabase: PrismaClient;
+let fixture: ApiFixture;
+let db: ApiFixture['db'];
+let app: ApiFixture['app'];
 let teamA: string;
 let teamB: string;
-const users: Record<string, string> = {};
-const agents: Record<string, ReturnType<typeof request.agent>> = {};
+let users: ApiFixture['users'];
+let agents: ApiFixture['agents'];
+
+beforeAll(async () => {
+  fixture = await createApiFixture();
+  ({ db, app, teamA, teamB, users, agents } = fixture);
+});
+afterAll(async () => {
+  if (fixture) await fixture.cleanup();
+});
 
 async function newUser(name: string) {
   return db.user.create({
@@ -37,70 +39,6 @@ async function task(teamId: string | null, status: 'FREE' | 'IN_REVIEW' = 'FREE'
     },
   });
 }
-
-beforeAll(async () => {
-  if (!process.env.TEST_DATABASE_URL)
-    throw new Error('TEST_DATABASE_URL is required for database tests.');
-  const url = new URL(process.env.TEST_DATABASE_URL);
-  if (!['postgres:', 'postgresql:'].includes(url.protocol)) throw new Error('PostgreSQL required.');
-  url.searchParams.set('schema', schema);
-  const testUrl = url.toString();
-  db = new PrismaClient({ datasources: { db: { url: testUrl } } });
-  execFileSync(
-    process.execPath,
-    [resolveModule.resolve('prisma/build/index.js'), 'migrate', 'deploy'],
-    {
-      env: { ...process.env, DATABASE_URL: testUrl, DIRECT_URL: testUrl },
-      stdio: 'pipe',
-    },
-  );
-  process.env.DATABASE_URL = testUrl;
-  process.env.DIRECT_URL = testUrl;
-  process.env.NODE_ENV = 'test';
-  process.env.SYSTEM_OWNER_EMAIL = 'gdgoc.psit@gmail.com';
-  // Vitest resolves the TS default export; NodeNext types wrap this CommonJS module.
-  app = (await import('../../src/app.js')).default as unknown as Express;
-  appDatabase = (await import('../../src/lib/prisma.js')).prisma;
-  teamA = (await db.team.create({ data: { name: 'Tech', slug: 'tech' } })).id;
-  teamB = (await db.team.create({ data: { name: 'Media', slug: 'media' } })).id;
-  const roles: Record<string, SystemRole> = {
-    owner: 'SYSTEM_OWNER',
-    president: 'PRESIDENT',
-    adminA: 'ADMIN',
-    adminB: 'ADMIN',
-    memberA: 'USER',
-    memberB: 'USER',
-    headA: 'USER',
-    outsider: 'USER',
-  };
-  for (const [name, role] of Object.entries(roles)) {
-    const email = name === 'owner' ? 'gdgoc.psit@gmail.com' : `${name.toLowerCase()}@example.com`;
-    users[name] = (await db.user.create({ data: { email, name, role } })).id;
-    agents[name] = request.agent(app);
-    const login = await agents[name].post('/api/v1/auth/dev-login').send({ email });
-    expect(login.status).toBe(200);
-  }
-  for (const name of ['adminA', 'memberA', 'headA', 'adminB', 'memberB']) {
-    await db.teamMembership.create({
-      data: {
-        userId: users[name],
-        teamId: name.endsWith('B') ? teamB : teamA,
-        isTeamHead: name === 'headA',
-      },
-    });
-  }
-});
-
-afterAll(async () => {
-  if (appDatabase) await appDatabase.$disconnect();
-  if (db) {
-    try {
-      await db.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
-    } finally {
-      await db.$disconnect();
-    }
-  }
-});
 
 describe('Users and team permissions through the HTTP API', () => {
   it('requires a session for profiles, directories, teams, and task reads', async () => {
@@ -348,8 +286,20 @@ describe('Users and team permissions through the HTTP API', () => {
       data: { taskId: own.id, memberId: users.memberA, note: 'Ready' },
     });
     const path = `/api/v1/tasks/${own.id}/review`;
-    expect((await agents.adminB.post(path).send({ outcome: 'SENT_BACK' })).status).toBe(403);
-    expect((await agents.memberA.post(path).send({ outcome: 'SENT_BACK' })).status).toBe(403);
+    expect(
+      (
+        await agents.adminB
+          .post(path)
+          .send({ outcome: 'SENT_BACK', reviewComment: 'Please revise' })
+      ).status,
+    ).toBe(403);
+    expect(
+      (
+        await agents.memberA
+          .post(path)
+          .send({ outcome: 'SENT_BACK', reviewComment: 'Please revise' })
+      ).status,
+    ).toBe(403);
     expect(
       (await agents.headA.post(path).send({ outcome: 'SENT_BACK', reviewComment: 'Revise' }))
         .status,

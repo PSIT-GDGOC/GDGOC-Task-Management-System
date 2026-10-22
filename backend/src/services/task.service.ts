@@ -1,51 +1,77 @@
-import {
-  Prisma,
-  TaskStatus,
-  TaskPriority,
-  TaskScope,
-  TaskAction,
-  SubmissionOutcome,
-} from '@prisma/client';
+import { Prisma, Task, TaskAction, TaskScope, TaskStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
+import { TaskRepository, taskSummaryInclude } from '../repositories/task.repository';
+import { userProfileSelect } from '../repositories/user.repository';
+import {
+  CreateTaskInput,
+  UpdateTaskInput,
+  TaskFilters,
+  SubmissionInput,
+  ReviewInput,
+} from '../schemas/task';
 import { AuthenticatedUser } from '../types/auth';
 import { canManageTeam, canViewTeam, isClubManager } from '../utils/permissions';
 
-export interface CreateTaskDTO {
-  title: string;
-  description: string;
-  priority?: TaskPriority;
-  scope?: TaskScope;
-  teamId?: string | null;
-  deadline?: string | null;
-  tags?: string[];
-  assigneeId?: string | null;
+function assertVisible(actor: AuthenticatedUser, task: Pick<Task, 'scope' | 'teamId'>) {
+  if (task.scope === TaskScope.TEAM && (!task.teamId || !canViewTeam(actor, task.teamId))) {
+    throw new AppError('You cannot view this task', 403);
+  }
 }
-
-export interface SubmitTaskReviewDTO {
-  note?: string;
-  prUrl: string;
+function assertManager(actor: AuthenticatedUser, task: Pick<Task, 'scope' | 'teamId'>) {
+  if (
+    task.scope === TaskScope.WHOLE_CLUB
+      ? !isClubManager(actor)
+      : !task.teamId || !canManageTeam(actor, task.teamId)
+  ) {
+    throw new AppError('You cannot manage tasks in this scope', 403);
+  }
 }
-
-export interface ReviewTaskDTO {
-  outcome: SubmissionOutcome;
-  reviewComment?: string;
+function assertEditable(task: Task) {
+  if (task.status === TaskStatus.IN_REVIEW || task.status === TaskStatus.DONE) {
+    throw new AppError('Tasks in review or done cannot be edited, reassigned, or deleted', 409);
+  }
+}
+async function eligible(tx: Prisma.TransactionClient, id: string, teamId: string | null) {
+  const user = await tx.user.findUnique({ where: { id }, select: userProfileSelect });
+  if (!user) throw new AppError('Assignee not found', 404);
+  if (!user.isActive || (teamId && !user.teamMemberships.some((m) => m.teamId === teamId))) {
+    throw new AppError('Assignee must be active and eligible for this team', 400);
+  }
+}
+async function log(
+  tx: Prisma.TransactionClient,
+  taskId: string,
+  actorId: string,
+  action: TaskAction,
+  oldValue: string | null,
+  newValue: string | null,
+  details?: Prisma.InputJsonValue,
+) {
+  await tx.taskActivity.create({ data: { taskId, actorId, action, oldValue, newValue, details } });
 }
 
 export class TaskService {
-  /**
-   * List tasks with filters (board columns, team, assignee, search)
-   */
-  static async listTasks(
-    filters: {
-      teamId?: string;
-      assigneeId?: string;
-      scope?: TaskScope;
-      status?: TaskStatus;
-      search?: string;
-    },
+  /** Refresh grants inside the transaction, including membership eligibility used by writes. */
+  private static mutate<T>(
     actor: AuthenticatedUser,
+    action: (tx: Prisma.TransactionClient, current: AuthenticatedUser) => Promise<T>,
   ) {
+    return prisma.$transaction(
+      async (tx) => {
+        const current = await tx.user.findUnique({
+          where: { id: actor.id },
+          select: userProfileSelect,
+        });
+        if (!current) throw new AppError('Authentication required', 401);
+        if (!current.isActive) throw new AppError('Your account has been deactivated', 403);
+        return action(tx, current);
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
+  }
+
+  static listTasks(filters: TaskFilters, actor: AuthenticatedUser) {
     const where: Prisma.TaskWhereInput = {
       isDeleted: false,
       ...(!isClubManager(actor) && {
@@ -58,423 +84,245 @@ export class TaskService {
           },
         ],
       }),
+      ...(filters.teamId && { teamId: filters.teamId }),
+      ...(filters.assigneeId && { assigneeId: filters.assigneeId }),
+      ...(filters.scope && { scope: filters.scope }),
+      ...(filters.status && { status: filters.status }),
+      ...(filters.priority && { priority: filters.priority }),
+      ...(filters.tag && { tags: { has: filters.tag } }),
+      ...(filters.search && {
+        OR: [
+          { title: { contains: filters.search, mode: 'insensitive' } },
+          { description: { contains: filters.search, mode: 'insensitive' } },
+        ],
+      }),
     };
-
-    if (filters.teamId) {
-      where.teamId = filters.teamId;
-    }
-    if (filters.assigneeId) {
-      where.assigneeId = filters.assigneeId;
-    }
-    if (filters.scope) {
-      where.scope = filters.scope;
-    }
-    if (filters.status) {
-      where.status = filters.status;
-    }
-    if (filters.search) {
-      where.OR = [
-        { title: { contains: filters.search, mode: 'insensitive' } },
-        { description: { contains: filters.search, mode: 'insensitive' } },
-      ];
-    }
-
-    return prisma.task.findMany({
-      where,
-      include: {
-        team: { select: { id: true, name: true, slug: true } },
-        creator: { select: { id: true, name: true, email: true } },
-        assignee: { select: { id: true, name: true, email: true, githubUsername: true } },
-        submissions: {
-          orderBy: { submittedAt: 'desc' },
-          take: 1,
-        },
-      },
-      orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }],
-    });
+    return TaskRepository.findActiveTasks(where, filters);
   }
 
-  /**
-   * Get single task with full activity timeline and submissions
-   */
-  static async getTaskById(taskId: string, actor: AuthenticatedUser) {
-    const task = await prisma.task.findUnique({
-      where: { id: taskId, isDeleted: false },
-      include: {
-        team: true,
-        creator: { select: { id: true, name: true, email: true } },
-        assignee: { select: { id: true, name: true, email: true, githubUsername: true } },
-        completedBy: { select: { id: true, name: true, email: true } },
-        approvedBy: { select: { id: true, name: true, email: true } },
-        activities: {
-          include: { actor: { select: { id: true, name: true } } },
-          orderBy: { timestamp: 'desc' },
-        },
-        submissions: {
-          include: {
-            member: { select: { id: true, name: true } },
-            reviewer: { select: { id: true, name: true } },
-          },
-          orderBy: { submittedAt: 'desc' },
-        },
-      },
-    });
-
-    if (!task) {
-      throw new AppError('Task not found', 404);
-    }
-
-    if (task.scope === TaskScope.TEAM && (!task.teamId || !canViewTeam(actor, task.teamId))) {
-      throw new AppError('You cannot view this task', 403);
-    }
+  static async getTaskById(id: string, actor: AuthenticatedUser) {
+    const task = await TaskRepository.findTaskById(id);
+    if (!task) throw new AppError('Task not found', 404);
+    assertVisible(actor, task);
     return task;
   }
 
-  /**
-   * Create task - requires Admin or Team Head permissions
-   * Wrapped in a transaction with activity log creation
-   */
-  static async createTask(data: CreateTaskDTO, actor: AuthenticatedUser) {
-    const scope = data.scope ?? (data.teamId ? TaskScope.TEAM : TaskScope.WHOLE_CLUB);
-
-    // If scope is TEAM, teamId must exist
-    if (scope === TaskScope.TEAM && !data.teamId) {
-      throw new AppError('A teamId must be provided for team-scoped tasks', 400);
-    }
-
-    if (scope === TaskScope.WHOLE_CLUB && data.teamId) {
-      throw new AppError('Club-wide tasks cannot have a teamId', 400);
-    }
-    if (
-      scope === TaskScope.WHOLE_CLUB ? !isClubManager(actor) : !canManageTeam(actor, data.teamId!)
-    ) {
-      throw new AppError('You cannot create tasks in this scope', 403);
-    }
-    const actorId = actor.id;
-    const task = await prisma.$transaction(
-      async (tx) => {
-        if (data.teamId && !(await tx.team.findUnique({ where: { id: data.teamId } }))) {
-          throw new AppError('Team not found', 404);
-        }
-        if (data.assigneeId) {
-          const assignee = await tx.user.findUnique({
-            where: { id: data.assigneeId },
-            include: { teamMemberships: true },
-          });
-          if (!assignee) throw new AppError('Assignee not found', 404);
-          if (
-            !assignee.isActive ||
-            (scope === TaskScope.TEAM &&
-              !assignee.teamMemberships.some((m) => m.teamId === data.teamId))
-          ) {
-            throw new AppError('Assignee must be active and eligible for this team', 400);
-          }
-        }
-        const newTask = await tx.task.create({
-          data: {
-            title: data.title,
-            description: data.description,
-            priority: data.priority ?? TaskPriority.MEDIUM,
-            scope,
-            teamId: scope === TaskScope.WHOLE_CLUB ? null : data.teamId,
-            creatorId: actorId,
-            assigneeId: data.assigneeId || null,
-            status: data.assigneeId ? TaskStatus.ASSIGNED : TaskStatus.FREE,
-            deadline: data.deadline ? new Date(data.deadline) : null,
-            tags: data.tags ?? [],
-          },
-        });
-
-        await tx.taskActivity.create({
-          data: {
-            taskId: newTask.id,
-            actorId,
-            action: TaskAction.CREATED,
-            newValue: newTask.status,
-            details: { title: newTask.title, scope: newTask.scope, priority: newTask.priority },
-          },
-        });
-
-        return newTask;
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
-
-    return task;
-  }
-
-  /**
-   * Atomic Claim Task:
-   * Prevents double-claiming concurrency races.
-   * Checks team scope eligibility. Loser receives HTTP 409 Conflict.
-   */
-  static async claimTask(taskId: string, userId: string) {
-    return prisma.$transaction(
-      async (tx) => {
-        const task = await tx.task.findUnique({
-          where: { id: taskId, isDeleted: false },
-        });
-
-        if (!task) {
-          throw new AppError('Task not found', 404);
-        }
-
-        if (task.status !== TaskStatus.FREE) {
-          throw new AppError('Task is no longer free to claim', 409);
-        }
-
-        // Check team membership for TEAM scoped tasks
-        if (task.scope === TaskScope.TEAM && task.teamId) {
-          const membership = await tx.teamMembership.findUnique({
-            where: {
-              userId_teamId: {
-                userId,
-                teamId: task.teamId,
-              },
-            },
-          });
-
-          if (!membership) {
-            throw new AppError(
-              'Forbidden: You must be a member of this team to claim this task',
-              403,
-            );
-          }
-        }
-
-        // Atomic update with status condition in the where clause
-        const updateResult = await tx.task.updateMany({
-          where: {
-            id: taskId,
-            status: TaskStatus.FREE,
-            isDeleted: false,
-          },
-          data: {
-            status: TaskStatus.ASSIGNED,
-            assigneeId: userId,
-          },
-        });
-
-        if (updateResult.count === 0) {
-          throw new AppError('Conflict: Task was claimed by another member simultaneously', 409);
-        }
-
-        await tx.taskActivity.create({
-          data: {
-            taskId,
-            actorId: userId,
-            action: TaskAction.CLAIMED,
-            oldValue: TaskStatus.FREE,
-            newValue: TaskStatus.ASSIGNED,
-            details: { message: 'Task claimed by member' },
-          },
-        });
-
-        return tx.task.findUnique({
-          where: { id: taskId },
-          include: { assignee: true, team: true },
-        });
-      },
-      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
-    );
-  }
-
-  /**
-   * Move task status by assignee (e.g., ASSIGNED -> IN_PROGRESS)
-   */
-  static async startTask(taskId: string, userId: string) {
-    return prisma.$transaction(async (tx) => {
-      const task = await tx.task.findUnique({
-        where: { id: taskId, isDeleted: false },
-      });
-
-      if (!task) throw new AppError('Task not found', 404);
-      if (task.assigneeId !== userId) {
-        throw new AppError('Only the assigned member can transition this task', 403);
-      }
-      if (task.status !== TaskStatus.ASSIGNED) {
-        throw new AppError(`Cannot start task in status ${task.status}. Must be ASSIGNED.`, 400);
-      }
-
-      const updated = await tx.task.update({
-        where: { id: taskId },
-        data: { status: TaskStatus.IN_PROGRESS },
-      });
-
-      await tx.taskActivity.create({
+  static createTask(data: CreateTaskInput, actor: AuthenticatedUser) {
+    return this.mutate(actor, async (tx, current) => {
+      const scope = data.scope ?? (data.teamId ? TaskScope.TEAM : TaskScope.WHOLE_CLUB);
+      const teamId = data.teamId ?? null;
+      if ((scope === TaskScope.TEAM) !== Boolean(teamId))
+        throw new AppError('Team scope requires a teamId; club scope requires no teamId', 400);
+      assertManager(current, { scope, teamId });
+      if (teamId && !(await tx.team.findUnique({ where: { id: teamId } })))
+        throw new AppError('Team not found', 404);
+      if (data.assigneeId) await eligible(tx, data.assigneeId, teamId);
+      const task = await tx.task.create({
         data: {
-          taskId,
-          actorId: userId,
-          action: TaskAction.MOVED_STATUS,
-          oldValue: TaskStatus.ASSIGNED,
-          newValue: TaskStatus.IN_PROGRESS,
+          title: data.title,
+          description: data.description,
+          priority: data.priority,
+          scope,
+          teamId,
+          creatorId: current.id,
+          assigneeId: data.assigneeId ?? null,
+          status: data.assigneeId ? TaskStatus.ASSIGNED : TaskStatus.FREE,
+          deadline: data.deadline ? new Date(data.deadline) : null,
+          tags: data.tags ?? [],
         },
+        include: taskSummaryInclude,
       });
-
-      return updated;
+      await log(tx, task.id, current.id, TaskAction.CREATED, null, task.status, {
+        title: task.title,
+        scope,
+        teamId,
+        assigneeId: task.assigneeId,
+      });
+      return task;
     });
   }
 
-  /**
-   * Submit completed work for review: IN_PROGRESS -> IN_REVIEW
-   * Requires PR URL and optional note
-   */
-  static async submitForReview(taskId: string, userId: string, submission: SubmitTaskReviewDTO) {
-    return prisma.$transaction(async (tx) => {
-      const task = await tx.task.findUnique({
-        where: { id: taskId, isDeleted: false },
-      });
-
-      if (!task) throw new AppError('Task not found', 404);
-      if (task.assigneeId !== userId) {
-        throw new AppError('Only the assigned member can submit this task for review', 403);
+  static updateTask(id: string, data: UpdateTaskInput, actor: AuthenticatedUser) {
+    return this.mutate(actor, async (tx, current) => {
+      const task = await TaskRepository.active(tx, id);
+      assertManager(current, task);
+      assertEditable(task);
+      const updated: Prisma.TaskUncheckedUpdateManyInput = {
+        ...data,
+        ...(data.deadline !== undefined && {
+          deadline: data.deadline ? new Date(data.deadline) : null,
+        }),
+      };
+      // Only record fields whose value changed; timestamps alone are not an edit.
+      const before: Record<string, Prisma.InputJsonValue | null> = {};
+      const after: Record<string, Prisma.InputJsonValue | null> = {};
+      for (const field of Object.keys(data) as Array<keyof UpdateTaskInput>) {
+        const oldValue =
+          field === 'deadline' ? (task.deadline?.toISOString() ?? null) : task[field];
+        const newValue =
+          field === 'deadline'
+            ? data.deadline
+              ? new Date(data.deadline).toISOString()
+              : null
+            : data[field];
+        if (JSON.stringify(oldValue) !== JSON.stringify(newValue) && newValue !== undefined) {
+          before[field] = oldValue;
+          after[field] = newValue;
+        }
       }
-      if (task.status !== TaskStatus.IN_PROGRESS) {
-        throw new AppError(
-          `Cannot submit task from status ${task.status}. Must be IN_PROGRESS.`,
-          400,
-        );
-      }
-
-      const updatedTask = await tx.task.update({
-        where: { id: taskId },
-        data: { status: TaskStatus.IN_REVIEW },
+      if (!Object.keys(after).length) return TaskRepository.summary(tx, id);
+      await TaskRepository.update(tx, task, updated);
+      await log(tx, id, current.id, TaskAction.UPDATED, task.status, task.status, {
+        before,
+        after,
       });
+      return TaskRepository.summary(tx, id);
+    });
+  }
 
-      await tx.taskSubmission.create({
+  static assignTask(id: string, assigneeId: string | null, actor: AuthenticatedUser) {
+    return this.mutate(actor, async (tx, current) => {
+      const task = await TaskRepository.active(tx, id);
+      assertManager(current, task);
+      assertEditable(task);
+      if (assigneeId) await eligible(tx, assigneeId, task.teamId);
+      if (task.assigneeId === assigneeId) return TaskRepository.summary(tx, id);
+      const status = assigneeId ? TaskStatus.ASSIGNED : TaskStatus.FREE;
+      await TaskRepository.update(tx, task, { assigneeId, status });
+      await log(
+        tx,
+        id,
+        current.id,
+        task.assigneeId ? TaskAction.REASSIGNED : TaskAction.ASSIGNED,
+        task.assigneeId,
+        assigneeId,
+        { previousStatus: task.status, status },
+      );
+      return TaskRepository.summary(tx, id);
+    });
+  }
+
+  static claimTask(id: string, actor: AuthenticatedUser) {
+    return this.mutate(actor, async (tx, current) => {
+      const task = await TaskRepository.active(tx, id);
+      assertVisible(current, task);
+      if (task.status !== TaskStatus.FREE)
+        throw new AppError('Task is no longer free to claim', 409);
+      await eligible(tx, current.id, task.teamId);
+      await TaskRepository.update(tx, task, {
+        assigneeId: current.id,
+        status: TaskStatus.ASSIGNED,
+      });
+      await log(tx, id, current.id, TaskAction.CLAIMED, task.status, TaskStatus.ASSIGNED);
+      return TaskRepository.summary(tx, id);
+    });
+  }
+
+  static startTask(id: string, actor: AuthenticatedUser) {
+    return this.mutate(actor, async (tx, current) => {
+      const task = await TaskRepository.active(tx, id);
+      assertVisible(current, task);
+      if (task.assigneeId !== current.id)
+        throw new AppError('Only the assignee can start this task', 403);
+      if (task.status !== TaskStatus.ASSIGNED)
+        throw new AppError('Only assigned tasks can be started', 409);
+      await TaskRepository.update(tx, task, { status: TaskStatus.IN_PROGRESS });
+      await log(tx, id, current.id, TaskAction.MOVED_STATUS, task.status, TaskStatus.IN_PROGRESS);
+      return TaskRepository.summary(tx, id);
+    });
+  }
+
+  static submitForReview(id: string, actor: AuthenticatedUser, submission: SubmissionInput) {
+    return this.mutate(actor, async (tx, current) => {
+      const task = await TaskRepository.active(tx, id);
+      assertVisible(current, task);
+      if (task.assigneeId !== current.id)
+        throw new AppError('Only the assignee can submit this task', 403);
+      if (task.status !== TaskStatus.IN_PROGRESS)
+        throw new AppError('Only in-progress tasks can be submitted', 409);
+      if (await tx.taskSubmission.findFirst({ where: { taskId: id, outcome: null } })) {
+        throw new AppError('This task already has a pending submission', 409);
+      }
+      await TaskRepository.update(tx, task, { status: TaskStatus.IN_REVIEW });
+      const saved = await tx.taskSubmission.create({
         data: {
-          taskId,
-          memberId: userId,
+          taskId: id,
+          memberId: current.id,
           prUrl: submission.prUrl,
           note: submission.note,
         },
       });
-
-      await tx.taskActivity.create({
-        data: {
-          taskId,
-          actorId: userId,
-          action: TaskAction.SUBMITTED_FOR_REVIEW,
-          oldValue: TaskStatus.IN_PROGRESS,
-          newValue: TaskStatus.IN_REVIEW,
-          details: { prUrl: submission.prUrl, note: submission.note },
-        },
-      });
-
-      return updatedTask;
+      await log(
+        tx,
+        id,
+        current.id,
+        TaskAction.SUBMITTED_FOR_REVIEW,
+        task.status,
+        TaskStatus.IN_REVIEW,
+        { submissionId: saved.id },
+      );
+      return TaskRepository.summary(tx, id);
     });
   }
 
-  /**
-   * Admin Review: Approve (-> DONE) or Send Back (-> IN_PROGRESS)
-   */
-  static async reviewTask(taskId: string, actor: AuthenticatedUser, review: ReviewTaskDTO) {
-    const reviewerId = actor.id;
-    return prisma.$transaction(async (tx) => {
-      const task = await tx.task.findUnique({
-        where: { id: taskId, isDeleted: false },
+  static reviewTask(id: string, actor: AuthenticatedUser, review: ReviewInput) {
+    return this.mutate(actor, async (tx, current) => {
+      const task = await TaskRepository.active(tx, id);
+      assertManager(current, task);
+      if (task.assigneeId === current.id)
+        throw new AppError('You cannot review your own work', 403);
+      if (task.status !== TaskStatus.IN_REVIEW)
+        throw new AppError('Only tasks in review can be reviewed', 409);
+      if (review.outcome === 'SENT_BACK' && !review.reviewComment?.trim())
+        throw new AppError('Send-back feedback is required', 400);
+      const submission = await tx.taskSubmission.findFirst({
+        where: { taskId: id, outcome: null },
+        orderBy: [{ submittedAt: 'desc' }, { id: 'desc' }],
       });
-
-      if (!task) throw new AppError('Task not found', 404);
-      if (task.status !== TaskStatus.IN_REVIEW) {
-        throw new AppError(`Cannot review a task that is not in IN_REVIEW status.`, 400);
-      }
-
-      if (
-        task.scope === TaskScope.WHOLE_CLUB
-          ? !isClubManager(actor)
-          : !task.teamId || !canManageTeam(actor, task.teamId)
-      ) {
-        throw new AppError('You cannot review tasks in this scope', 403);
-      }
-      const isApproval = review.outcome === SubmissionOutcome.APPROVED;
-      const newStatus = isApproval ? TaskStatus.DONE : TaskStatus.IN_PROGRESS;
-      const now = new Date();
-      const isOnTime = task.deadline ? now <= task.deadline : true;
-
-      const updatedTask = await tx.task.update({
-        where: { id: taskId },
+      if (!submission || submission.memberId !== task.assigneeId)
+        throw new AppError('A pending submission from the current assignee is required', 409);
+      const [{ now }] = await tx.$queryRaw<Array<{ now: Date }>>`SELECT clock_timestamp() AS "now"`;
+      const approved = review.outcome === 'APPROVED';
+      const status = approved ? TaskStatus.DONE : TaskStatus.IN_PROGRESS;
+      await TaskRepository.update(tx, task, {
+        status,
+        ...(approved && {
+          completedAt: now,
+          completedById: task.assigneeId,
+          approvedById: current.id,
+          isOnTime: task.deadline ? submission.submittedAt <= task.deadline : true,
+        }),
+      });
+      await tx.taskSubmission.update({
+        where: { id: submission.id },
         data: {
-          status: newStatus,
-          ...(isApproval && {
-            completedAt: now,
-            completedById: task.assigneeId,
-            approvedById: reviewerId,
-            isOnTime,
-          }),
+          reviewerId: current.id,
+          reviewedAt: now,
+          outcome: review.outcome,
+          reviewComment: review.reviewComment,
         },
       });
-
-      // Update the latest pending submission record
-      const latestSubmission = await tx.taskSubmission.findFirst({
-        where: { taskId, outcome: null },
-        orderBy: { submittedAt: 'desc' },
-      });
-
-      if (latestSubmission) {
-        await tx.taskSubmission.update({
-          where: { id: latestSubmission.id },
-          data: {
-            reviewerId,
-            reviewComment: review.reviewComment,
-            outcome: review.outcome,
-            reviewedAt: now,
-          },
-        });
-      }
-
-      await tx.taskActivity.create({
-        data: {
-          taskId,
-          actorId: reviewerId,
-          action: isApproval ? TaskAction.APPROVED : TaskAction.SENT_BACK,
-          oldValue: TaskStatus.IN_REVIEW,
-          newValue: newStatus,
-          details: { comment: review.reviewComment, outcome: review.outcome },
-        },
-      });
-
-      return updatedTask;
+      await log(
+        tx,
+        id,
+        current.id,
+        approved ? TaskAction.APPROVED : TaskAction.SENT_BACK,
+        task.status,
+        status,
+        { submissionId: submission.id, reviewComment: review.reviewComment ?? null },
+      );
+      return TaskRepository.summary(tx, id);
     });
   }
 
-  /**
-   * Soft delete task
-   */
-  static async deleteTask(taskId: string, actor: AuthenticatedUser) {
-    return prisma.$transaction(async (tx) => {
-      const task = await tx.task.findUnique({
-        where: { id: taskId, isDeleted: false },
-      });
-
-      if (!task) throw new AppError('Task not found', 404);
-
-      if (
-        task.scope === TaskScope.WHOLE_CLUB
-          ? !isClubManager(actor)
-          : !task.teamId || !canManageTeam(actor, task.teamId)
-      ) {
-        throw new AppError('You cannot delete tasks in this scope', 403);
-      }
-      const actorId = actor.id;
-      const deleted = await tx.task.update({
-        where: { id: taskId },
-        data: {
-          isDeleted: true,
-          deletedAt: new Date(),
-        },
-      });
-
-      await tx.taskActivity.create({
-        data: {
-          taskId,
-          actorId,
-          action: TaskAction.DELETED,
-          details: { reason: 'Soft deleted by authorized admin' },
-        },
-      });
-
-      return deleted;
+  static deleteTask(id: string, actor: AuthenticatedUser) {
+    return this.mutate(actor, async (tx, current) => {
+      const task = await TaskRepository.active(tx, id);
+      assertManager(current, task);
+      assertEditable(task);
+      await TaskRepository.update(tx, task, { isDeleted: true, deletedAt: new Date() });
+      await log(tx, id, current.id, TaskAction.DELETED, task.status, task.status);
+      return TaskRepository.summary(tx, id);
     });
   }
 }
