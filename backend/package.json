@@ -6,13 +6,18 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc -p tsconfig.test.json",
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
-    "prisma:seed": "tsx prisma/seed.ts"
+    "prisma:seed": "prisma db seed",
+    "prisma:validate": "prisma validate",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:status": "prisma migrate status",
+    "prisma:studio": "prisma studio",
+    "test:database": "vitest run --config vitest.database.config.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -39,5 +44,8 @@
     "tsx": "^4.19.3",
     "typescript": "^5.7.3",
     "vitest": "^3.0.6"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }

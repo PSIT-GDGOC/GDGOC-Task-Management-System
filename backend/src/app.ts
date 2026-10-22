@@ -43,16 +43,20 @@ app.use(express.urlencoded({ extended: true }));
 // PostgreSQL Session Store setup
 const PgStore = pgSession(session);
 
-let sessionStore: session.Store;
-try {
-  sessionStore = new PgStore({
-    conString: env.DATABASE_URL,
-    tableName: 'session',
-    createTableIfMissing: true,
-  });
-} catch (e) {
-  console.warn('⚠️ Could not connect to PostgreSQL session store; falling back to in-memory session for dev/test.');
-  sessionStore = new session.MemoryStore();
+// Tests that do not exercise persistence need no database. In other environments,
+// connection failures must remain visible instead of silently losing sessions.
+export const sessionStore =
+  env.NODE_ENV === 'test'
+    ? new session.MemoryStore()
+    : new PgStore({
+        conString: env.DATABASE_URL,
+        schemaName: new URL(env.DATABASE_URL).searchParams.get('schema') ?? 'public',
+        tableName: 'session',
+        createTableIfMissing: false, // Prisma migrations own the table.
+      });
+
+export async function closeSessionStore() {
+  if ('close' in sessionStore) await sessionStore.close();
 }
 
 app.use(

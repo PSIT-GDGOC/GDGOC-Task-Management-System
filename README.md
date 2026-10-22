@@ -162,7 +162,7 @@ GDGOC-Task-Management-System/
 | **Drag and Drop** | `@dnd-kit/core` | Accessible drag-and-drop primitives for Kanban column transitions. |
 | **Backend** | Express + TypeScript | Modular architecture separating routes, services, repositories, and middlewares. |
 | **Database & ORM** | PostgreSQL + Prisma ORM | ACID compliance, relational integrity, conditional atomic updates (`$transaction`). |
-| **Sessions** | `express-session` + `connect-pg-simple` | Secure, HTTP-only server sessions in PostgreSQL with dev memory fallback. |
+| **Sessions** | `express-session` + `connect-pg-simple` | Secure, HTTP-only server sessions in PostgreSQL; explicit memory store for isolated tests. |
 | **Validation** | Zod | Runtime schema validation for request bodies, queries, and params. |
 | **Testing** | Vitest + Supertest | Ultra-fast unit and API integration testing. |
 
@@ -191,8 +191,9 @@ PORT=5000
 NODE_ENV=development
 CLIENT_ORIGIN=http://localhost:5173
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gdgoc_tasks?schema=public"
+DIRECT_URL="postgresql://postgres:postgres@localhost:5432/gdgoc_tasks?schema=public"
 SESSION_SECRET="your-secure-random-32-byte-secret"
-SYSTEM_OWNER_EMAIL="aditya.lead@example.com"
+SYSTEM_OWNER_EMAIL="gdgoc.psit@gmail.com"
 GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
 GOOGLE_CALLBACK_URL="http://localhost:5000/api/v1/auth/google/callback"
@@ -211,6 +212,11 @@ VITE_API_URL="http://localhost:5000/api/v1"
 
 ---
 
+## Database foundation
+
+See [database setup and verification](docs/backend/DATABASE.md) for PostgreSQL,
+Prisma migrations, seeding, Neon connection settings, and database tests.
+
 ## 🚀 Local Setup & Development Commands
 
 ### 1. Installation
@@ -226,12 +232,12 @@ npm install
 ### 2. Configure Environment Files
 ```bash
 # Windows PowerShell
-Copy-Item .env.example backend\.env
+Copy-Item backend\.env.example backend\.env
 Copy-Item frontend\client\.env.example frontend\client\.env
 Copy-Item frontend\admin\.env.example frontend\admin\.env
 
 # Unix / macOS
-cp .env.example backend/.env
+cp backend/.env.example backend/.env
 cp frontend/client/.env.example frontend/client/.env
 cp frontend/admin/.env.example frontend/admin/.env
 ```
@@ -241,8 +247,8 @@ cp frontend/admin/.env.example frontend/admin/.env
 # Generate Prisma Client
 npm run prisma:generate
 
-# Apply migrations
-npm run prisma:migrate
+# Apply committed migrations (start PostgreSQL and configure both database URLs first)
+npm run prisma:deploy
 
 # Seed core teams (Tech, Media, Content) & System Owner
 npm run prisma:seed
@@ -277,7 +283,7 @@ npm run build
 
 ### Backend (Render)
 - Deploy using the provided `render.yaml` blueprint.
-- Provision a managed PostgreSQL instance and link `DATABASE_URL`.
+- Configure the external PostgreSQL database (Neon) using `DATABASE_URL` and the non-pooler `DIRECT_URL`.
 - Set `SESSION_SECRET`, `SYSTEM_OWNER_EMAIL`, and `CLIENT_ORIGIN` in Render dashboard.
 
 ### Frontends (Vercel)
@@ -289,5 +295,5 @@ npm run build
 ## 🔍 Known Limitations & Planned Follow-Ups
 
 1. **Google OAuth 2.0 Credentials:** URL scaffolding is functional; production Google Cloud credentials (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) must be supplied. A local development role-switcher is included for instant local testing.
-2. **Database Provisioning:** A live PostgreSQL database is required for `npm run prisma:migrate`. The session store falls back to in-memory during local development if PostgreSQL is temporarily offline.
+2. **Database Provisioning:** A live PostgreSQL database is required for `npm run prisma:migrate`. Startup checks require PostgreSQL and migrated user/session tables; database outages do not silently switch session storage.
 3. **Automated GitHub PR Sync:** Webhook signature verification (`crypto.timingSafeEqual`) is fully tested; automated PR status reflection triggers when the webhook is pointed to the live backend URL.

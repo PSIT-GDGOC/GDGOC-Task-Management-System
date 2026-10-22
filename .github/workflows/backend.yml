@@ -1,0 +1,54 @@
+name: Backend checks
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/backend.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/backend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: gdgoc_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d gdgoc_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gdgoc_ci?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@localhost:5432/gdgoc_ci?schema=public
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gdgoc_ci?schema=public
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run prisma:validate
+      - run: npm run prisma:generate
+      - run: npm run typecheck --workspace=backend
+      - run: npm run build:backend
+      - run: npm run test --workspace=backend
+      - run: npm run test:database
