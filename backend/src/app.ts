@@ -8,6 +8,7 @@ import { env, frontendOrigins } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 
 // Route imports
+import historyRoutes from './routes/history.routes';
 import healthRoutes from './routes/health.routes';
 import authRoutes from './routes/auth.routes';
 import taskRoutes from './routes/task.routes';
@@ -92,6 +93,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/tasks', taskRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/teams', teamRoutes);
+app.use('/api/v1/history', historyRoutes);
 app.use('/api/v1/webhooks', webhookRoutes);
 app.use('/api/v1/docs', docsRoutes);
 
