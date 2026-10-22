@@ -80,9 +80,10 @@ Use **migrations**, not `prisma db push`, to install the complete foundation. Fu
 migrations must retain these safeguards. Indexes cover board filtering, work
 history, activity timelines, invitations, and session expiry.
 
-Authorization, allowed transitions, team eligibility, verified Google identity,
-review policy, invitation redemption concurrency, and timeliness calculations
-remain service-layer work for later phases. Database checks validate record
+Users/teams authorization and team-scoped task access are now implemented; see
+[Users and teams](USERS_AND_TEAMS.md). Verified Google identity, further task
+transition rules, review policy, invitation redemption concurrency, and timeliness
+calculations remain service-layer work for later phases. Database checks validate record
 shape; they do not establish the caller's identity or permissions. Activity records
 are protected from cascading deletion, but append-only access enforcement is not
 implemented by this foundation.

@@ -216,6 +216,8 @@ VITE_API_URL="http://localhost:5000/api/v1"
 
 See [database setup and verification](docs/backend/DATABASE.md) for PostgreSQL,
 Prisma migrations, seeding, Neon connection settings, and database tests.
+See [users, teams, and permissions](docs/backend/USERS_AND_TEAMS.md) for the next
+backend stage and the API contract for profile/team integration.
 
 ## 🚀 Local Setup & Development Commands
 

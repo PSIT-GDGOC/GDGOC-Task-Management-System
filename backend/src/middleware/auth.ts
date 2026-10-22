@@ -1,81 +1,34 @@
-import { Request, Response, NextFunction } from 'express';
 import { SystemRole } from '@prisma/client';
-import { prisma } from '../lib/prisma';
 import { AppError } from './errorHandler';
+import { UserRepository } from '../repositories/user.repository';
+import { asyncHandler } from '../utils/asyncHandler';
+import { canManageTeam } from '../utils/permissions';
 
-/**
- * Middleware: requireAuth
- * Fails closed. If session does not contain an authenticated user, returns 401 Unauthorized.
- * In development, if a mock token or header is supplied, it must be explicitly authenticated.
- * NEVER allows unauthenticated requests to bypass.
- */
-export const requireAuth = (req: Request, res: Response, next: NextFunction): void => {
-  if (req.session && req.session.user) {
-    req.user = req.session.user;
-    return next();
-  }
+/** Sessions identify a user; current account and team permissions come from PostgreSQL. */
+export const requireAuth = asyncHandler(async (req, _res, next) => {
+  const id = req.session?.user?.id;
+  if (!id) throw new AppError('Authentication required. Please sign in.', 401);
+  const user = await UserRepository.findById(id);
+  if (!user) throw new AppError('Authentication required. Please sign in again.', 401);
+  if (!user.isActive) throw new AppError('Your account has been deactivated', 403);
+  req.user = user;
+  next();
+});
 
-  // Fails closed
-  return next(new AppError('Authentication required. Please sign in.', 401));
-};
-
-/**
- * Middleware: requireRole
- * Verifies that the authenticated user has one of the allowed system roles.
- */
-export const requireRole = (allowedRoles: SystemRole[]) => {
-  return (req: Request, res: Response, next: NextFunction): void => {
-    if (!req.user) {
-      return next(new AppError('Authentication required', 401));
-    }
-
-    if (!allowedRoles.includes(req.user.role)) {
-      return next(
-        new AppError(
-          `Forbidden: Requires one of [${allowedRoles.join(', ')}] permissions. Current role: ${req.user.role}`,
-          403,
-        ),
-      );
-    }
-
+export const requireRole = (allowedRoles: SystemRole[]) =>
+  asyncHandler(async (req, _res, next) => {
+    if (!req.user) throw new AppError('Authentication required', 401);
+    if (!allowedRoles.includes(req.user.role))
+      throw new AppError('You do not have permission for this action', 403);
     next();
-  };
-};
+  });
 
-/**
- * Middleware: requireTeamHeadOrAdmin
- * Grants access if user is SYSTEM_OWNER, PRESIDENT, or ADMIN,
- * OR if the user is a designated team head for the team matching req.params[paramName] or req.body[paramName].
- */
-export const requireTeamHeadOrAdmin = (teamIdParamName = 'teamId') => {
-  return async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    if (!req.user) {
-      return next(new AppError('Authentication required', 401));
-    }
-
-    const role = req.user.role;
-    if (role === SystemRole.SYSTEM_OWNER || role === SystemRole.PRESIDENT || role === SystemRole.ADMIN) {
-      return next();
-    }
-
-    const teamId = (req.params[teamIdParamName] || req.body[teamIdParamName]) as string | undefined;
-    if (!teamId) {
-      return next(new AppError('Team ID context is required to verify permissions', 400));
-    }
-
-    const membership = await prisma.teamMembership.findUnique({
-      where: {
-        userId_teamId: {
-          userId: req.user.id,
-          teamId,
-        },
-      },
-    });
-
-    if (membership && membership.isTeamHead) {
-      return next();
-    }
-
-    return next(new AppError('Forbidden: You are not a team head for this team or an admin', 403));
-  };
-};
+/** ADMIN is scoped to its memberships; a USER team head is scoped to headed teams. */
+export const requireTeamHeadOrAdmin = (teamIdParamName = 'teamId') =>
+  asyncHandler(async (req, _res, next) => {
+    if (!req.user) throw new AppError('Authentication required', 401);
+    const teamId = req.params[teamIdParamName] ?? req.body?.[teamIdParamName];
+    if (typeof teamId !== 'string' || !teamId) throw new AppError('Team context is required', 400);
+    if (!canManageTeam(req.user, teamId)) throw new AppError('You cannot manage this team', 403);
+    next();
+  });

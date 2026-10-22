@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 
 export class AppError extends Error {
   public statusCode: number;
@@ -43,6 +44,25 @@ export const errorHandler = (
         details: err.details,
       },
     });
+  }
+
+  if (err instanceof Prisma.PrismaClientKnownRequestError) {
+    const status =
+      err.code === 'P2002' || err.code === 'P2034'
+        ? 409
+        : err.code === 'P2025'
+          ? 404
+          : err.code === 'P2003'
+            ? 409
+            : undefined;
+    if (status)
+      return res.status(status).json({
+        success: false,
+        error: {
+          code: getErrorCodeForStatus(status),
+          message: status === 404 ? 'Record not found' : 'This change conflicts with existing data',
+        },
+      });
   }
 
   // Log unhandled exceptions

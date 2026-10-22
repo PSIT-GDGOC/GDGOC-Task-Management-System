@@ -2,6 +2,11 @@
 
 Base URL: `/api/v1`
 
+Users/teams endpoints and the current role/team permission matrix are documented
+in [Users and teams](backend/USERS_AND_TEAMS.md). The implemented OpenAPI contract
+is also available at `/api/v1/docs/openapi.json`. Task endpoints require a session
+and restrict visibility/actions by the rules in that document.
+
 All responses follow a consistent JSON format:
 ```json
 // Success Response
@@ -112,7 +117,7 @@ The Kanban columns follow:
 
 ### 2.3 `POST /tasks`
 - **Description:** Creates a new task.
-- **Permission:** `SYSTEM_OWNER`, `PRESIDENT`, `ADMIN`, or Team Head for the targeted team.
+- **Permission:** `SYSTEM_OWNER`/`PRESIDENT` across scopes; `ADMIN` in joined teams or a Team Head in headed teams. Whole-club creation is restricted to club managers.
 - **Request Body:**
   ```json
   {
@@ -157,7 +162,7 @@ The Kanban columns follow:
 
 ### 2.7 `POST /tasks/:id/review`
 - **Description:** Reviewer inspects PR and decides outcome.
-- **Permission:** `SYSTEM_OWNER`, `PRESIDENT`, `ADMIN`, or Team Head.
+- **Permission:** Club managers across scopes; admins/heads only in their authorized team scope.
 - **Request Body:**
   ```json
   {
@@ -172,7 +177,7 @@ The Kanban columns follow:
 
 ### 2.8 `DELETE /tasks/:id`
 - **Description:** Soft deletes task (`isDeleted = true`, `deletedAt = now()`) and records activity.
-- **Permission:** `SYSTEM_OWNER`, `PRESIDENT`, `ADMIN`.
+- **Permission:** Club managers across scopes; admins/heads only in their authorized team scope.
 
 ---
 

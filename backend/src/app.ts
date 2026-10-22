@@ -12,8 +12,11 @@ import authRoutes from './routes/auth.routes';
 import taskRoutes from './routes/task.routes';
 import webhookRoutes from './routes/webhook.routes';
 import docsRoutes from './routes/docs.routes';
+import userRoutes from './routes/user.routes';
+import teamRoutes from './routes/team.routes';
 
 const app = express();
+if (env.NODE_ENV === 'production') app.set('trust proxy', 1);
 
 // Security Headers
 app.use(
@@ -79,6 +82,8 @@ app.use(
 app.use('/health', healthRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/tasks', taskRoutes);
+app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/teams', teamRoutes);
 app.use('/api/v1/webhooks', webhookRoutes);
 app.use('/api/v1/docs', docsRoutes);
 

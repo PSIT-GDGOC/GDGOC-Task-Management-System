@@ -1,11 +1,12 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
-import { TaskStatus, TaskPriority, TaskScope, SubmissionOutcome, SystemRole } from '@prisma/client';
+import { TaskStatus, TaskPriority, TaskScope, SubmissionOutcome } from '@prisma/client';
 import { TaskService } from '../services/task.service';
 import { validate } from '../middleware/validate';
-import { requireAuth, requireRole } from '../middleware/auth';
+import { requireAuth } from '../middleware/auth';
 
 const router = Router();
+router.use(requireAuth);
 
 // Validation Schemas
 const listTasksQuerySchema = z.object({
@@ -50,7 +51,7 @@ router.get(
   validate({ query: listTasksQuerySchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const tasks = await TaskService.listTasks(req.query as any);
+      const tasks = await TaskService.listTasks(req.query as any, req.user!);
       res.json({ success: true, count: tasks.length, data: tasks });
     } catch (err) {
       next(err);
@@ -67,7 +68,7 @@ router.get(
   validate({ params: taskIdParamSchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const task = await TaskService.getTaskById(req.params.id);
+      const task = await TaskService.getTaskById(req.params.id, req.user!);
       res.json({ success: true, data: task });
     } catch (err) {
       next(err);
@@ -81,12 +82,10 @@ router.get(
  */
 router.post(
   '/',
-  requireAuth,
-  requireRole([SystemRole.SYSTEM_OWNER, SystemRole.PRESIDENT, SystemRole.ADMIN]),
   validate({ body: createTaskBodySchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const task = await TaskService.createTask(req.body, req.user!.id);
+      const task = await TaskService.createTask(req.body, req.user!);
       res.status(201).json({ success: true, message: 'Task created successfully', data: task });
     } catch (err) {
       next(err);
@@ -100,7 +99,6 @@ router.post(
  */
 router.post(
   '/:id/claim',
-  requireAuth,
   validate({ params: taskIdParamSchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -118,7 +116,6 @@ router.post(
  */
 router.post(
   '/:id/start',
-  requireAuth,
   validate({ params: taskIdParamSchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -136,7 +133,6 @@ router.post(
  */
 router.post(
   '/:id/submit',
-  requireAuth,
   validate({ params: taskIdParamSchema, body: submitReviewBodySchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -154,15 +150,16 @@ router.post(
  */
 router.post(
   '/:id/review',
-  requireAuth,
-  requireRole([SystemRole.SYSTEM_OWNER, SystemRole.PRESIDENT, SystemRole.ADMIN]),
   validate({ params: taskIdParamSchema, body: reviewTaskBodySchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const task = await TaskService.reviewTask(req.params.id, req.user!.id, req.body);
+      const task = await TaskService.reviewTask(req.params.id, req.user!, req.body);
       res.json({
         success: true,
-        message: req.body.outcome === SubmissionOutcome.APPROVED ? 'Task approved and marked Done' : 'Task sent back with review feedback',
+        message:
+          req.body.outcome === SubmissionOutcome.APPROVED
+            ? 'Task approved and marked Done'
+            : 'Task sent back with review feedback',
         data: task,
       });
     } catch (err) {
@@ -177,12 +174,10 @@ router.post(
  */
 router.delete(
   '/:id',
-  requireAuth,
-  requireRole([SystemRole.SYSTEM_OWNER, SystemRole.PRESIDENT, SystemRole.ADMIN]),
   validate({ params: taskIdParamSchema }),
   async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const deleted = await TaskService.deleteTask(req.params.id, req.user!.id);
+      const deleted = await TaskService.deleteTask(req.params.id, req.user!);
       res.json({ success: true, message: 'Task soft-deleted', data: deleted });
     } catch (err) {
       next(err);

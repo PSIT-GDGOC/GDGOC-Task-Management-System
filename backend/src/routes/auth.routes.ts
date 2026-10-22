@@ -47,7 +47,11 @@ router.post('/logout', requireAuth, (req: Request, res: Response, next: NextFunc
     if (err) {
       return next(new AppError('Failed to logout cleanly', 500));
     }
-    res.clearCookie('connect.sid');
+    res.clearCookie('gdgoc.sid', {
+      httpOnly: true,
+      secure: env.NODE_ENV === 'production',
+      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+    });
     res.json({ success: true, message: 'Logged out successfully' });
   });
 });
@@ -103,7 +107,8 @@ router.post(
       const result = await AuthService.createAdminInvitation(req.user!.id, req.body);
       res.status(201).json({
         success: true,
-        message: 'Admin invitation created. Share this code securely; it cannot be retrieved again.',
+        message:
+          'Admin invitation created. Share this code securely; it cannot be retrieved again.',
         data: result,
       });
     } catch (err) {
@@ -162,7 +167,10 @@ router.post(
       const { email, name, role } = req.body;
       const normalizedEmail = email.toLowerCase().trim();
 
-      // Upsert mock user
+      const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
+      if (existing && !existing.isActive)
+        throw new AppError('Your account has been deactivated', 403);
+      // Upsert mock user; this endpoint is only for isolated development/testing.
       const user = await prisma.user.upsert({
         where: { email: normalizedEmail },
         update: {
@@ -176,6 +184,9 @@ router.post(
         },
       });
 
+      await new Promise<void>((resolve, reject) =>
+        req.session.regenerate((error) => (error ? reject(error) : resolve())),
+      );
       req.session.user = {
         id: user.id,
         email: user.email,

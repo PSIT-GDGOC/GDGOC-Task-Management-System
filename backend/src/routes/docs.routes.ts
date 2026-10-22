@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import swaggerUi from 'swagger-ui-express';
+import { directoryPaths, directorySchemas } from '../config/directory.openapi';
 
 const router = Router();
 
@@ -16,7 +17,12 @@ const swaggerDocument = {
       description: 'API v1 Base',
     },
   ],
+  components: {
+    securitySchemes: { sessionCookie: { type: 'apiKey', in: 'cookie', name: 'gdgoc.sid' } },
+    schemas: directorySchemas,
+  },
   paths: {
+    ...directoryPaths,
     '/health': {
       get: {
         summary: 'Health check endpoint',
@@ -27,10 +33,18 @@ const swaggerDocument = {
     },
     '/tasks': {
       get: {
-        summary: 'List tasks with board sync filtering',
+        summary: 'List tasks within the authenticated user team scope',
+        security: [{ sessionCookie: [] }],
         parameters: [
           { name: 'teamId', in: 'query', schema: { type: 'string' } },
-          { name: 'status', in: 'query', schema: { type: 'string', enum: ['FREE', 'ASSIGNED', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'] } },
+          {
+            name: 'status',
+            in: 'query',
+            schema: {
+              type: 'string',
+              enum: ['FREE', 'ASSIGNED', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'],
+            },
+          },
           { name: 'scope', in: 'query', schema: { type: 'string', enum: ['TEAM', 'WHOLE_CLUB'] } },
         ],
         responses: {
@@ -138,6 +152,7 @@ const swaggerDocument = {
   },
 };
 
+router.get('/openapi.json', (_req, res) => res.json(swaggerDocument));
 router.use('/', swaggerUi.serve);
 router.get('/', swaggerUi.setup(swaggerDocument));
 

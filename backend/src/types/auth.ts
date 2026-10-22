@@ -8,3 +8,7 @@ export interface AuthSessionUser {
   position?: string | null;
   githubUsername?: string | null;
 }
+
+export interface AuthenticatedUser extends AuthSessionUser {
+  teamMemberships: Array<{ teamId: string; isTeamHead: boolean }>;
+}

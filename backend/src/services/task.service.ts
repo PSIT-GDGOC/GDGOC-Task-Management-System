@@ -1,6 +1,15 @@
-import { PrismaClient, TaskStatus, TaskPriority, TaskScope, TaskAction, SubmissionOutcome, SystemRole } from '@prisma/client';
+import {
+  Prisma,
+  TaskStatus,
+  TaskPriority,
+  TaskScope,
+  TaskAction,
+  SubmissionOutcome,
+} from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
+import { AuthenticatedUser } from '../types/auth';
+import { canManageTeam, canViewTeam, isClubManager } from '../utils/permissions';
 
 export interface CreateTaskDTO {
   title: string;
@@ -27,15 +36,28 @@ export class TaskService {
   /**
    * List tasks with filters (board columns, team, assignee, search)
    */
-  static async listTasks(filters: {
-    teamId?: string;
-    assigneeId?: string;
-    scope?: TaskScope;
-    status?: TaskStatus;
-    search?: string;
-  }) {
-    const where: any = {
+  static async listTasks(
+    filters: {
+      teamId?: string;
+      assigneeId?: string;
+      scope?: TaskScope;
+      status?: TaskStatus;
+      search?: string;
+    },
+    actor: AuthenticatedUser,
+  ) {
+    const where: Prisma.TaskWhereInput = {
       isDeleted: false,
+      ...(!isClubManager(actor) && {
+        AND: [
+          {
+            OR: [
+              { scope: TaskScope.WHOLE_CLUB },
+              { scope: TaskScope.TEAM, teamId: { in: actor.teamMemberships.map((m) => m.teamId) } },
+            ],
+          },
+        ],
+      }),
     };
 
     if (filters.teamId) {
@@ -75,7 +97,7 @@ export class TaskService {
   /**
    * Get single task with full activity timeline and submissions
    */
-  static async getTaskById(taskId: string) {
+  static async getTaskById(taskId: string, actor: AuthenticatedUser) {
     const task = await prisma.task.findUnique({
       where: { id: taskId, isDeleted: false },
       include: {
@@ -102,6 +124,9 @@ export class TaskService {
       throw new AppError('Task not found', 404);
     }
 
+    if (task.scope === TaskScope.TEAM && (!task.teamId || !canViewTeam(actor, task.teamId))) {
+      throw new AppError('You cannot view this task', 403);
+    }
     return task;
   }
 
@@ -109,7 +134,7 @@ export class TaskService {
    * Create task - requires Admin or Team Head permissions
    * Wrapped in a transaction with activity log creation
    */
-  static async createTask(data: CreateTaskDTO, actorId: string) {
+  static async createTask(data: CreateTaskDTO, actor: AuthenticatedUser) {
     const scope = data.scope ?? (data.teamId ? TaskScope.TEAM : TaskScope.WHOLE_CLUB);
 
     // If scope is TEAM, teamId must exist
@@ -117,34 +142,63 @@ export class TaskService {
       throw new AppError('A teamId must be provided for team-scoped tasks', 400);
     }
 
-    const task = await prisma.$transaction(async (tx) => {
-      const newTask = await tx.task.create({
-        data: {
-          title: data.title,
-          description: data.description,
-          priority: data.priority ?? TaskPriority.MEDIUM,
-          scope,
-          teamId: scope === TaskScope.WHOLE_CLUB ? null : data.teamId,
-          creatorId: actorId,
-          assigneeId: data.assigneeId || null,
-          status: data.assigneeId ? TaskStatus.ASSIGNED : TaskStatus.FREE,
-          deadline: data.deadline ? new Date(data.deadline) : null,
-          tags: data.tags ?? [],
-        },
-      });
+    if (scope === TaskScope.WHOLE_CLUB && data.teamId) {
+      throw new AppError('Club-wide tasks cannot have a teamId', 400);
+    }
+    if (
+      scope === TaskScope.WHOLE_CLUB ? !isClubManager(actor) : !canManageTeam(actor, data.teamId!)
+    ) {
+      throw new AppError('You cannot create tasks in this scope', 403);
+    }
+    const actorId = actor.id;
+    const task = await prisma.$transaction(
+      async (tx) => {
+        if (data.teamId && !(await tx.team.findUnique({ where: { id: data.teamId } }))) {
+          throw new AppError('Team not found', 404);
+        }
+        if (data.assigneeId) {
+          const assignee = await tx.user.findUnique({
+            where: { id: data.assigneeId },
+            include: { teamMemberships: true },
+          });
+          if (!assignee) throw new AppError('Assignee not found', 404);
+          if (
+            !assignee.isActive ||
+            (scope === TaskScope.TEAM &&
+              !assignee.teamMemberships.some((m) => m.teamId === data.teamId))
+          ) {
+            throw new AppError('Assignee must be active and eligible for this team', 400);
+          }
+        }
+        const newTask = await tx.task.create({
+          data: {
+            title: data.title,
+            description: data.description,
+            priority: data.priority ?? TaskPriority.MEDIUM,
+            scope,
+            teamId: scope === TaskScope.WHOLE_CLUB ? null : data.teamId,
+            creatorId: actorId,
+            assigneeId: data.assigneeId || null,
+            status: data.assigneeId ? TaskStatus.ASSIGNED : TaskStatus.FREE,
+            deadline: data.deadline ? new Date(data.deadline) : null,
+            tags: data.tags ?? [],
+          },
+        });
 
-      await tx.taskActivity.create({
-        data: {
-          taskId: newTask.id,
-          actorId,
-          action: TaskAction.CREATED,
-          newValue: newTask.status,
-          details: { title: newTask.title, scope: newTask.scope, priority: newTask.priority },
-        },
-      });
+        await tx.taskActivity.create({
+          data: {
+            taskId: newTask.id,
+            actorId,
+            action: TaskAction.CREATED,
+            newValue: newTask.status,
+            details: { title: newTask.title, scope: newTask.scope, priority: newTask.priority },
+          },
+        });
 
-      return newTask;
-    });
+        return newTask;
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
 
     return task;
   }
@@ -155,68 +209,74 @@ export class TaskService {
    * Checks team scope eligibility. Loser receives HTTP 409 Conflict.
    */
   static async claimTask(taskId: string, userId: string) {
-    return prisma.$transaction(async (tx) => {
-      const task = await tx.task.findUnique({
-        where: { id: taskId, isDeleted: false },
-      });
+    return prisma.$transaction(
+      async (tx) => {
+        const task = await tx.task.findUnique({
+          where: { id: taskId, isDeleted: false },
+        });
 
-      if (!task) {
-        throw new AppError('Task not found', 404);
-      }
+        if (!task) {
+          throw new AppError('Task not found', 404);
+        }
 
-      if (task.status !== TaskStatus.FREE) {
-        throw new AppError('Task is no longer free to claim', 409);
-      }
+        if (task.status !== TaskStatus.FREE) {
+          throw new AppError('Task is no longer free to claim', 409);
+        }
 
-      // Check team membership for TEAM scoped tasks
-      if (task.scope === TaskScope.TEAM && task.teamId) {
-        const membership = await tx.teamMembership.findUnique({
-          where: {
-            userId_teamId: {
-              userId,
-              teamId: task.teamId,
+        // Check team membership for TEAM scoped tasks
+        if (task.scope === TaskScope.TEAM && task.teamId) {
+          const membership = await tx.teamMembership.findUnique({
+            where: {
+              userId_teamId: {
+                userId,
+                teamId: task.teamId,
+              },
             },
+          });
+
+          if (!membership) {
+            throw new AppError(
+              'Forbidden: You must be a member of this team to claim this task',
+              403,
+            );
+          }
+        }
+
+        // Atomic update with status condition in the where clause
+        const updateResult = await tx.task.updateMany({
+          where: {
+            id: taskId,
+            status: TaskStatus.FREE,
+            isDeleted: false,
+          },
+          data: {
+            status: TaskStatus.ASSIGNED,
+            assigneeId: userId,
           },
         });
 
-        if (!membership) {
-          throw new AppError('Forbidden: You must be a member of this team to claim this task', 403);
+        if (updateResult.count === 0) {
+          throw new AppError('Conflict: Task was claimed by another member simultaneously', 409);
         }
-      }
 
-      // Atomic update with status condition in the where clause
-      const updateResult = await tx.task.updateMany({
-        where: {
-          id: taskId,
-          status: TaskStatus.FREE,
-          isDeleted: false,
-        },
-        data: {
-          status: TaskStatus.ASSIGNED,
-          assigneeId: userId,
-        },
-      });
+        await tx.taskActivity.create({
+          data: {
+            taskId,
+            actorId: userId,
+            action: TaskAction.CLAIMED,
+            oldValue: TaskStatus.FREE,
+            newValue: TaskStatus.ASSIGNED,
+            details: { message: 'Task claimed by member' },
+          },
+        });
 
-      if (updateResult.count === 0) {
-        throw new AppError('Conflict: Task was claimed by another member simultaneously', 409);
-      }
-
-      await tx.taskActivity.create({
-        data: {
-          taskId,
-          actorId: userId,
-          action: TaskAction.CLAIMED,
-          oldValue: TaskStatus.FREE,
-          newValue: TaskStatus.ASSIGNED,
-          details: { message: 'Task claimed by member' },
-        },
-      });
-
-      return tx.task.findUnique({
-        where: { id: taskId },
-        include: { assignee: true, team: true },
-      });
-    });
+        return tx.task.findUnique({
+          where: { id: taskId },
+          include: { assignee: true, team: true },
+        });
+      },
+      { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
+    );
   }
 
   /**
@@ -270,7 +330,10 @@ export class TaskService {
         throw new AppError('Only the assigned member can submit this task for review', 403);
       }
       if (task.status !== TaskStatus.IN_PROGRESS) {
-        throw new AppError(`Cannot submit task from status ${task.status}. Must be IN_PROGRESS.`, 400);
+        throw new AppError(
+          `Cannot submit task from status ${task.status}. Must be IN_PROGRESS.`,
+          400,
+        );
       }
 
       const updatedTask = await tx.task.update({
@@ -305,7 +368,8 @@ export class TaskService {
   /**
    * Admin Review: Approve (-> DONE) or Send Back (-> IN_PROGRESS)
    */
-  static async reviewTask(taskId: string, reviewerId: string, review: ReviewTaskDTO) {
+  static async reviewTask(taskId: string, actor: AuthenticatedUser, review: ReviewTaskDTO) {
+    const reviewerId = actor.id;
     return prisma.$transaction(async (tx) => {
       const task = await tx.task.findUnique({
         where: { id: taskId, isDeleted: false },
@@ -316,6 +380,13 @@ export class TaskService {
         throw new AppError(`Cannot review a task that is not in IN_REVIEW status.`, 400);
       }
 
+      if (
+        task.scope === TaskScope.WHOLE_CLUB
+          ? !isClubManager(actor)
+          : !task.teamId || !canManageTeam(actor, task.teamId)
+      ) {
+        throw new AppError('You cannot review tasks in this scope', 403);
+      }
       const isApproval = review.outcome === SubmissionOutcome.APPROVED;
       const newStatus = isApproval ? TaskStatus.DONE : TaskStatus.IN_PROGRESS;
       const now = new Date();
@@ -370,7 +441,7 @@ export class TaskService {
   /**
    * Soft delete task
    */
-  static async deleteTask(taskId: string, actorId: string) {
+  static async deleteTask(taskId: string, actor: AuthenticatedUser) {
     return prisma.$transaction(async (tx) => {
       const task = await tx.task.findUnique({
         where: { id: taskId, isDeleted: false },
@@ -378,6 +449,14 @@ export class TaskService {
 
       if (!task) throw new AppError('Task not found', 404);
 
+      if (
+        task.scope === TaskScope.WHOLE_CLUB
+          ? !isClubManager(actor)
+          : !task.teamId || !canManageTeam(actor, task.teamId)
+      ) {
+        throw new AppError('You cannot delete tasks in this scope', 403);
+      }
+      const actorId = actor.id;
       const deleted = await tx.task.update({
         where: { id: taskId },
         data: {
