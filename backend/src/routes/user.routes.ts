@@ -55,6 +55,20 @@ router.get(
     });
   }),
 );
+router.post(
+  '/',
+  validate({
+    body: z
+      .object({
+        email: z.string().trim().toLowerCase().email().max(254),
+        name: z.string().trim().min(1).max(100),
+      })
+      .strict(),
+  }),
+  asyncHandler(async (req, res) => {
+    res.status(201).json({ success: true, data: await UserService.register(req.user!, req.body) });
+  }),
+);
 router.patch(
   '/:userId/status',
   validate({

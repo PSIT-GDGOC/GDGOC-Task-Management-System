@@ -1,11 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import request from 'supertest';
 import { ApiFixture, createApiFixture } from './helpers/api-fixture';
 
 let fixture: ApiFixture;
 let db: ApiFixture['db'];
-let app: ApiFixture['app'];
 let teamA: string;
 let teamB: string;
 let users: ApiFixture['users'];
@@ -13,7 +11,7 @@ let agents: ApiFixture['agents'];
 
 beforeAll(async () => {
   fixture = await createApiFixture();
-  ({ db, app, teamA, teamB, users, agents } = fixture);
+  ({ db, teamA, teamB, users, agents } = fixture);
 });
 afterAll(async () => {
   if (fixture) await fixture.cleanup();

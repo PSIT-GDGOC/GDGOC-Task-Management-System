@@ -1,7 +1,8 @@
 import { generateKeyPairSync, sign } from 'node:crypto';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { ipKeyGenerator } from 'express-rate-limit';
 import request from 'supertest';
-import { ApiFixture, createApiFixture, loginWithCsrf } from './helpers/api-fixture';
+import { ApiFixture, createApiFixture } from './helpers/api-fixture';
 import type { googleClient as GoogleClientType } from '../../src/services/google-auth.service';
 
 let fixture: ApiFixture;
@@ -51,6 +52,11 @@ beforeAll(async () => {
   client = (await import('../../src/services/google-auth.service.js')).googleClient;
 });
 afterEach(() => vi.restoreAllMocks());
+beforeEach(async () => {
+  const limit = (await import('../../src/security/rateLimits.js')).authenticationLimit;
+  for (const ip of ['127.0.0.1', '::ffff:127.0.0.1', '::1'])
+    await limit.resetKey(ipKeyGenerator(ip));
+});
 afterAll(async () => {
   if (fixture) await fixture.cleanup();
 });
@@ -177,5 +183,44 @@ describe('Google OAuth and browser security', () => {
           .send({ position: 'Developer' })
       ).status,
     ).toBe(200);
+  });
+
+  it('blocks unregistered identities when registration is closed and links preregistered members', async () => {
+    const { env } = await import('../../src/config/env.js');
+    const { AuthService } = await import('../../src/services/auth.service.js');
+    const previous = env.ALLOW_SELF_REGISTRATION;
+    env.ALLOW_SELF_REGISTRATION = false;
+    const identity = {
+      email: 'preregistered@gmail.com',
+      name: 'New Member',
+      subject: 'new-preregistered-subject',
+      authoritativeEmail: true,
+    };
+    try {
+      await expect(AuthService.handleVerifiedGoogleUser(identity)).rejects.toMatchObject({
+        statusCode: 403,
+      });
+      await fixture.agents.owner
+        .post('/api/v1/users')
+        .send({ email: identity.email, name: identity.name })
+        .expect(201);
+      expect(await AuthService.handleVerifiedGoogleUser(identity)).toMatchObject({
+        googleSubject: identity.subject,
+        role: 'USER',
+      });
+    } finally {
+      env.ALLOW_SELF_REGISTRATION = previous;
+    }
+  });
+
+  it('fails closed when Google login is explicitly disabled', async () => {
+    const { env } = await import('../../src/config/env.js');
+    const previous = env.GOOGLE_AUTH_ENABLED;
+    env.GOOGLE_AUTH_ENABLED = false;
+    try {
+      expect((await request(fixture.app).get('/api/v1/auth/google')).status).toBe(503);
+    } finally {
+      env.GOOGLE_AUTH_ENABLED = previous;
+    }
   });
 });

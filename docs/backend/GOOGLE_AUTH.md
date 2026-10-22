@@ -9,6 +9,11 @@ No Google access/refresh/ID token is returned to the frontend or saved in a sess
 
 ## Club configuration
 
+The backend can now be deployed with `GOOGLE_AUTH_ENABLED=false` while real cloud
+credentials are pending. Google entry points then return 503 and protected APIs
+remain closed; development login is still forbidden in production. Enable Google
+only after setting the credentials, callback and both frontend origins explicitly.
+
 Use a Google Cloud project controlled by `gdgoc.psit@gmail.com` and grant named
 maintainers access. Create a Web application OAuth client and configure the
 consent screen. Basic sign-in requests only openid, email, and profile scopes.

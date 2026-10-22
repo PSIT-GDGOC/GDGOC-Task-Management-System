@@ -54,6 +54,11 @@ export class AuthService {
         }
         if (user && !user.isActive) throw new AppError('Your account has been deactivated', 403);
         const role = this.resolveInitialRole(email);
+        if (!user && role !== 'SYSTEM_OWNER' && !env.ALLOW_SELF_REGISTRATION)
+          throw new AppError(
+            'Ask a club administrator to register your email before signing in',
+            403,
+          );
         const identity = {
           email,
           name: googleUser.name,

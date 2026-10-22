@@ -19,7 +19,7 @@ const save = (req: Request) =>
   );
 export class GoogleAuthService {
   static configured() {
-    return Boolean(env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
+    return Boolean(env.GOOGLE_AUTH_ENABLED && env.GOOGLE_CLIENT_ID && env.GOOGLE_CLIENT_SECRET);
   }
   static async begin(req: Request, portal: 'member' | 'admin') {
     if (!this.configured()) throw new AppError('Google authentication is not configured', 503);

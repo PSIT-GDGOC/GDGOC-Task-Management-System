@@ -1,4 +1,5 @@
 import { Prisma } from '@prisma/client';
+import { queryCache } from '../cache/query-cache';
 import { prisma } from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
 import { taskSummaryInclude } from '../repositories/task.repository';
@@ -76,44 +77,48 @@ export class HistoryService {
   }
   static statistics(actor: AuthenticatedUser, filters: HistoryFilters, personal: boolean) {
     const { sql } = predicates(actor, filters, personal);
-    return prisma.$transaction(
-      async (tx) => {
-        const [totals] = await tx.$queryRaw<
-          Array<{
-            totalCompleted: number;
-            onTime: number;
-            late: number;
-            noDeadline: number;
-            averageLeadTimeHours: number | null;
-          }>
-        >`
+    return queryCache.remember(
+      ['history', actor.id, actor.role, actor.teamMemberships, filters, personal],
+      () =>
+        prisma.$transaction(
+          async (tx) => {
+            const [totals] = await tx.$queryRaw<
+              Array<{
+                totalCompleted: number;
+                onTime: number;
+                late: number;
+                noDeadline: number;
+                averageLeadTimeHours: number | null;
+              }>
+            >`
         SELECT COUNT(*)::int AS "totalCompleted",
           COUNT(*) FILTER (WHERE t."deadline" IS NOT NULL AND t."isOnTime")::int AS "onTime",
           COUNT(*) FILTER (WHERE t."deadline" IS NOT NULL AND NOT t."isOnTime")::int AS "late",
           COUNT(*) FILTER (WHERE t."deadline" IS NULL)::int AS "noDeadline",
           (AVG(EXTRACT(EPOCH FROM (t."completedAt" - t."createdAt"))) / 3600)::float8 AS "averageLeadTimeHours"
         FROM "Task" t WHERE ${sql}`;
-        const byTeam = await tx.$queryRaw<
-          Array<{ teamId: string | null; name: string; completed: number }>
-        >`
+            const byTeam = await tx.$queryRaw<
+              Array<{ teamId: string | null; name: string; completed: number }>
+            >`
         SELECT t."teamId", COALESCE(team.name, 'Whole Club') AS name, COUNT(*)::int AS completed
         FROM "Task" t LEFT JOIN "Team" team ON team.id = t."teamId" WHERE ${sql}
         GROUP BY t."teamId", team.name ORDER BY completed DESC, name ASC`;
-        const topContributors = personal
-          ? undefined
-          : await tx.$queryRaw<Array<{ userId: string; name: string; completed: number }>>`
+            const topContributors = personal
+              ? undefined
+              : await tx.$queryRaw<Array<{ userId: string; name: string; completed: number }>>`
         SELECT t."completedById" AS "userId", u.name, COUNT(*)::int AS completed
         FROM "Task" t JOIN "User" u ON u.id = t."completedById" WHERE ${sql}
         GROUP BY t."completedById", u.name ORDER BY completed DESC, u.name ASC, t."completedById" ASC LIMIT 10`;
-        const rated = totals.onTime + totals.late;
-        return {
-          ...totals,
-          onTimeRate: rated ? Math.round((totals.onTime / rated) * 10000) / 100 : null,
-          byTeam,
-          ...(topContributors && { topContributors }),
-        };
-      },
-      { isolationLevel: 'RepeatableRead' },
+            const rated = totals.onTime + totals.late;
+            return {
+              ...totals,
+              onTimeRate: rated ? Math.round((totals.onTime / rated) * 10000) / 100 : null,
+              byTeam,
+              ...(topContributors && { topContributors }),
+            };
+          },
+          { isolationLevel: 'RepeatableRead' },
+        ),
     );
   }
 }

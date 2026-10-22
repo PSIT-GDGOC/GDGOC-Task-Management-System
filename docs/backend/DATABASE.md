@@ -37,15 +37,19 @@ passwords, invitations, or sessions are seeded.
 
 ## Connection settings
 
-- `DATABASE_URL`: application connection; use Neon's pooled URL when appropriate.
-- `DIRECT_URL`: direct, non-pooler connection for Prisma migrations. Locally it is
-  identical to `DATABASE_URL`.
+- `DATABASE_URL`: application connection. Supabase is now the selected hosted
+  provider; use its session pooler on port 5432 for this persistent backend.
+- `DIRECT_URL`: migration connection. Use a direct endpoint when reachable or
+  Supabase's session pooler on port 5432. Locally it equals `DATABASE_URL`.
 - `TEST_DATABASE_URL`: explicit connection for database integration tests. Use a
   dedicated disposable local database and a role allowed to create/drop schemas.
 
 Put secrets only in ignored `.env` files or hosting environment variables. Preserve
-Neon's SSL parameters when copying connection URLs. Prisma CLI and seed commands
+the provider's required SSL parameters when copying connection URLs. Prisma CLI and seed commands
 run in the backend workspace and load `backend/.env`.
+
+See [Supabase setup](SUPABASE.md) for the club project, connection examples and
+Data API restrictions. No hosted database has been provisioned yet.
 
 ## Models and invariants
 
@@ -82,8 +86,9 @@ history, activity timelines, invitations, and session expiry.
 
 Users/teams authorization and the Task Board lifecycle are now implemented; see
 [Users and teams](USERS_AND_TEAMS.md) and [Task Board workflow](TASK_WORKFLOW.md).
-Verified Google identity, history/statistics APIs, invitation redemption concurrency,
-and GitHub synchronization remain work for later phases. Database checks validate record
+Google identity, history/statistics and invitation workflows now have local
+implementations and tests; live Google setup and GitHub synchronization remain
+unfinished. See `AUDIT_AND_STATUS.md` for current release blockers. Database checks validate record
 shape; they do not establish the caller's identity or permissions. Activity records
 are protected from cascading deletion, but append-only access enforcement is not
 implemented by this foundation.
@@ -104,7 +109,7 @@ npm run prisma:generate
 Commit schema and migration SQL together. Apply committed migrations in hosted
 environments using `npm run prisma:deploy`. Never use `migrate dev` or reset on a
 production database. The Render blueprint accepts external database URLs (such as
-Neon), generates Prisma Client before building, and deploys migrations before
+Supabase), generates Prisma Client before building, and deploys migrations before
 starting the server. Configure both URLs in Render; owner seeding is an explicit
 one-time administrative command. No hosted database is provisioned by this code.
 
@@ -134,7 +139,7 @@ application database.
 ## Team ownership and access
 
 Use `gdgoc.psit@gmail.com` as the project contact and bootstrap identity. Create
-Neon, Render, Google OAuth, and any future Redis resources under club-controlled
+Supabase, Render, Google OAuth, and any future Redis resources under club-controlled
 accounts or organizations, and invite the maintainers through those providers.
 The email setting alone does not provision these resources or grant anyone access.
 

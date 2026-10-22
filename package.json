@@ -29,7 +29,8 @@
     "prisma:deploy": "npm run prisma:deploy --workspace=backend",
     "prisma:status": "npm run prisma:status --workspace=backend",
     "prisma:studio": "npm run prisma:studio --workspace=backend",
-    "test:database": "npm run test:database --workspace=backend"
+    "test:database": "npm run test:database --workspace=backend",
+    "test:redis": "npm run test:redis --workspace=backend"
   },
   "devDependencies": {
     "prettier": "^3.5.2"

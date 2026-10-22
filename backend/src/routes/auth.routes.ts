@@ -35,7 +35,7 @@ router.get('/me', requireAuth, (req: Request, res: Response) => {
  * POST /api/v1/auth/logout
  * Destroys the server session and clears the session cookie
  */
-router.post('/logout', requireAuth, (req: Request, res: Response, next: NextFunction) => {
+router.post('/logout', (req: Request, res: Response, next: NextFunction) => {
   req.session.destroy((err) => {
     if (err) {
       return next(new AppError('Failed to logout cleanly', 500));
@@ -51,7 +51,7 @@ router.post('/logout', requireAuth, (req: Request, res: Response, next: NextFunc
 
 /**
  * GET /api/v1/auth/google/url
- * Scaffolding for Google OAuth 2.0 initiation
+ * Begin a browser-bound Google OAuth 2.0 sign-in
  */
 const googleQuery = z.object({ portal: z.enum(['member', 'admin']).default('member') }).strict();
 router.get(

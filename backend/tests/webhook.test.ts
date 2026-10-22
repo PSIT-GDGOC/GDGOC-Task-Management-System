@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
-import crypto from 'crypto';
 import app from '../src/app';
 import { env } from '../src/config/env';
 env.GITHUB_WEBHOOK_SECRET = 'test-only-webhook-secret-123456789';

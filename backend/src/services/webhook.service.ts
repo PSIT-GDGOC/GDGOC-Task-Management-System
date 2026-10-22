@@ -1,5 +1,13 @@
 import { prisma } from '../lib/prisma';
-import { TaskAction } from '@prisma/client';
+
+interface PullRequestPayload {
+  head?: { ref?: string };
+  title?: string;
+  body?: string;
+  html_url?: string;
+  user?: { login?: string };
+  number?: number;
+}
 
 export class WebhookService {
   /**
@@ -34,7 +42,11 @@ export class WebhookService {
   /**
    * Handle incoming validated pull_request event
    */
-  static async handlePullRequestEvent(action: string, pullRequest: any, repository: any) {
+  static async handlePullRequestEvent(
+    action: string,
+    pullRequest: PullRequestPayload,
+    _repository: unknown,
+  ) {
     const branchName = pullRequest?.head?.ref;
     const prTitle = pullRequest?.title;
     const prBody = pullRequest?.body;

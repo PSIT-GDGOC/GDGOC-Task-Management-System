@@ -24,14 +24,18 @@ export async function createApiFixture() {
     'ENABLE_DEV_LOGIN',
     'GOOGLE_CLIENT_ID',
     'GOOGLE_CLIENT_SECRET',
+    'GOOGLE_AUTH_ENABLED',
+    'ALLOW_SELF_REGISTRATION',
   ] as const;
   const previousEnvironment = Object.fromEntries(
     environmentKeys.map((key) => [key, process.env[key]]),
   );
+  let disconnectRedis: (() => Promise<void>) | undefined;
   const cleanup = async () => {
     try {
       await db.$executeRawUnsafe(`DROP SCHEMA IF EXISTS "${schema}" CASCADE`);
     } finally {
+      await disconnectRedis?.();
       await db.$disconnect();
       if (globalThis.prismaGlobal === db) globalThis.prismaGlobal = undefined;
       for (const key of environmentKeys) {
@@ -57,9 +61,12 @@ export async function createApiFixture() {
     process.env.ENABLE_DEV_LOGIN = 'true';
     process.env.GOOGLE_CLIENT_ID = 'fixture.apps.googleusercontent.com';
     process.env.GOOGLE_CLIENT_SECRET = 'fixture-only-not-a-real-secret';
+    process.env.GOOGLE_AUTH_ENABLED = 'true';
+    process.env.ALLOW_SELF_REGISTRATION = 'true';
     globalThis.prismaGlobal = db;
     // Vitest resolves the TS default export; NodeNext types wrap this CommonJS module.
     const app = (await import('../../../src/app.js')).default as unknown as Express;
+    disconnectRedis = (await import('../../../src/lib/redis.js')).closeRedis;
     const teamA = (await db.team.create({ data: { name: 'Tech', slug: 'tech' } })).id;
     const teamB = (await db.team.create({ data: { name: 'Media', slug: 'media' } })).id;
     const roles: Record<string, SystemRole> = {

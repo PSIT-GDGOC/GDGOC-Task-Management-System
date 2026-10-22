@@ -22,6 +22,15 @@ jobs:
   backend:
     runs-on: ubuntu-latest
     services:
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
       postgres:
         image: postgres:16-alpine
         env:
@@ -39,6 +48,7 @@ jobs:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gdgoc_ci?schema=public
       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/gdgoc_ci?schema=public
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gdgoc_ci?schema=public
+      TEST_REDIS_URL: redis://localhost:6379/0
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -50,5 +60,8 @@ jobs:
       - run: npm run prisma:generate
       - run: npm run typecheck --workspace=backend
       - run: npm run build:backend
+      - run: npm run lint --workspace=backend
       - run: npm run test --workspace=backend
       - run: npm run test:database
+      - run: npm run test:redis
+      - run: npm audit --workspace=backend --audit-level=high

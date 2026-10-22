@@ -1,4 +1,5 @@
 import { Prisma, Task, TaskAction, TaskScope, TaskStatus } from '@prisma/client';
+import { queryCache } from '../cache/query-cache';
 import { prisma } from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
 import { TaskRepository, taskSummaryInclude } from '../repositories/task.repository';
@@ -57,7 +58,7 @@ export class TaskService {
     actor: AuthenticatedUser,
     action: (tx: Prisma.TransactionClient, current: AuthenticatedUser) => Promise<T>,
   ) {
-    return prisma.$transaction(
+    const result = prisma.$transaction(
       async (tx) => {
         const current = await tx.user.findUnique({
           where: { id: actor.id },
@@ -69,6 +70,10 @@ export class TaskService {
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
+    return result.then(async (value) => {
+      await queryCache.invalidate();
+      return value;
+    });
   }
 
   static listTasks(filters: TaskFilters, actor: AuthenticatedUser) {
@@ -97,7 +102,10 @@ export class TaskService {
         ],
       }),
     };
-    return TaskRepository.findActiveTasks(where, filters);
+    return queryCache.remember(
+      ['board', actor.id, actor.role, actor.teamMemberships, filters],
+      () => TaskRepository.findActiveTasks(where, filters),
+    );
   }
 
   static async getTaskById(id: string, actor: AuthenticatedUser) {

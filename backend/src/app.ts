@@ -3,11 +3,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import session from 'express-session';
 import pgSession from 'connect-pg-simple';
+import { apiLimit } from './security/rateLimits';
 import { csrfProtection } from './security/csrf';
 import { env, frontendOrigins } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 
 // Route imports
+import notificationRoutes from './routes/notification.routes';
 import invitationRoutes from './routes/invitation.routes';
 import historyRoutes from './routes/history.routes';
 import healthRoutes from './routes/health.routes';
@@ -40,8 +42,8 @@ app.use(
 app.use(
   express.json({
     limit: '64kb',
-    verify: (req: any, _res, buf) => {
-      req.rawBody = buf;
+    verify: (req, _res, buf) => {
+      (req as express.Request).rawBody = buf;
     },
   }),
 );
@@ -82,6 +84,7 @@ app.use(
   }),
 );
 
+app.use('/api/v1', apiLimit);
 app.use(csrfProtection);
 app.use((_req, res, next) => {
   res.set('Cache-Control', 'no-store');
@@ -96,8 +99,9 @@ app.use('/api/v1/tasks', taskRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/teams', teamRoutes);
 app.use('/api/v1/history', historyRoutes);
+app.use('/api/v1/notifications', notificationRoutes);
 app.use('/api/v1/webhooks', webhookRoutes);
-app.use('/api/v1/docs', docsRoutes);
+if (env.NODE_ENV !== 'production') app.use('/api/v1/docs', docsRoutes);
 
 // Central Error Handler
 app.use(errorHandler);

@@ -381,4 +381,26 @@ describe('Users and team permissions through the HTTP API', () => {
     expect(logout.headers['set-cookie'][0]).toContain('gdgoc.sid=;');
     expect((await agent.get('/api/v1/users/me')).status).toBe(401);
   });
+
+  it('limits preregistration to club managers and always creates an ordinary member with an audit event', async () => {
+    const body = { email: ' NewMember@Gmail.com ', name: ' New Member ' };
+    expect((await agents.adminA.post('/api/v1/users').send(body)).status).toBe(403);
+    expect((await agents.memberA.post('/api/v1/users').send(body)).status).toBe(403);
+    expect((await agents.owner.post('/api/v1/users').send({ ...body, role: 'ADMIN' })).status).toBe(
+      400,
+    );
+    const response = await agents.president.post('/api/v1/users').send(body);
+    expect(response.status).toBe(201);
+    expect(response.body.data).toMatchObject({
+      email: 'newmember@gmail.com',
+      name: 'New Member',
+      role: 'USER',
+    });
+    expect(
+      await db.adminEvent.count({
+        where: { resourceId: response.body.data.id, action: 'MEMBER_REGISTERED' },
+      }),
+    ).toBe(1);
+    expect((await agents.owner.post('/api/v1/users').send(body)).status).toBe(409);
+  });
 });

@@ -15,6 +15,23 @@ export interface UserFilters extends Pagination {
 }
 
 export class UserService {
+  static async register(actor: AuthenticatedUser, data: { email: string; name: string }) {
+    if (!isClubManager(actor)) throw new AppError('Club management permission required', 403);
+    return prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: { ...data, role: 'USER' },
+        select: userProfileSelect,
+      });
+      await tx.adminEvent.create({
+        data: {
+          actorId: actor.id,
+          action: 'MEMBER_REGISTERED',
+          resourceId: user.id,
+        },
+      });
+      return user;
+    });
+  }
   static async profile(id: string) {
     const user = await UserRepository.findById(id);
     if (!user) throw new AppError('User not found', 404);

@@ -79,6 +79,7 @@ model User {
   taskActivities      TaskActivity[]    @relation("ActivityActor")
   submissions         TaskSubmission[]  @relation("TaskSubmissionMember")
   reviewedSubmissions TaskSubmission[]  @relation("TaskSubmissionReviewer")
+  notifications       Notification[]
   adminEvents         AdminEvent[]
   createdInvitations  AdminInvitation[] @relation("InvitationCreator")
   usedInvitations     AdminInvitation[] @relation("InvitationRedeemer")
@@ -136,13 +137,14 @@ model Task {
   updatedAt     DateTime     @updatedAt
 
   // Relations
-  team        Team?            @relation(fields: [teamId], references: [id], onDelete: Restrict)
-  creator     User             @relation("TaskCreator", fields: [creatorId], references: [id])
-  assignee    User?            @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
-  completedBy User?            @relation("TaskCompleter", fields: [completedById], references: [id], onDelete: Restrict)
-  approvedBy  User?            @relation("TaskApprover", fields: [approvedById], references: [id], onDelete: Restrict)
-  activities  TaskActivity[]
-  submissions TaskSubmission[]
+  team          Team?            @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  creator       User             @relation("TaskCreator", fields: [creatorId], references: [id])
+  assignee      User?            @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+  completedBy   User?            @relation("TaskCompleter", fields: [completedById], references: [id], onDelete: Restrict)
+  approvedBy    User?            @relation("TaskApprover", fields: [approvedById], references: [id], onDelete: Restrict)
+  activities    TaskActivity[]
+  notifications Notification[]
+  submissions   TaskSubmission[]
 
   @@index([status])
   @@index([teamId])
@@ -254,4 +256,18 @@ model AdminEvent {
 
   @@index([resourceId, createdAt])
   @@index([actorId, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  taskId    String
+  kind      String    @default("TASK_OVERDUE")
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, taskId, kind])
+  @@index([userId, readAt, createdAt])
 }

@@ -17,7 +17,11 @@
     "prisma:deploy": "prisma migrate deploy",
     "prisma:status": "prisma migrate status",
     "prisma:studio": "prisma studio",
-    "test:database": "vitest run --config vitest.database.config.ts"
+    "test:database": "vitest run --config vitest.database.config.ts",
+    "worker": "tsx src/jobs/worker.ts",
+    "start:worker": "node dist/jobs/worker.js",
+    "config:check": "node dist/config/check.js",
+    "test:redis": "vitest run --config vitest.redis.config.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
@@ -48,9 +52,13 @@
     "supertest": "^7.0.0",
     "tsx": "^4.19.3",
     "typescript": "^5.7.3",
-    "vitest": "^3.0.6"
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
+  },
+  "engines": {
+    "node": ">=22.12.0 <23"
   }
 }

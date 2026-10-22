@@ -215,7 +215,7 @@ VITE_API_URL="http://localhost:5000/api/v1"
 ## Database foundation
 
 See [database setup and verification](docs/backend/DATABASE.md) for PostgreSQL,
-Prisma migrations, seeding, Neon connection settings, and database tests.
+Prisma migrations, seeding, Supabase connection settings, and database tests.
 See [users, teams, and permissions](docs/backend/USERS_AND_TEAMS.md) for the next
 backend stage and the API contract for profile/team integration.
 See [Task Board workflow](docs/backend/TASK_WORKFLOW.md) for assignment, lifecycle
@@ -287,7 +287,7 @@ npm run build
 
 ### Backend (Render)
 - Deploy using the provided `render.yaml` blueprint.
-- Configure the external PostgreSQL database (Neon) using `DATABASE_URL` and the non-pooler `DIRECT_URL`.
+- Configure Supabase PostgreSQL using `DATABASE_URL` and `DIRECT_URL`; follow [Supabase setup](docs/backend/SUPABASE.md) for session pooling, SSL and API access restrictions.
 - Set `SESSION_SECRET`, `SYSTEM_OWNER_EMAIL`, and `CLIENT_ORIGIN` in Render dashboard.
 
 ### Frontends (Vercel)
