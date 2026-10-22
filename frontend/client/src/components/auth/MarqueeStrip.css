@@ -1,0 +1,73 @@
+/* =========================================================================
+   GDGoC TaskFlow - Continuous Left-to-Right Marquee Strip
+   ========================================================================= */
+
+.marquee-strip-container {
+  width: 100%;
+  max-width: 24rem; /* matches max-w-sm / collaboration visual */
+  background-color: #202124;
+  border-radius: 9999px;
+  padding: 0.55rem 0.75rem;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  user-select: none;
+}
+
+/* Subtle gradient edge fades to enhance loop smoothness */
+.marquee-strip-container::before,
+.marquee-strip-container::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 1.5rem;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.marquee-strip-container::before {
+  left: 0;
+  background: linear-gradient(to right, #202124, transparent);
+}
+
+.marquee-strip-container::after {
+  right: 0;
+  background: linear-gradient(to left, #202124, transparent);
+}
+
+/* Sliding content track: contains 2 identical tracks side by side */
+.marquee-track-wrapper {
+  display: flex;
+  width: max-content;
+  /* Animate strictly from LEFT TO RIGHT: -50% to 0% */
+  animation: marquee-left-to-right 14s linear infinite;
+  will-change: transform;
+}
+
+.marquee-track-content {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding-right: 0.6rem;
+  white-space: nowrap;
+}
+
+/* Keyframes: Continuous seamless loop strictly from LEFT to RIGHT */
+@keyframes marquee-left-to-right {
+  0% {
+    transform: translateX(-50%);
+  }
+  100% {
+    transform: translateX(0%);
+  }
+}
+
+/* Accessibility: Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .marquee-track-wrapper {
+    animation: none;
+    transform: translateX(0);
+  }
+}
