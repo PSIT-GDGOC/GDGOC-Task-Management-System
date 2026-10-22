@@ -1,29 +1,18 @@
 import crypto from 'node:crypto';
 import { GoogleAuthService } from '../services/google-auth.service';
-import { authenticationLimit, invitationLimit } from '../security/rateLimits';
+import { authenticationLimit } from '../security/rateLimits';
 import { asyncHandler } from '../utils/asyncHandler';
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { SystemRole } from '@prisma/client';
 import { AuthService } from '../services/auth.service';
-import { requireAuth, requireRole } from '../middleware/auth';
+import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { AppError } from '../middleware/errorHandler';
 import { env } from '../config/env';
 import { prisma } from '../lib/prisma';
 
 const router = Router();
-
-const createInvitationSchema = z.object({
-  role: z.nativeEnum(SystemRole).optional(),
-  position: z.string().optional(),
-  teamId: z.string().optional(),
-  expiresInHours: z.number().min(1).max(168).optional(), // 1h to 7 days
-});
-
-const redeemInvitationSchema = z.object({
-  code: z.string().min(10, 'Invalid invitation code format'),
-});
 
 const devLoginSchema = z.object({
   email: z.string().email(),
@@ -119,65 +108,6 @@ router.get(
     );
     res.set('Cache-Control', 'no-store').json({ success: true, csrfToken: req.session.csrfToken });
   }),
-);
-
-/**
- * POST /api/v1/auth/invitations
- * Create single-use expiring admin invitation
- * Restricted strictly to System Owner and President
- */
-router.post(
-  '/invitations',
-  requireAuth,
-  requireRole([SystemRole.SYSTEM_OWNER, SystemRole.PRESIDENT]),
-  validate({ body: createInvitationSchema }),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const result = await AuthService.createAdminInvitation(req.user!.id, req.body);
-      res.status(201).json({
-        success: true,
-        message:
-          'Admin invitation created. Share this code securely; it cannot be retrieved again.',
-        data: result,
-      });
-    } catch (err) {
-      next(err);
-    }
-  },
-);
-
-/**
- * POST /api/v1/auth/invitations/redeem
- * Redeem an admin invitation code
- */
-router.post(
-  '/invitations/redeem',
-  invitationLimit,
-  requireAuth,
-  validate({ body: redeemInvitationSchema }),
-  async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const updatedUser = await AuthService.redeemAdminInvitation(req.user!.id, req.body.code);
-
-      // Update session with new role
-      req.session.user = {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        name: updatedUser.name,
-        role: updatedUser.role,
-        position: updatedUser.position,
-        githubUsername: updatedUser.githubUsername,
-      };
-
-      res.json({
-        success: true,
-        message: `Successfully promoted to ${updatedUser.role}`,
-        user: req.session.user,
-      });
-    } catch (err) {
-      next(err);
-    }
-  },
 );
 
 /**

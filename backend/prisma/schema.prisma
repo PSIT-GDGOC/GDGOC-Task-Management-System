@@ -79,6 +79,7 @@ model User {
   taskActivities      TaskActivity[]    @relation("ActivityActor")
   submissions         TaskSubmission[]  @relation("TaskSubmissionMember")
   reviewedSubmissions TaskSubmission[]  @relation("TaskSubmissionReviewer")
+  adminEvents         AdminEvent[]
   createdInvitations  AdminInvitation[] @relation("InvitationCreator")
   usedInvitations     AdminInvitation[] @relation("InvitationRedeemer")
 
@@ -201,6 +202,7 @@ model AdminInvitation {
   id               String     @id @default(cuid())
   hashedCode       String     @unique
   intendedRole     SystemRole @default(ADMIN)
+  intendedEmail    String?
   intendedPosition String?
   intendedTeamId   String?
   createdById      String
@@ -239,4 +241,17 @@ model OAuthAttempt {
   createdAt   DateTime  @default(now())
 
   @@index([expiresAt])
+}
+
+model AdminEvent {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  resourceId String
+  details    Json?
+  createdAt  DateTime @default(now())
+  actor      User     @relation(fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([resourceId, createdAt])
+  @@index([actorId, createdAt])
 }
