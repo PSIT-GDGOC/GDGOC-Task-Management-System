@@ -35,50 +35,55 @@ export class AuthService {
     email: string;
     name: string;
     avatarUrl?: string;
+    subject: string;
+    authoritativeEmail: boolean;
   }) {
-    const normalizedEmail = googleUser.email.toLowerCase().trim();
-    const defaultRole = this.resolveInitialRole(normalizedEmail);
-
-    let user = await prisma.user.findUnique({
-      where: { email: normalizedEmail },
-    });
-
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: normalizedEmail,
+    const email = googleUser.email.toLowerCase().trim();
+    return prisma.$transaction(
+      async (tx) => {
+        let user = await tx.user.findUnique({ where: { googleSubject: googleUser.subject } });
+        if (!user) {
+          user = await tx.user.findUnique({ where: { email } });
+          if (user?.googleSubject && user.googleSubject !== googleUser.subject)
+            throw new AppError('This email is linked to a different Google identity', 409);
+          if (user && !googleUser.authoritativeEmail)
+            throw new AppError(
+              'An administrator must verify this existing account before linking it',
+              409,
+            );
+        }
+        if (user && !user.isActive) throw new AppError('Your account has been deactivated', 403);
+        const role = this.resolveInitialRole(email);
+        const identity = {
+          email,
           name: googleUser.name,
           avatarUrl: googleUser.avatarUrl,
-          role: defaultRole,
-        },
-      });
-    } else {
-      // If user exists and email matches SYSTEM_OWNER_EMAIL, guarantee SYSTEM_OWNER role
-      if (defaultRole === SystemRole.SYSTEM_OWNER && user.role !== SystemRole.SYSTEM_OWNER) {
-        user = await prisma.user.update({
-          where: { id: user.id },
-          data: { role: SystemRole.SYSTEM_OWNER },
-        });
-      }
-    }
-
-    if (!user.isActive) {
-      throw new AppError('Your account has been deactivated. Please contact an administrator.', 403);
-    }
-
-    return user;
+          googleSubject: googleUser.subject,
+        };
+        return user
+          ? tx.user.update({
+              where: { id: user.id },
+              data: { ...identity, ...(role === 'SYSTEM_OWNER' && { role }) },
+            })
+          : tx.user.create({ data: { ...identity, role } });
+      },
+      { isolationLevel: 'Serializable' },
+    );
   }
 
   /**
    * Create an Admin Invitation code (System Owner & President only)
    * Generates a secure random token, hashes it, stores hash + expiration
    */
-  static async createAdminInvitation(issuerId: string, options: {
-    role?: SystemRole;
-    position?: string;
-    teamId?: string;
-    expiresInHours?: number;
-  }) {
+  static async createAdminInvitation(
+    issuerId: string,
+    options: {
+      role?: SystemRole;
+      position?: string;
+      teamId?: string;
+      expiresInHours?: number;
+    },
+  ) {
     // Generate 32-byte secure random string
     const rawCode = `inv_${crypto.randomBytes(24).toString('base64url')}`;
     const hashedCode = this.hashInvitationCode(rawCode);

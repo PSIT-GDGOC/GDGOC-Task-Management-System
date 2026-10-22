@@ -16,7 +16,15 @@ export async function createApiFixture() {
   url.searchParams.set('schema', schema);
   const testUrl = url.toString();
   const db = new PrismaClient({ datasources: { db: { url: testUrl } } });
-  const environmentKeys = ['DATABASE_URL', 'DIRECT_URL', 'NODE_ENV', 'SYSTEM_OWNER_EMAIL'] as const;
+  const environmentKeys = [
+    'DATABASE_URL',
+    'DIRECT_URL',
+    'NODE_ENV',
+    'SYSTEM_OWNER_EMAIL',
+    'ENABLE_DEV_LOGIN',
+    'GOOGLE_CLIENT_ID',
+    'GOOGLE_CLIENT_SECRET',
+  ] as const;
   const previousEnvironment = Object.fromEntries(
     environmentKeys.map((key) => [key, process.env[key]]),
   );
@@ -46,6 +54,9 @@ export async function createApiFixture() {
     process.env.DIRECT_URL = testUrl;
     process.env.NODE_ENV = 'test';
     process.env.SYSTEM_OWNER_EMAIL = 'gdgoc.psit@gmail.com';
+    process.env.ENABLE_DEV_LOGIN = 'true';
+    process.env.GOOGLE_CLIENT_ID = 'fixture.apps.googleusercontent.com';
+    process.env.GOOGLE_CLIENT_SECRET = 'fixture-only-not-a-real-secret';
     globalThis.prismaGlobal = db;
     // Vitest resolves the TS default export; NodeNext types wrap this CommonJS module.
     const app = (await import('../../../src/app.js')).default as unknown as Express;
@@ -69,6 +80,8 @@ export async function createApiFixture() {
       agents[name] = request.agent(app);
       const login = await agents[name].post('/api/v1/auth/dev-login').send({ email });
       if (login.status !== 200) throw new Error('API test fixture login failed');
+      const csrf = await agents[name].get('/api/v1/auth/csrf');
+      agents[name].set('X-CSRF-Token', csrf.body.csrfToken);
     }
     for (const name of ['adminA', 'memberA', 'headA', 'adminB', 'memberB']) {
       await db.teamMembership.create({
@@ -86,3 +99,11 @@ export async function createApiFixture() {
   }
 }
 export type ApiFixture = Awaited<ReturnType<typeof createApiFixture>>;
+
+export async function loginWithCsrf(agent: ReturnType<typeof request.agent>, email: string) {
+  const login = await agent.post('/api/v1/auth/dev-login').send({ email });
+  if (login.status !== 200) throw new Error('Fixture login failed');
+  const csrf = await agent.get('/api/v1/auth/csrf');
+  agent.set('X-CSRF-Token', csrf.body.csrfToken);
+  return login;
+}

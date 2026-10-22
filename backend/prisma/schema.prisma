@@ -65,6 +65,7 @@ model User {
   role           SystemRole @default(USER)
   position       String? // e.g. "President", "Tech Lead", "Core Member"
   githubUsername String?    @unique
+  googleSubject  String?    @unique
   isActive       Boolean    @default(true) // Soft-disable / deactivation
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
@@ -227,4 +228,15 @@ model Session {
 
   @@index([expire], map: "IDX_session_expire")
   @@map("session")
+}
+
+// OAuth state is consumed atomically across server instances; no OAuth tokens are stored.
+model OAuthAttempt {
+  stateHash   String    @id
+  sessionHash String
+  expiresAt   DateTime
+  consumedAt  DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([expiresAt])
 }

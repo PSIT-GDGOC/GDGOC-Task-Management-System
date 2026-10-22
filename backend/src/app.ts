@@ -3,7 +3,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import session from 'express-session';
 import pgSession from 'connect-pg-simple';
-import { env } from './config/env';
+import { csrfProtection } from './security/csrf';
+import { env, frontendOrigins } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 
 // Route imports
@@ -21,14 +22,14 @@ if (env.NODE_ENV === 'production') app.set('trust proxy', 1);
 // Security Headers
 app.use(
   helmet({
-    contentSecurityPolicy: false, // Allows Swagger UI to execute inline styles/scripts safely
+    contentSecurityPolicy: env.NODE_ENV === 'production' ? undefined : false,
   }),
 );
 
 // CORS
 app.use(
   cors({
-    origin: env.CLIENT_ORIGIN,
+    origin: frontendOrigins,
     credentials: true,
   }),
 );
@@ -36,12 +37,13 @@ app.use(
 // Body parsing with rawBody preservation for Webhook HMAC verification
 app.use(
   express.json({
+    limit: '64kb',
     verify: (req: any, _res, buf) => {
       req.rawBody = buf;
     },
   }),
 );
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: false, limit: '64kb' }));
 
 // PostgreSQL Session Store setup
 const PgStore = pgSession(session);
@@ -72,11 +74,17 @@ app.use(
     cookie: {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
-      sameSite: env.NODE_ENV === 'production' ? 'none' : 'lax',
+      sameSite: env.COOKIE_SAME_SITE,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
   }),
 );
+
+app.use(csrfProtection);
+app.use((_req, res, next) => {
+  res.set('Cache-Control', 'no-store');
+  next();
+});
 
 // API Routes
 app.use('/health', healthRoutes);

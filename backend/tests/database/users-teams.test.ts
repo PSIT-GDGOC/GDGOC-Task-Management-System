@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import { ApiFixture, createApiFixture } from './helpers/api-fixture';
+import { ApiFixture, createApiFixture, loginWithCsrf } from './helpers/api-fixture';
 
 let fixture: ApiFixture;
 let db: ApiFixture['db'];
@@ -321,7 +321,7 @@ describe('Users and team permissions through the HTTP API', () => {
       const member = await newUser('Concurrent member');
       await agents.owner.put(`/api/v1/teams/${teamA}/members/${member.id}`).send({});
       const agent = request.agent(app);
-      await agent.post('/api/v1/auth/dev-login').send({ email: member.email });
+      await loginWithCsrf(agent, member.email);
       const free = await task(teamA);
       const [claim, removal] = await Promise.all([
         agent.post(`/api/v1/tasks/${free.id}/claim`).send({}),
@@ -366,7 +366,7 @@ describe('Users and team permissions through the HTTP API', () => {
 
   it('rotates the session identifier on development login', async () => {
     const agent = request.agent(app);
-    const first = await agent.post('/api/v1/auth/dev-login').send({ email: 'membera@example.com' });
+    const first = await loginWithCsrf(agent, 'membera@example.com');
     const second = await agent
       .post('/api/v1/auth/dev-login')
       .send({ email: 'membera@example.com' });
@@ -375,7 +375,7 @@ describe('Users and team permissions through the HTTP API', () => {
 
   it('destroys logout sessions and clears the configured cookie', async () => {
     const agent = request.agent(app);
-    await agent.post('/api/v1/auth/dev-login').send({ email: 'membera@example.com' });
+    await loginWithCsrf(agent, 'membera@example.com');
     const logout = await agent.post('/api/v1/auth/logout').send({});
     expect(logout.status).toBe(200);
     expect(logout.headers['set-cookie'][0]).toContain('gdgoc.sid=;');
