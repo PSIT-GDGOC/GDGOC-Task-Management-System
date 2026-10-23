@@ -1,54 +1,48 @@
-export type TaskStatus = 'FREE' | 'ASSIGNED' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
+export type Priority = 'High' | 'Medium' | 'Low';
 
-export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+export type TaskStatus = 'Assigned' | 'To Do' | 'In Progress' | 'Pending Review' | 'Completed';
 
-export type TaskScope = 'TEAM' | 'WHOLE_CLUB';
+export type TeamId = 'core' | 'tech' | 'media' | 'content';
 
-export type SystemRole = 'USER' | 'ADMIN' | 'PRESIDENT' | 'SYSTEM_OWNER';
+export interface AttachedFile {
+  id: string;
+  name: string;
+  size: number;
+  type: string;
+  formattedSize: string;
+}
 
-export interface UserSummary {
+export interface TeamMember {
   id: string;
   name: string;
   email: string;
-  avatarUrl?: string | null;
-  role: SystemRole;
-  position?: string | null;
-  githubUsername?: string | null;
+  initials: string;
+  role: string;
 }
 
-export interface TeamSummary {
-  id: string;
+export interface Team {
+  id: TeamId;
   name: string;
   slug: string;
-}
-
-export interface TaskSubmissionSummary {
-  id: string;
-  note?: string | null;
-  prUrl?: string | null;
-  submittedAt: string;
-  outcome?: 'APPROVED' | 'SENT_BACK' | null;
-  reviewComment?: string | null;
+  description: string;
+  accent: 'blue' | 'red' | 'yellow' | 'green';
+  leadName: string;
+  members: TeamMember[];
 }
 
 export interface Task {
   id: string;
   title: string;
   description: string;
+  teamId: TeamId;
+  teamName: string;
+  assigneeId: string;
+  assigneeName: string;
+  assigneeEmail: string;
+  assigneeInitials: string;
+  priority?: Priority;
   status: TaskStatus;
-  priority: TaskPriority;
-  scope: TaskScope;
-  teamId?: string | null;
-  team?: TeamSummary | null;
-  creatorId: string;
-  creator?: UserSummary;
-  assigneeId?: string | null;
-  assignee?: UserSummary | null;
-  deadline?: string | null;
-  tags: string[];
-  isOnTime?: boolean | null;
-  completedAt?: string | null;
-  createdAt: string;
-  updatedAt: string;
-  submissions?: TaskSubmissionSummary[];
+  deadline: string;
+  createdAt?: string;
+  attachments?: AttachedFile[];
 }
