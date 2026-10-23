@@ -18,15 +18,15 @@ export const Logo: React.FC<LogoProps> = ({
   };
 
   const titleSizeClasses = {
-    sm: 'text-base font-semibold',
-    md: 'text-lg font-bold',
-    lg: 'text-2xl font-bold',
+    sm: 'text-base font-bold',
+    md: 'text-lg font-extrabold',
+    lg: 'text-2xl font-extrabold',
   };
 
   return (
-    <div className={`flex items-center gap-3 select-none ${className}`}>
+    <div className={`flex items-center gap-2.5 select-none ${className}`}>
       {/* Google 4-Color Geometric Brackets / Emblem */}
-      <div className={`relative ${iconSizeClasses[size]} flex items-center justify-center rounded-lg bg-white shadow-sm border border-gdgoc-gray-200 p-1 flex-shrink-0`}>
+      <div className={`relative ${iconSizeClasses[size]} flex items-center justify-center rounded-lg bg-white shadow-2xs border border-gdgoc-gray-200 p-1 flex-shrink-0`}>
         <svg viewBox="0 0 48 48" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
           {/* Left bracket: Red */}
           <path d="M14 24L22 16L18.5 12.5L7 24L18.5 35.5L22 32L14 24Z" fill="#EA4335" />
@@ -40,9 +40,26 @@ export const Logo: React.FC<LogoProps> = ({
       </div>
 
       <div className="flex flex-col leading-tight">
-        <div className="flex items-center gap-1.5">
-          <span className="text-gdgoc-gray-900 font-semibold tracking-tight">GDGoC</span>
-          <span className={`${titleSizeClasses[size]} text-gdgoc-blue tracking-tight`}>TaskHub</span>
+        <div className={`flex items-center gap-1.5 tracking-tight font-extrabold ${titleSizeClasses[size]}`}>
+          {/* GDGoC with Google Brand Colors */}
+          <span className="inline-flex">
+            <span style={{ color: '#4285F4' }}>G</span>
+            <span style={{ color: '#EA4335' }}>D</span>
+            <span style={{ color: '#FBBC04' }}>G</span>
+            <span style={{ color: '#4285F4' }}>o</span>
+            <span style={{ color: '#34A853' }}>C</span>
+          </span>
+
+          {/* TaskHub with Google Brand Colors */}
+          <span className="inline-flex">
+            <span style={{ color: '#4285F4' }}>T</span>
+            <span style={{ color: '#EA4335' }}>a</span>
+            <span style={{ color: '#FBBC04' }}>s</span>
+            <span style={{ color: '#34A853' }}>k</span>
+            <span style={{ color: '#4285F4' }}>H</span>
+            <span style={{ color: '#EA4335' }}>u</span>
+            <span style={{ color: '#34A853' }}>b</span>
+          </span>
         </div>
         {showSubtitle && (
           <span className="text-[11px] text-gdgoc-gray-600 font-medium tracking-wide uppercase">

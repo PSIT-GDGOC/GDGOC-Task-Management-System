@@ -98,3 +98,113 @@
     transform: rotate(0deg);
   }
 }
+
+
+/* =========================================================================
+   Hero Reveal & Entrance Animations
+   ========================================================================= */
+@keyframes hero-reveal {
+  0% {
+    opacity: 0;
+    transform: translateY(20px) scale(0.985);
+    filter: blur(4px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes float-subtle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes cursor-pulse {
+  0% {
+    transform: scale(1) translateY(0);
+    filter: drop-shadow(0 2px 8px rgba(66, 133, 244, 0.4));
+  }
+  50% {
+    transform: scale(1.1) translateY(-4px);
+    filter: drop-shadow(0 6px 16px rgba(66, 133, 244, 0.7));
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    filter: drop-shadow(0 2px 8px rgba(66, 133, 244, 0.4));
+  }
+}
+
+@keyframes spotlight-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 4px rgba(66, 133, 244, 0.45), 0 0 24px rgba(66, 133, 244, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(66, 133, 244, 0.7), 0 0 36px rgba(66, 133, 244, 0.45);
+  }
+}
+
+@keyframes click-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(0.92);
+  }
+  75% {
+    transform: scale(1.06);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.animate-hero-reveal {
+  animation: hero-reveal 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.reveal-delay-1 {
+  animation-delay: 0.08s;
+  opacity: 0;
+}
+
+.reveal-delay-2 {
+  animation-delay: 0.18s;
+  opacity: 0;
+}
+
+.reveal-delay-3 {
+  animation-delay: 0.28s;
+  opacity: 0;
+}
+
+.reveal-delay-4 {
+  animation-delay: 0.38s;
+  opacity: 0;
+}
+
+.reveal-delay-5 {
+  animation-delay: 0.48s;
+  opacity: 0;
+}
+
+.animate-float-subtle {
+  animation: float-subtle 4s ease-in-out infinite;
+}
+
+.animate-cursor-pulse {
+  animation: cursor-pulse 1.8s ease-in-out infinite;
+}
+
+.animate-spotlight {
+  animation: spotlight-glow 2s ease-in-out infinite;
+}
+
+.animate-click-pop {
+  animation: click-pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}

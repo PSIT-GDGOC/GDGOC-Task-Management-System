@@ -4,23 +4,51 @@ import { useTasks } from '../../context/TaskContext';
 import { Task } from '../../types/task';
 import { TaskStatusBadge } from '../../components/common/TaskStatusBadge';
 import { TaskDetailsModal } from '../../components/common/TaskDetailsModal';
+import { CursorTour, TourStep } from '../../components/tour/CursorTour';
+import { 
+  CelebrationNotification, 
+  CelebrationState 
+} from '../../components/common/CelebrationNotification';
+import { triggerCelebrationBurst } from '../../utils/confetti';
 import { 
   CheckSquare, 
   Clock, 
   AlertCircle, 
   CheckCircle2, 
   FolderKanban,
-  Search,
-  Filter,
-  Calendar,
-  Eye,
+  Search, 
+  Calendar, 
+  Eye, 
   Paperclip,
-  FolderOpen
+  FolderOpen,
+  Sparkles,
+  SendHorizontal
 } from 'lucide-react';
+
+const MEMBER_TOUR_STEPS: TourStep[] = [
+  {
+    selector: '[data-tour="workspace-header"]',
+    title: 'Personal Workspace',
+    description: 'Welcome to your GDGOC Member Portal! All assignments, project deadlines, and status updates are centralized here.',
+    badge: 'Overview',
+  },
+  {
+    selector: '[data-tour="stats-overview"]',
+    title: 'Sprint Metrics',
+    description: 'Track your live deliverable velocity: assigned milestones, work currently in progress, items pending review, and completed achievements.',
+    badge: 'Metrics',
+  },
+  {
+    selector: '[data-tour="task-table"]',
+    title: 'My Deliverables & Actions',
+    description: 'Inspect your tasks, claim new assignments with one click, and submit your pull requests for team lead review.',
+    badge: 'Tasks & Sprints',
+  },
+];
 
 export const MemberMyWork: React.FC = () => {
   const { user } = useAuth();
-  const { tasks } = useTasks();
+  const { tasks, claimTask, submitTask } = useTasks();
 
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -29,9 +57,11 @@ export const MemberMyWork: React.FC = () => {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
+  // Click celebration state
+  const [celebration, setCelebration] = useState<CelebrationState | null>(null);
+
   // Strict role isolation: Filter tasks assigned to current member only
   const memberTasks = useMemo(() => {
-    // Match by user id or email (fallback to default dev member usr_member_01)
     const targetUserId = user?.id || 'usr_member_01';
     const targetEmail = user?.email?.toLowerCase();
 
@@ -41,7 +71,6 @@ export const MemberMyWork: React.FC = () => {
         (targetEmail && t.assigneeEmail.toLowerCase() === targetEmail)
     );
 
-    // Personalize task assignee info for current preview session
     return filtered.map((t) => ({
       ...t,
       assigneeName: user?.name || t.assigneeName,
@@ -74,12 +103,54 @@ export const MemberMyWork: React.FC = () => {
     });
   }, [memberTasks, statusFilter, searchQuery]);
 
+  // Handle Claim Task with Click Success & Confetti Burst
+  const handleClaimTask = (task: Task, e?: React.MouseEvent) => {
+    const updated = claimTask(task.id, user?.id, user?.name);
+    if (updated) {
+      if (e) {
+        triggerCelebrationBurst({ x: e.clientX, y: e.clientY, count: 85 });
+      } else {
+        triggerCelebrationBurst({ count: 85 });
+      }
+
+      setCelebration({
+        isOpen: true,
+        type: 'claim',
+        taskTitle: task.title,
+        subtitle: 'Task claimed and moved to "In Progress". Have fun building!',
+      });
+
+      if (selectedTask?.id === task.id) {
+        setSelectedTask(updated);
+      }
+    }
+  };
+
+  // Handle Submit for Review
+  const handleSubmitTask = (task: Task, e?: React.MouseEvent) => {
+    const updated = submitTask(task.id);
+    if (updated) {
+      if (e) {
+        triggerCelebrationBurst({ x: e.clientX, y: e.clientY, count: 50 });
+      } else {
+        triggerCelebrationBurst({ count: 50 });
+      }
+
+      if (selectedTask?.id === task.id) {
+        setSelectedTask(updated);
+      }
+    }
+  };
+
   return (
-    <div className="space-y-6 text-left">
+    <div className="space-y-6 text-left relative">
       {/* ---------------------------------------------------------------------
-          HEADER SECTION
+          HEADER SECTION (Hero Reveal Animation)
           --------------------------------------------------------------------- */}
-      <div className="space-y-1">
+      <div 
+        data-tour="workspace-header"
+        className="space-y-1 animate-hero-reveal reveal-delay-1"
+      >
         <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-green-50 border border-green-200 text-[10px] font-bold uppercase tracking-wider text-gdgoc-green">
           Personal Workspace
         </div>
@@ -92,11 +163,14 @@ export const MemberMyWork: React.FC = () => {
       </div>
 
       {/* ---------------------------------------------------------------------
-          MEMBER STATISTICS METRICS
+          MEMBER STATISTICS METRICS (Hero Reveal Staggered)
           --------------------------------------------------------------------- */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div 
+        data-tour="stats-overview"
+        className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 animate-hero-reveal reveal-delay-2"
+      >
         {/* Assigned Tasks */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs hover:shadow-xs transition-shadow">
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-gdgoc-gray-500">
               Assigned Tasks
@@ -110,7 +184,7 @@ export const MemberMyWork: React.FC = () => {
         </div>
 
         {/* In Progress */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs hover:shadow-xs transition-shadow">
           <div className="flex items-center justify-between text-amber-700 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">
               In Progress
@@ -124,7 +198,7 @@ export const MemberMyWork: React.FC = () => {
         </div>
 
         {/* Pending Review */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs hover:shadow-xs transition-shadow">
           <div className="flex items-center justify-between text-blue-700 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-blue-800">
               Pending Review
@@ -138,12 +212,12 @@ export const MemberMyWork: React.FC = () => {
         </div>
 
         {/* Completed */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs hover:shadow-xs transition-shadow">
           <div className="flex items-center justify-between text-emerald-700 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
               Completed
             </span>
-            <CheckCircle2 className="w-4 h-4 text-gdgoc-green" />
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
           </div>
           <div className="text-2xl sm:text-3xl font-extrabold text-emerald-900">
             {memberStats.completed}
@@ -153,80 +227,83 @@ export const MemberMyWork: React.FC = () => {
       </div>
 
       {/* ---------------------------------------------------------------------
-          FILTER & SEARCH BAR
+          FILTER & SEARCH TOOLBAR (Hero Reveal Staggered)
           --------------------------------------------------------------------- */}
-      <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
-        {/* Search */}
-        <div className="relative w-full sm:w-72">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gdgoc-gray-400">
-            <Search className="w-4 h-4" />
+      <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs space-y-3 animate-hero-reveal reveal-delay-3">
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          {/* Search bar */}
+          <div className="relative w-full sm:w-80">
+            <Search className="w-4 h-4 text-gdgoc-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search my tasks..."
+              className="w-full pl-9 pr-4 py-2 rounded-lg border border-gdgoc-gray-200 text-xs sm:text-sm focus:border-gdgoc-blue focus:ring-1 focus:ring-gdgoc-blue outline-none transition-all placeholder:text-gdgoc-gray-400"
+            />
           </div>
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search my tasks..."
-            className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-gdgoc-gray-50 border border-gdgoc-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gdgoc-blue focus:bg-white transition-all placeholder:text-gdgoc-gray-400"
-          />
-        </div>
 
-        {/* Status Filter */}
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Filter className="w-3.5 h-3.5 text-gdgoc-gray-400" />
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 text-xs bg-gdgoc-gray-50 border border-gdgoc-gray-200 rounded-lg text-gdgoc-gray-700 focus:outline-none focus:ring-2 focus:ring-gdgoc-blue w-full sm:w-auto"
-          >
-            <option value="ALL">All Statuses</option>
-            <option value="Assigned">Assigned</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Pending Review">Pending Review</option>
-            <option value="Completed">Completed</option>
-          </select>
+          {/* Quick Status Filter Tabs */}
+          <div className="flex items-center gap-1 bg-gdgoc-gray-100 p-1 rounded-lg w-full sm:w-auto overflow-x-auto">
+            {['ALL', 'Assigned', 'In Progress', 'Pending Review', 'Completed'].map((status) => (
+              <button
+                key={status}
+                type="button"
+                onClick={() => setStatusFilter(status)}
+                className={`px-3 py-1 rounded-md text-xs font-semibold transition-all whitespace-nowrap cursor-pointer ${
+                  statusFilter === status
+                    ? 'bg-white text-gdgoc-gray-900 shadow-2xs'
+                    : 'text-gdgoc-gray-600 hover:text-gdgoc-gray-900'
+                }`}
+              >
+                {status === 'ALL' ? 'All Deliverables' : status}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* ---------------------------------------------------------------------
-          TASK LIST TABLE (CLICKABLE ROWS)
+          DELIVERABLES TABLE (Hero Reveal Staggered)
           --------------------------------------------------------------------- */}
-      <div className="bg-white rounded-xl border border-gdgoc-gray-200 shadow-2xs overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-gdgoc-gray-100 flex items-center justify-between">
+      <div 
+        data-tour="task-table"
+        className="bg-white rounded-xl border border-gdgoc-gray-200 shadow-2xs overflow-hidden animate-hero-reveal reveal-delay-4"
+      >
+        <div className="px-5 py-3.5 border-b border-gdgoc-gray-100 flex items-center justify-between bg-gdgoc-gray-50/50">
           <div className="flex items-center gap-2">
-            <CheckSquare className="w-4 h-4 text-gdgoc-green" />
-            <h2 className="text-base font-bold text-gdgoc-gray-900">
-              My Assigned Tasks ({displayedTasks.length})
+            <CheckSquare className="w-4 h-4 text-gdgoc-blue" />
+            <h2 className="text-xs sm:text-sm font-bold text-gdgoc-gray-800">
+              Sprint Tasks ({displayedTasks.length})
             </h2>
           </div>
-          <span className="text-xs text-gdgoc-gray-400">
-            Assigned to {user?.name || 'Rohan Gupta'}
+          <span className="text-[11px] text-gdgoc-gray-500 hidden sm:inline">
+            Click any task row or button to view details & actions
           </span>
         </div>
 
         {displayedTasks.length === 0 ? (
-          <div className="p-12 text-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-gdgoc-gray-100 text-gdgoc-gray-400 flex items-center justify-center mx-auto">
-              <FolderOpen className="w-6 h-6" />
-            </div>
-            <p className="text-sm font-semibold text-gdgoc-gray-800">No assigned tasks</p>
+          <div className="py-14 px-4 text-center space-y-2">
+            <FolderOpen className="w-10 h-10 text-gdgoc-gray-300 mx-auto" />
+            <h3 className="text-sm font-bold text-gdgoc-gray-700">No deliverables found</h3>
             <p className="text-xs text-gdgoc-gray-500 max-w-sm mx-auto">
-              No tasks match your current filters. Any new tasks assigned to you by team leaders will appear here automatically.
+              No tasks match your current filter selection. Check back when your team leader assigns sprint work.
             </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-gdgoc-gray-50/80 border-b border-gdgoc-gray-200 text-[11px] font-bold uppercase tracking-wider text-gdgoc-gray-600 select-none">
-                  <th className="py-3 px-4">Task</th>
+                <tr className="border-b border-gdgoc-gray-200 bg-gdgoc-gray-50/80 text-[11px] font-bold text-gdgoc-gray-500 uppercase tracking-wider select-none">
+                  <th className="py-3 px-4">Task Title</th>
                   <th className="py-3 px-4">Description</th>
                   <th className="py-3 px-4">Team</th>
                   <th className="py-3 px-4">Status</th>
                   <th className="py-3 px-4">Deadline</th>
-                  <th className="py-3 px-4 text-center">Actions</th>
+                  <th className="py-3 px-4 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-gdgoc-gray-100">
                 {displayedTasks.map((task) => {
                   const isDeadlineNotSpecified =
                     !task.deadline ||
@@ -292,20 +369,52 @@ export const MemberMyWork: React.FC = () => {
                         </div>
                       </td>
 
-                      {/* Actions */}
+                      {/* Actions with Click Celebration */}
                       <td className="py-3.5 px-4 whitespace-nowrap text-center">
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setSelectedTask(task);
-                            setIsModalOpen(true);
-                          }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-gdgoc-gray-200 bg-white group-hover:border-gdgoc-blue group-hover:text-gdgoc-blue text-[11px] font-semibold text-gdgoc-gray-700 transition-colors shadow-2xs"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>Details</span>
-                        </button>
+                        <div className="inline-flex items-center gap-1.5">
+                          {task.status === 'Assigned' && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleClaimTask(task, e);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-gdgoc-blue hover:bg-blue-600 active:scale-95 text-[11px] font-bold text-white shadow-2xs transition-all cursor-pointer animate-click-pop"
+                              title="Claim and Start Task"
+                            >
+                              <Sparkles className="w-3 h-3" />
+                              <span>Claim</span>
+                            </button>
+                          )}
+
+                          {task.status === 'In Progress' && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSubmitTask(task, e);
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-500 hover:bg-amber-600 active:scale-95 text-[11px] font-bold text-white shadow-2xs transition-all cursor-pointer"
+                              title="Submit for Lead Review"
+                            >
+                              <SendHorizontal className="w-3 h-3" />
+                              <span>Submit</span>
+                            </button>
+                          )}
+
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedTask(task);
+                              setIsModalOpen(true);
+                            }}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-gdgoc-gray-200 bg-white group-hover:border-gdgoc-blue group-hover:text-gdgoc-blue text-[11px] font-semibold text-gdgoc-gray-700 transition-colors shadow-2xs cursor-pointer"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            <span>Details</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -316,7 +425,22 @@ export const MemberMyWork: React.FC = () => {
         )}
       </div>
 
-      {/* Task Details Modal */}
+      {/* ---------------------------------------------------------------------
+          BEGINNER CURSOR TOUR
+          --------------------------------------------------------------------- */}
+      <CursorTour steps={MEMBER_TOUR_STEPS} tourKey="gdgoc_member_tour_completed" />
+
+      {/* ---------------------------------------------------------------------
+          CLICK CELEBRATION NOTIFICATION
+          --------------------------------------------------------------------- */}
+      <CelebrationNotification
+        state={celebration}
+        onClose={() => setCelebration(null)}
+      />
+
+      {/* ---------------------------------------------------------------------
+          TASK DETAILS MODAL
+          --------------------------------------------------------------------- */}
       <TaskDetailsModal
         task={selectedTask}
         isOpen={isModalOpen}
@@ -324,6 +448,9 @@ export const MemberMyWork: React.FC = () => {
           setIsModalOpen(false);
           setSelectedTask(null);
         }}
+        onClaim={(task) => handleClaimTask(task)}
+        onSubmitForReview={(task) => handleSubmitTask(task)}
+        userRole="MEMBER"
       />
     </div>
   );

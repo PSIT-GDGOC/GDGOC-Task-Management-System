@@ -11,19 +11,29 @@ import {
   Paperclip,
   FileCode,
   Image as ImageIcon,
-  FileArchive
+  FileArchive,
+  Award,
+  SendHorizontal,
+  Sparkles
 } from 'lucide-react';
 
 interface TaskDetailsModalProps {
   task: Task | null;
   isOpen?: boolean;
   onClose: () => void;
+  onClaim?: (task: Task) => void;
+  onApprove?: (task: Task) => void;
+  onSubmitForReview?: (task: Task) => void;
+  userRole?: 'ADMIN' | 'TEAM_LEADER' | 'MEMBER';
 }
 
 export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
   task,
   isOpen = true,
   onClose,
+  onClaim,
+  onApprove,
+  onSubmitForReview,
 }) => {
   // Handle ESC key to close modal
   useEffect(() => {
@@ -97,7 +107,7 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gdgoc-gray-400 hover:text-gdgoc-gray-700 hover:bg-gdgoc-gray-100 transition-colors flex-shrink-0"
+            className="p-1.5 rounded-lg text-gdgoc-gray-400 hover:text-gdgoc-gray-700 hover:bg-gdgoc-gray-100 transition-colors flex-shrink-0 cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -170,7 +180,7 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
             </div>
           </div>
 
-          {/* Attached Documents & Files (Only if attachments exist) */}
+          {/* Attached Documents & Files */}
           {task.attachments && task.attachments.length > 0 && (
             <div className="space-y-2">
               <h3 className="text-xs font-bold uppercase tracking-wider text-gdgoc-gray-700 flex items-center gap-1.5">
@@ -206,18 +216,57 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
           )}
         </div>
 
-        {/* Modal Footer */}
-        <div className="px-6 py-3.5 border-t border-gdgoc-gray-100 bg-gdgoc-gray-50 flex items-center justify-between">
+        {/* Modal Footer with Actions */}
+        <div className="px-6 py-4 border-t border-gdgoc-gray-100 bg-gdgoc-gray-50 flex flex-wrap items-center justify-between gap-3">
           <span className="text-[11px] text-gdgoc-gray-500">
             Press <kbd className="px-1.5 py-0.5 rounded bg-white border border-gdgoc-gray-200 text-[10px] font-mono">ESC</kbd> or click outside to close
           </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-1.5 rounded-lg border border-gdgoc-gray-300 bg-white hover:bg-gdgoc-gray-100 text-xs font-semibold text-gdgoc-gray-700 transition-colors"
-          >
-            Close
-          </button>
+
+          <div className="flex items-center gap-2">
+            {/* 1. Member Claim Action */}
+            {onClaim && task.status === 'Assigned' && (
+              <button
+                type="button"
+                onClick={() => onClaim(task)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gdgoc-blue hover:bg-blue-600 active:bg-blue-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer animate-click-pop hover:shadow-lg"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Claim Task</span>
+              </button>
+            )}
+
+            {/* 2. Member Submit Action */}
+            {onSubmitForReview && task.status === 'In Progress' && (
+              <button
+                type="button"
+                onClick={() => onSubmitForReview(task)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer animate-click-pop"
+              >
+                <SendHorizontal className="w-3.5 h-3.5" />
+                <span>Submit For Review</span>
+              </button>
+            )}
+
+            {/* 3. Lead Approve Action */}
+            {onApprove && task.status === 'Pending Review' && (
+              <button
+                type="button"
+                onClick={() => onApprove(task)}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gdgoc-green hover:bg-emerald-600 active:bg-emerald-700 text-white text-xs font-bold shadow-md transition-all cursor-pointer animate-click-pop"
+              >
+                <Award className="w-4 h-4" />
+                <span>Approve Deliverable</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-xl border border-gdgoc-gray-300 bg-white hover:bg-gdgoc-gray-100 text-xs font-semibold text-gdgoc-gray-700 transition-colors cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -15,6 +15,9 @@ interface TaskContextType {
   tasks: Task[];
   assignTask: (input: NewTaskInput) => Task;
   getTaskById: (id: string) => Task | undefined;
+  claimTask: (taskId: string, memberId?: string, memberName?: string) => Task | null;
+  submitTask: (taskId: string) => Task | null;
+  approveTask: (taskId: string) => Task | null;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
@@ -70,12 +73,74 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return newTask;
   };
 
+  const claimTask = (taskId: string, memberId?: string, memberName?: string): Task | null => {
+    let updatedTask: Task | null = null;
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId) {
+          updatedTask = {
+            ...t,
+            status: 'In Progress',
+            ...(memberId && { assigneeId: memberId }),
+            ...(memberName && { assigneeName: memberName }),
+          };
+          return updatedTask;
+        }
+        return t;
+      })
+    );
+    return updatedTask;
+  };
+
+  const submitTask = (taskId: string): Task | null => {
+    let updatedTask: Task | null = null;
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId) {
+          updatedTask = {
+            ...t,
+            status: 'Pending Review',
+          };
+          return updatedTask;
+        }
+        return t;
+      })
+    );
+    return updatedTask;
+  };
+
+  const approveTask = (taskId: string): Task | null => {
+    let updatedTask: Task | null = null;
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId) {
+          updatedTask = {
+            ...t,
+            status: 'Completed',
+          };
+          return updatedTask;
+        }
+        return t;
+      })
+    );
+    return updatedTask;
+  };
+
   const getTaskById = (id: string): Task | undefined => {
     return tasks.find((t) => t.id === id);
   };
 
   return (
-    <TaskContext.Provider value={{ tasks, assignTask, getTaskById }}>
+    <TaskContext.Provider
+      value={{
+        tasks,
+        assignTask,
+        getTaskById,
+        claimTask,
+        submitTask,
+        approveTask,
+      }}
+    >
       {children}
     </TaskContext.Provider>
   );
