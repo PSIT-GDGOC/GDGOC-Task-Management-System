@@ -1,4 +1,5 @@
-import app, { closeSessionStore } from './app';
+import app from './app';
+import { checkSessionStore, closeSessionStore } from './lib/session-store';
 import { env } from './config/env';
 import { redis, closeRedis } from './lib/redis';
 import { startJobs } from './jobs/runtime';
@@ -12,6 +13,7 @@ async function start() {
     await prisma.user.count();
     await prisma.session.count();
     await prisma.notification.count();
+    await checkSessionStore();
     if (redis) {
       await redis.ping();
       const memory = await redis.info('memory');

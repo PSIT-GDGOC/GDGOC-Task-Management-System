@@ -1,6 +1,6 @@
 # GDGOC — Backend team guide
 
-Handoff snapshot: 22 October 2026. Club account: `gdgoc.psit@gmail.com`.
+Handoff snapshot: 23 October 2026. Club account: `gdgoc.psit@gmail.com`.
 
 ## Start here
 
@@ -96,11 +96,11 @@ npm run test:redis
 npm audit --workspace=backend
 ```
 
-Latest local checks: **75 database/API, 13 unit/config and 8 Redis tests pass;
+Latest local checks: **75 database/API, 16 unit/config and 8 Redis tests pass;
 build/typecheck/lint pass; backend dependencies have 0 known advisories.**
 
 Hosted Redis-compatible service `gdgoc-tracking-redis` exists in the club's Render
-account, but application connectivity is unverified. Its free plan lacks disk
+account, and hosted application connectivity is verified. Its free plan lacks disk
 persistence. The shared Supabase project now exists; live API verification is recorded in
 `DEPLOYMENT_HANDOFF.md`. GitHub
 synchronization remains unfinished and assigned to teammates.
@@ -113,3 +113,8 @@ Full findings: `docs/backend/AUDIT_AND_STATUS.md`. Feature details:
 `docs/backend/DATABASE.md`, `USERS_AND_TEAMS.md`, `TASK_WORKFLOW.md`, `GOOGLE_AUTH.md`,
 `HISTORY.md`, and `INVITATIONS.md`. Where older wording conflicts with this
 handoff, current route/schema/service code and the audit take precedence.
+
+Hosted API: `https://gdgoc-tracking-backend.onrender.com/api/v1`. Supabase
+migrations and core seed are applied. Keep `backend/certs/` in deployment: its
+public CA is required by the session driver and contains no private key or secret.
+Read `docs/backend/VERIFICATION_2026-10-23.md` for acceptance results and limits.

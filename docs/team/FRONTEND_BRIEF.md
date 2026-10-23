@@ -1,10 +1,14 @@
 # GDGOC — Frontend integration brief
 
-Handoff snapshot: 22 October 2026. This describes the existing backend contract;
+Handoff snapshot: 23 October 2026. This describes the existing backend contract;
 frontend implementation remains with the frontend team.
 
 The hosted database plan now uses Supabase PostgreSQL. Keep calling Express and
 using its existing login/session contract; Supabase Auth has not been adopted.
+
+Hosted API base: `https://gdgoc-tracking-backend.onrender.com/api/v1`. Before
+calling it from deployed portals, coordinate their exact HTTPS origins with the
+backend team. The initial deployment allows only its own origin.
 
 **Dependency:** use the latest `feat/backend` work. Backend Redis/build fixes now pass local checks; real Google setup remains
 pending. Read `docs/backend/DEPLOYMENT_HANDOFF.md` for the live URL and verification
@@ -166,3 +170,11 @@ does not verify that PR or automatically complete the task.
 
 Detailed contracts live in `docs/backend/`. OpenAPI is incomplete; consult the
 current routes/schemas/services and `AUDIT_AND_STATUS.md` for discrepancies.
+
+Read-only integration review on 23 October found that both API clients still lack
+CSRF-token handling, Members & Teams and member My Work History still contain
+sample content, and Admin Invitations starts with sample state. Admin Google
+sign-in must supply `portal=admin`. Remove production development-login controls.
+Both frontend dependency workspaces need remediation (12 affected package entries:
+2 critical in development/test tooling, 5 high, 5 moderate). These are outstanding
+frontend tasks, not completed end-to-end acceptance. No frontend source was changed.

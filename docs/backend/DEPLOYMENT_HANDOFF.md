@@ -6,8 +6,12 @@ This document supersedes the release-blocker status in the earlier
 ## Verified locally
 
 - Fixed the BullMQ 6 connection API used by the worker policy check.
-- Typecheck, build and ESLint pass. Tests pass: 75 database/API, 13 unit/config,
+- Typecheck, build and ESLint pass. Tests pass: 75 database/API, 16 unit/config,
   and 8 Redis integration tests, including scheduler registration across restarts.
+- Follow-up verification on 23 October 2026: **99 tests pass** (75 database/API,
+  16 unit/config, 8 Redis). Build, typecheck and lint pass. The additional tests
+  verify the Supabase session certificate configuration; the real session adapter
+  test also checks session deletion.
 - Backend dependency scan reports zero known advisories. Frontend dependency
   findings in the earlier audit remain assigned to the frontend team.
 - Production rejects known example session secrets, requires the owner setting
@@ -26,9 +30,12 @@ This document supersedes the release-blocker status in the earlier
 - Render Key Value: [gdgoc-tracking-redis](https://dashboard.render.com/r/red-dbd4u1favr4c73cdurfg),
   Oregon. The dashboard reports Available. Free plan, noeviction, no disk
   persistence; external access is blocked. Its private URL stays within Render.
-- Render backend creation is prepared as `gdgoc-tracking-backend`, Node 22.23.4,
-  free compute, Oregon, branch `feat/backend`, health path `/health/ready`.
-  Until a deploy has been verified, this is configuration work, not a live API.
+- Render backend: [gdgoc-tracking-backend](https://dashboard.render.com/web/srv-dbdcd6jncjis739n3bj0),
+  Node 22.23.4, free compute, Oregon, branch `feat/backend`, health path
+  `/health/ready`. The session transport fix `3dc29d1` is confirmed Live.
+- API base: `https://gdgoc-tracking-backend.onrender.com/api/v1`.
+- [Live readiness](https://gdgoc-tracking-backend.onrender.com/health/ready).
+  This is a backend API; opening the domain root does not display a frontend.
 
 Real database passwords, database URLs containing passwords and session secrets
 belong only in the hosting environment/club password manager, never in Git or
@@ -42,6 +49,12 @@ Render builds only the backend workspace and generates Prisma Client. Before
 opening its HTTP port, startup validates configuration, applies committed Prisma
 migrations, seeds the core teams/club owner idempotently, and checks database and
 Redis access. A seed does not create an authenticated session.
+
+The session driver also uses the provider's official public CA certificate in
+`backend/certs/`, retaining certificate and hostname verification. Do not disable
+TLS verification to work around connection errors. Both startup and readiness
+query the actual PostgreSQL session store as well as Prisma/Redis; a successful
+Prisma connection alone is not enough to report ready.
 
 Set `DATABASE_URL` and `DIRECT_URL` to the Supabase **session pooler** URI, with
 the real password percent-encoded and `?schema=public&sslmode=require` appended.
@@ -72,10 +85,18 @@ rollback must be checked for compatibility with already-applied schema changes.
 
 ## Live acceptance and remaining limits
 
-Verify the deployed commit, successful migration/seed logs, `/health/ready` 200,
-unauthenticated protected requests 401, disabled dev login 403, disabled Google
-503, and scheduler operation. Inspect Supabase table RLS/grants and advisors after
-migrations. Test application sessions and role boundaries once OAuth is enabled.
+Supabase verification on 23 October 2026: four migrations completed, zero
+unfinished migrations, 12 public tables with RLS enabled on all 12, one seeded
+club owner and three core teams. Data API is disabled. Security Advisor reports
+zero errors/warnings and 12 informational "RLS Enabled No Policy" suggestions.
+This intentionally denies access through unprivileged database/API roles; Express
+uses the server database credential and enforces application permissions. Do not
+add broad public policies simply to clear informational suggestions.
+
+The first hosted session probe caught `SELF_SIGNED_CERT_IN_CHAIN`; the committed
+provider CA fixed the driver configuration. See `VERIFICATION_2026-10-23.md` for
+live endpoint/session checks and frontend integration gaps. Live Google sign-in
+and authenticated role flows still require OAuth configuration and browser tests.
 
 Free Render web compute sleeps when idle; its embedded worker then stops too.
 Free Key Value can lose queue/scheduler state after restart. PostgreSQL remains

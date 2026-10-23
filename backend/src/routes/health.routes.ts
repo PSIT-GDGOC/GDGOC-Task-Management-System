@@ -1,6 +1,7 @@
 import { prisma } from '../lib/prisma';
 import { env } from '../config/env';
 import { redis } from '../lib/redis';
+import { checkSessionStore } from '../lib/session-store';
 import { asyncHandler } from '../utils/asyncHandler';
 import { Router, Request, Response } from 'express';
 
@@ -24,6 +25,7 @@ router.get(
   asyncHandler(async (_req, res) => {
     try {
       await prisma.$queryRaw`SELECT 1`;
+      await checkSessionStore();
       if (redis) await redis.ping();
       res.json({
         status: 'ready',

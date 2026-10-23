@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import session from 'express-session';
-import pgSession from 'connect-pg-simple';
+import { sessionStore } from './lib/session-store';
 import { apiLimit } from './security/rateLimits';
 import { csrfProtection } from './security/csrf';
 import { env, frontendOrigins } from './config/env';
@@ -48,25 +48,6 @@ app.use(
   }),
 );
 app.use(express.urlencoded({ extended: false, limit: '64kb' }));
-
-// PostgreSQL Session Store setup
-const PgStore = pgSession(session);
-
-// Tests that do not exercise persistence need no database. In other environments,
-// connection failures must remain visible instead of silently losing sessions.
-export const sessionStore =
-  env.NODE_ENV === 'test'
-    ? new session.MemoryStore()
-    : new PgStore({
-        conString: env.DATABASE_URL,
-        schemaName: new URL(env.DATABASE_URL).searchParams.get('schema') ?? 'public',
-        tableName: 'session',
-        createTableIfMissing: false, // Prisma migrations own the table.
-      });
-
-export async function closeSessionStore() {
-  if ('close' in sessionStore) await sessionStore.close();
-}
 
 app.use(
   session({
