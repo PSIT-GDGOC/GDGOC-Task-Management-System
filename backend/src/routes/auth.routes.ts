@@ -11,10 +11,7 @@ import { prisma } from '../lib/prisma';
 const router = Router();
 
 const createInvitationSchema = z.object({
-  role: z.nativeEnum(SystemRole).optional(),
   position: z.string().optional(),
-  teamId: z.string().optional(),
-  expiresInHours: z.number().min(1).max(168).optional(), // 1h to 7 days
 });
 
 const redeemInvitationSchema = z.object({
@@ -111,6 +108,14 @@ router.post(
     }
   },
 );
+
+router.get('/invitations', requireAuth, requireRole([SystemRole.SYSTEM_OWNER, SystemRole.PRESIDENT]), async (_req, res, next) => {
+  try { res.json({ success: true, ...(await AuthService.listAdminInvitations()) }); } catch (err) { next(err); }
+});
+
+router.delete('/invitations/:id', requireAuth, requireRole([SystemRole.SYSTEM_OWNER, SystemRole.PRESIDENT]), async (req, res, next) => {
+  try { await AuthService.revokeAdminInvitation(req.params.id); res.json({ success: true }); } catch (err) { next(err); }
+});
 
 /**
  * POST /api/v1/auth/invitations/redeem

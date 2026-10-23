@@ -24,6 +24,17 @@ export interface ReviewTaskDTO {
 }
 
 export class TaskService {
+  static async getMemberHistory(userId: string) {
+    return prisma.task.findMany({
+      where: { isDeleted: false, OR: [{ assigneeId: userId }, { activities: { some: { actorId: userId } } }, { submissions: { some: { memberId: userId } } }] },
+      include: {
+        team: { select: { id: true, name: true } },
+        activities: { where: { OR: [{ actorId: userId }, { action: { in: [TaskAction.ASSIGNED, TaskAction.APPROVED, TaskAction.SENT_BACK] } }] }, orderBy: { timestamp: 'desc' } },
+        submissions: { where: { memberId: userId }, orderBy: { submittedAt: 'desc' }, include: { reviewer: { select: { name: true } } } },
+      },
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
   /**
    * List tasks with filters (board columns, team, assignee, search)
    */
@@ -142,6 +153,17 @@ export class TaskService {
           details: { title: newTask.title, scope: newTask.scope, priority: newTask.priority },
         },
       });
+      if (newTask.assigneeId) {
+        await tx.taskActivity.create({
+          data: {
+            taskId: newTask.id,
+            actorId,
+            action: TaskAction.ASSIGNED,
+            newValue: TaskStatus.ASSIGNED,
+            details: { assigneeId: newTask.assigneeId },
+          },
+        });
+      }
 
       return newTask;
     });

@@ -220,44 +220,60 @@ export const AssignWorkPage: React.FC = () => {
   const todayStr = new Date().toISOString().split('T')[0];
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6 text-left">
-      {/* ---------------------------------------------------------------------
-          NAVIGATION HEADER
-          --------------------------------------------------------------------- */}
-      <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => navigate('/leader/overview')}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-gdgoc-gray-600 hover:text-gdgoc-blue transition-colors p-1 -ml-1 rounded"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>Back to Overview</span>
-        </button>
+    <div
+      className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full"
+      style={{
+        backgroundImage: 'url(/dashboard-bg.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      {/* Subtle white overlay */}
+      <div
+        className="absolute inset-0 bg-white/10 pointer-events-none"
+        aria-hidden="true"
+      />
 
-        <button
-          type="button"
-          onClick={() => navigate('/leader/view-work')}
-          className="inline-flex items-center gap-1.5 text-xs font-semibold text-gdgoc-blue hover:text-blue-700 transition-colors"
-        >
-          <Layers className="w-4 h-4" />
-          <span>View All Work</span>
-        </button>
-      </div>
+      <div className="relative z-10 p-4 sm:p-6 lg:p-8">
+        <div className="max-w-4xl mx-auto space-y-6 text-left">
+          {/* ---------------------------------------------------------------------
+              NAVIGATION HEADER
+              --------------------------------------------------------------------- */}
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => navigate('/leader/overview')}
+              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gdgoc-gray-600 hover:text-gdgoc-blue transition-colors p-1 -ml-1 rounded"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Overview</span>
+            </button>
 
-      {/* ---------------------------------------------------------------------
-          PAGE TITLE
-          --------------------------------------------------------------------- */}
-      <div className="space-y-1">
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold uppercase tracking-wider text-gdgoc-blue">
-          Sprint Task Delegation
-        </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-gdgoc-gray-900 tracking-tight">
-          Assign Work
-        </h1>
-        <p className="text-xs sm:text-sm text-gdgoc-gray-600">
-          Team leaders can assign tasks to team members across Core, Tech, Media, and Content teams.
-        </p>
-      </div>
+            <button
+              type="button"
+              onClick={() => navigate('/leader/view-work')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-xs font-semibold text-gdgoc-blue hover:text-blue-700 transition-colors card-bb-sm"
+            >
+              <Layers className="w-4 h-4" />
+              <span>View All Work</span>
+            </button>
+          </div>
+
+          {/* ---------------------------------------------------------------------
+              PAGE TITLE
+              --------------------------------------------------------------------- */}
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#111111] text-[10px] font-bold uppercase tracking-wider text-gdgoc-gray-900 shadow-2xs">
+              Sprint Task Delegation
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gdgoc-gray-900 tracking-tight">
+              Assign Work
+            </h1>
+            <p className="text-xs sm:text-sm text-gdgoc-gray-600">
+              Team leaders can assign tasks to team members across Core, Tech, Media, and Content teams.
+            </p>
+          </div>
 
       {/* ---------------------------------------------------------------------
           SUCCESS NOTIFICATION
@@ -265,7 +281,7 @@ export const AssignWorkPage: React.FC = () => {
       {successMessage && (
         <div 
           role="status" 
-          className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-start gap-3 shadow-xs animate-in fade-in"
+          className="p-4 rounded-xl bg-emerald-50 text-emerald-900 flex items-start gap-3 card-bb-sm animate-in fade-in"
         >
           <CheckCircle2 className="w-5 h-5 text-gdgoc-green flex-shrink-0 mt-0.5" />
           <div className="flex-1 space-y-1">
@@ -281,7 +297,7 @@ export const AssignWorkPage: React.FC = () => {
                 onClick={() => navigate('/leader/view-work')}
                 className="text-xs font-bold text-emerald-900 underline hover:text-emerald-950"
               >
-                Go to View Work →
+                Go to View Work â†’
               </button>
             </div>
           </div>
@@ -301,7 +317,7 @@ export const AssignWorkPage: React.FC = () => {
       <form 
         onSubmit={handleSubmit} 
         noValidate 
-        className="bg-white rounded-2xl border border-gdgoc-gray-200 p-6 sm:p-8 shadow-xs space-y-6"
+        className="bg-white rounded-2xl p-6 sm:p-8 card-bb space-y-6"
       >
         {/* SECTION 1: TEAM & ASSIGNEE */}
         <div className="space-y-4">
@@ -325,7 +341,7 @@ export const AssignWorkPage: React.FC = () => {
                 id="assign-team-select"
                 value={selectedTeamId}
                 onChange={handleTeamChange}
-                className={`w-full px-3 py-2.5 text-xs sm:text-sm bg-white border rounded-xl transition-all focus:outline-none focus:ring-2 ${
+                className={`w-full px-3 py-2.5 text-xs sm:text-sm bg-white rounded-xl transition-all card-bb-sm focus:outline-none focus:ring-2 ${
                   errors.team
                     ? 'border-red-300 focus:border-red-500 focus:ring-red-100'
                     : 'border-gdgoc-gray-300 hover:border-gdgoc-gray-400 focus:border-gdgoc-blue focus:ring-blue-100'
@@ -359,7 +375,7 @@ export const AssignWorkPage: React.FC = () => {
                 value={selectedMemberId}
                 onChange={handleMemberChange}
                 disabled={!selectedTeamId}
-                className={`w-full px-3 py-2.5 text-xs sm:text-sm bg-white border rounded-xl transition-all focus:outline-none focus:ring-2 disabled:bg-gdgoc-gray-50 disabled:cursor-not-allowed disabled:text-gdgoc-gray-400 ${
+                className={`w-full px-3 py-2.5 text-xs sm:text-sm bg-white rounded-xl transition-all card-bb-sm focus:outline-none focus:ring-2 disabled:bg-gdgoc-gray-50 disabled:cursor-not-allowed disabled:text-gdgoc-gray-400 ${
                   errors.member
                     ? 'border-red-300 focus:border-red-500 focus:ring-red-100'
                     : 'border-gdgoc-gray-300 hover:border-gdgoc-gray-400 focus:border-gdgoc-blue focus:ring-blue-100'
@@ -410,7 +426,7 @@ export const AssignWorkPage: React.FC = () => {
                 if (errors.title) setErrors((prev) => ({ ...prev, title: undefined }));
               }}
               placeholder="e.g., Build the team dashboard UI"
-              className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-xl transition-all placeholder:text-gdgoc-gray-400 focus:outline-none focus:ring-2 ${
+              className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white rounded-xl transition-all placeholder:text-gdgoc-gray-400 card-bb-sm focus:outline-none focus:ring-2 ${
                 errors.title
                   ? 'border-red-300 focus:border-red-500 focus:ring-red-100'
                   : 'border-gdgoc-gray-300 hover:border-gdgoc-gray-400 focus:border-gdgoc-blue focus:ring-blue-100'
@@ -441,7 +457,7 @@ export const AssignWorkPage: React.FC = () => {
                 if (errors.description) setErrors((prev) => ({ ...prev, description: undefined }));
               }}
               placeholder="Describe the task, requirements, and expected deliverables..."
-              className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-xl transition-all placeholder:text-gdgoc-gray-400 focus:outline-none focus:ring-2 leading-relaxed ${
+              className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white rounded-xl transition-all placeholder:text-gdgoc-gray-400 card-bb-sm focus:outline-none focus:ring-2 leading-relaxed ${
                 errors.description
                   ? 'border-red-300 focus:border-red-500 focus:ring-red-100'
                   : 'border-gdgoc-gray-300 hover:border-gdgoc-gray-400 focus:border-gdgoc-blue focus:ring-blue-100'
@@ -473,7 +489,7 @@ export const AssignWorkPage: React.FC = () => {
                   setDeadline(e.target.value);
                   validateDeadline(e.target.value);
                 }}
-                className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-xl transition-all focus:outline-none focus:ring-2 ${
+                className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white rounded-xl transition-all card-bb-sm focus:outline-none focus:ring-2 ${
                   errors.deadline
                     ? 'border-red-300 focus:border-red-500 focus:ring-red-100'
                     : 'border-gdgoc-gray-300 hover:border-gdgoc-gray-400 focus:border-gdgoc-blue focus:ring-blue-100'
@@ -508,7 +524,7 @@ export const AssignWorkPage: React.FC = () => {
               e.preventDefault();
               handleFileUpload(e.dataTransfer.files);
             }}
-            className="border-2 border-dashed border-gdgoc-gray-200 hover:border-gdgoc-blue rounded-xl p-6 text-center transition-colors bg-gdgoc-gray-50/50 hover:bg-blue-50/30 cursor-pointer"
+            className="border-2 border-dashed border-[#111111] hover:border-gdgoc-blue rounded-xl p-6 text-center transition-colors bg-gdgoc-gray-50/50 hover:bg-blue-50/30 cursor-pointer shadow-[3px_3px_0_#111111]"
             onClick={() => document.getElementById('assign-file-input')?.click()}
           >
             <input
@@ -550,7 +566,7 @@ export const AssignWorkPage: React.FC = () => {
                 {attachedFiles.map((file) => (
                   <div
                     key={file.id}
-                    className="p-2.5 rounded-xl border border-gdgoc-gray-200 bg-white flex items-center justify-between gap-2 shadow-2xs"
+                    className="p-2.5 rounded-xl bg-white flex items-center justify-between gap-2 card-bb-sm"
                   >
                     <div className="flex items-center gap-2 min-w-0">
                       <div className="p-1.5 rounded-lg bg-gdgoc-gray-50 border border-gdgoc-gray-200 flex-shrink-0">
@@ -589,13 +605,16 @@ export const AssignWorkPage: React.FC = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gdgoc-blue hover:bg-blue-600 active:bg-blue-700 text-white font-semibold text-sm transition-all shadow-sm hover:shadow focus:outline-none focus:ring-2 focus:ring-gdgoc-blue focus:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl bg-gdgoc-blue hover:bg-blue-600 active:bg-blue-700 text-white font-semibold text-sm transition-all card-bb-sm disabled:opacity-60 disabled:cursor-not-allowed flex-shrink-0"
           >
             <PlusCircle className="w-4 h-4" />
             <span>{isSubmitting ? 'Assigning Task...' : 'Assign Task'}</span>
           </button>
         </div>
       </form>
+        </div>
+      </div>
     </div>
   );
 };
+

@@ -23,7 +23,11 @@ export const AppRouter: React.FC<AppRouterProps> = ({ user, onLoginSuccess, onLo
         <Route path="history" element={<MyWorkHistory user={user} />} />
         <Route path="profile" element={<MyProfile user={user} />} />
         <Route path="members-teams" element={<MembersTeams />} />
-        <Route path="invitations" element={<AdminInvitations />} />
+        <Route path="invitations" element={
+          user && (user.role === 'SYSTEM_OWNER' || user.role === 'PRESIDENT')
+            ? <AdminInvitations />
+            : <Navigate to={user ? '/' : '/login'} replace />
+        } />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

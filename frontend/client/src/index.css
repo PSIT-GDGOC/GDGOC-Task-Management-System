@@ -4,7 +4,12 @@
 
 @layer base {
   html {
-    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Fredoka', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  }
+
+  body {
+    font-family: 'Fredoka', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-weight: 400;
   }
 
   /* Accessible focus visible outlines */
@@ -18,6 +23,18 @@
   .bg-ambient-dots {
     background-image: radial-gradient(rgba(148, 163, 184, 0.15) 1px, transparent 1px);
     background-size: 28px 28px;
+  }
+
+  /* Bold black border + offset shadow — main dashboard cards */
+  .card-bb {
+    border: 2px solid #111111 !important;
+    box-shadow: 4px 4px 0 #111111 !important;
+  }
+
+  /* Bold black border + offset shadow — smaller controls / member cards */
+  .card-bb-sm {
+    border: 1.5px solid #111111 !important;
+    box-shadow: 3px 3px 0 #111111 !important;
   }
 }
 
@@ -96,5 +113,133 @@
   .google-border-beam-ambient {
     animation: none;
     transform: rotate(0deg);
+  }
+}
+
+.profile-card-trigger {
+  transition: transform 220ms ease, box-shadow 220ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .profile-card-trigger:hover {
+    transform: translateY(-2px);
+    box-shadow: 4px 4px 0 #111111 !important;
+  }
+}
+
+.profile-panel-backdrop {
+  animation: profile-backdrop-in 180ms ease-out both;
+}
+
+.profile-panel-card {
+  animation: profile-card-in 180ms ease-out both;
+}
+
+.profile-panel-backdrop.is-closing {
+  animation: profile-backdrop-out 160ms ease-in both;
+}
+
+.profile-panel-card.is-closing {
+  animation: profile-card-out 160ms ease-in both;
+}
+
+@keyframes profile-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes profile-backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes profile-card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes profile-card-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .profile-panel-backdrop,
+  .profile-panel-card,
+  .profile-panel-backdrop.is-closing,
+  .profile-panel-card.is-closing {
+    animation-duration: 0.01ms;
+  }
+
+  .profile-card-trigger {
+    transition-duration: 0.01ms;
+  }
+}
+
+/* Fredoka is used throughout, including elements with explicit Tailwind font classes. */
+*,
+*::before,
+*::after,
+input::placeholder,
+textarea::placeholder {
+  font-family: 'Fredoka', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+main h1,
+main h2 {
+  font-weight: 600;
+}
+
+main .bg-white h2,
+main .bg-white h3,
+main [class*='bg-white/'] h2,
+main [class*='bg-white/'] h3 {
+  font-weight: 600;
+}
+
+aside nav a,
+aside nav button {
+  font-weight: 600;
+}
+
+button[class],
+[role='button'],
+main a[class*='px-'][class*='py-'] {
+  font-weight: 600;
+}
+
+.text-2xl:not(h1),
+.text-3xl:not(h1) {
+  font-weight: 700;
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  main :is([class~='card-bb'], [class~='card-bb-sm']):not(button):not(a):not(input):not(select):not(textarea):not(.fixed):not(.fixed *):not(:has(div[class~='card-bb'], div[class~='card-bb-sm'])):not([style*='translate3d']),
+  main [class~='bg-white'][class*='rounded-'][class*='shadow-']:not(button):not(a):not(input):not(select):not(textarea):not(.fixed):not(.fixed *):not(:has(div[class~='card-bb'], div[class~='card-bb-sm'])):not([style*='translate3d']) {
+    transition-property: transform, box-shadow, background-color, border-color, color, filter;
+    transition-duration: 220ms;
+    transition-timing-function: ease;
+  }
+
+  main :is([class~='card-bb'], [class~='card-bb-sm']):not(button):not(a):not(input):not(select):not(textarea):not(.fixed):not(.fixed *):not(:has(div[class~='card-bb'], div[class~='card-bb-sm'])):not([style*='translate3d']):hover,
+  main [class~='bg-white'][class*='rounded-'][class*='shadow-']:not(button):not(a):not(input):not(select):not(textarea):not(.fixed):not(.fixed *):not(:has(div[class~='card-bb'], div[class~='card-bb-sm'])):not([style*='translate3d']):hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 14px rgba(17, 17, 17, 0.16);
+  }
+
+  main [class~='card-bb']:not(button):not(a):not(input):not(select):not(textarea):not(:has(div[class~='card-bb'], div[class~='card-bb-sm'])):hover {
+    box-shadow: 6px 6px 0 #111111 !important;
+  }
+
+  main [class~='card-bb-sm']:not(button):not(a):not(input):not(select):not(textarea):not(:has(div[class~='card-bb'], div[class~='card-bb-sm'])):hover {
+    box-shadow: 4px 4px 0 #111111 !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main [class~='card-bb'],
+  main [class~='card-bb-sm'],
+  main [class~='bg-white'][class*='rounded-'][class*='shadow-'] {
+    transition-duration: 0.01ms !important;
   }
 }

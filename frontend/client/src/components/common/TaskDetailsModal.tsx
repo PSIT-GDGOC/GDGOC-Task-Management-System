@@ -72,19 +72,19 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
       aria-labelledby="task-detail-title"
     >
       <div
-        className="w-full max-w-2xl bg-white rounded-2xl border border-gdgoc-gray-200 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-left animate-in zoom-in-95 duration-150"
+        className="w-full max-w-2xl bg-white rounded-2xl border-2 border-[#111111] shadow-[8px_8px_0_#111111] overflow-hidden flex flex-col max-h-[90vh] text-left animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-gdgoc-gray-100 flex items-start justify-between gap-4 bg-gdgoc-gray-50/70">
+        <div className="px-6 py-4 border-b border-[#111111] flex items-start justify-between gap-4 bg-gdgoc-gray-50/70">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-white border border-gdgoc-gray-200 text-gdgoc-gray-700">
+              <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded bg-white border border-[#111111] text-gdgoc-gray-700">
                 {task.id}
               </span>
               <TaskStatusBadge status={task.status} />
               {task.priority && <PriorityBadge priority={task.priority} />}
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gdgoc-gray-600 bg-white border border-gdgoc-gray-200 px-2 py-0.5 rounded">
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-gdgoc-gray-600 bg-white border border-[#111111] px-2 py-0.5 rounded">
                 <Users className="w-3 h-3 text-gdgoc-gray-400" />
                 {task.teamName}
               </span>
@@ -107,7 +107,7 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
         {/* Modal Body (Scrollable) */}
         <div className="p-6 overflow-y-auto space-y-6">
           {/* Key Task Metadata Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-gdgoc-gray-50/80 border border-gdgoc-gray-200/80">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-gdgoc-gray-50/80 border border-[#111111] shadow-[2px_2px_0_#111111]">
             {/* Assigned Member */}
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-gdgoc-gray-400 block mb-1">

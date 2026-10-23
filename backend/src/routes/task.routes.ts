@@ -46,6 +46,18 @@ const reviewTaskBodySchema = z.object({
  * Returns tasks for board synchronization
  */
 router.get(
+  '/me/history',
+  requireAuth,
+  async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const userId = req.user!.id;
+      const tasks = await TaskService.getMemberHistory(userId);
+      res.json({ success: true, data: tasks });
+    } catch (err) { next(err); }
+  },
+);
+
+router.get(
   '/',
   validate({ query: listTasksQuerySchema }),
   async (req: Request, res: Response, next: NextFunction) => {

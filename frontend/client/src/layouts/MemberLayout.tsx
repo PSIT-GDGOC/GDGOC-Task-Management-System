@@ -24,7 +24,7 @@ export const MemberLayout: React.FC = () => {
 
       {/* Mobile Drawer */}
       <div
-        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white transform transition-transform duration-200 ease-in-out ${
+        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-[#E9EDF2] transform transition-transform duration-200 ease-in-out ${
           mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
         }`}
       >
@@ -34,7 +34,7 @@ export const MemberLayout: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
         {/* Mobile Top Header */}
-        <header className="lg:hidden bg-white border-b border-gdgoc-gray-200 px-4 py-3 flex items-center justify-between sticky top-0 z-30">
+        <header className="lg:hidden bg-white border-b-2 border-[#111111] px-4 py-3 flex items-center justify-between sticky top-0 z-30">
           <button
             onClick={() => setMobileMenuOpen(true)}
             className="p-1.5 rounded-lg border border-gdgoc-gray-200 text-gdgoc-gray-700 hover:bg-gdgoc-gray-100"

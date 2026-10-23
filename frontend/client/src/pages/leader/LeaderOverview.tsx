@@ -33,49 +33,64 @@ export const LeaderOverview: React.FC = () => {
   const recentTasks = [...tasks].slice(0, 5);
 
   return (
-    <div className="space-y-8 text-left">
-      {/* ---------------------------------------------------------------------
-          HEADER SECTION
-          --------------------------------------------------------------------- */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
-        <div className="space-y-1">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-blue-50 border border-blue-200 text-[10px] font-bold uppercase tracking-wider text-gdgoc-blue">
-            Team Workspace
+    <div
+      className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full"
+      style={{
+        backgroundImage: 'url(/dashboard-bg.jpg)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center top',
+        backgroundRepeat: 'no-repeat',
+      }}
+    >
+      {/* Subtle white overlay */}
+      <div
+        className="absolute inset-0 bg-white/10 pointer-events-none"
+        aria-hidden="true"
+      />
+
+      <div className="relative z-10 p-4 sm:p-6 lg:p-8 space-y-8 text-left">
+        {/* ---------------------------------------------------------------------
+            HEADER SECTION
+            --------------------------------------------------------------------- */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
+          <div className="space-y-1">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#111111] text-[10px] font-bold uppercase tracking-wider text-gdgoc-gray-900 shadow-2xs">
+              Team Workspace
+            </div>
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gdgoc-gray-900 tracking-tight">
+              Welcome back, {user?.name || 'Team Leader'}
+            </h1>
+            <p className="text-xs sm:text-sm text-gdgoc-gray-600 max-w-xl">
+              Manage your teams, assign work, and keep everyone moving forward.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-gdgoc-gray-900 tracking-tight">
-            Welcome back, {user?.name || 'Team Leader'}
-          </h1>
-          <p className="text-xs sm:text-sm text-gdgoc-gray-600 max-w-xl">
-            Manage your teams, assign work, and keep everyone moving forward.
-          </p>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-2.5 flex-shrink-0">
-          <button
-            onClick={() => navigate('/leader/assign-work')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-gdgoc-blue hover:bg-blue-600 active:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all shadow-xs"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>+ Assign Work</span>
-          </button>
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2.5 flex-shrink-0">
+            <button
+              onClick={() => navigate('/leader/assign-work')}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gdgoc-blue hover:bg-blue-600 active:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all card-bb"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>+ Assign Work</span>
+            </button>
 
-          <button
-            onClick={() => navigate('/leader/view-work')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-gdgoc-gray-300 bg-white hover:bg-gdgoc-gray-50 active:bg-gdgoc-gray-100 text-xs sm:text-sm font-semibold text-gdgoc-gray-700 transition-colors shadow-2xs"
-          >
-            <Layers className="w-4 h-4 text-gdgoc-gray-500" />
-            <span>View Work</span>
-          </button>
+            <button
+              onClick={() => navigate('/leader/view-work')}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-white hover:bg-gdgoc-gray-50 active:bg-gdgoc-gray-100 text-xs sm:text-sm font-semibold text-gdgoc-gray-900 transition-colors card-bb"
+            >
+              <Layers className="w-4 h-4 text-gdgoc-gray-500" />
+              <span>View Work</span>
+            </button>
+          </div>
         </div>
-      </div>
 
       {/* ---------------------------------------------------------------------
           ORGANIZATION STATISTICS METRICS
           --------------------------------------------------------------------- */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Tasks */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-gdgoc-gray-500">
               Total Tasks
@@ -89,7 +104,7 @@ export const LeaderOverview: React.FC = () => {
         </div>
 
         {/* In Progress */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">
               In Progress
@@ -103,7 +118,7 @@ export const LeaderOverview: React.FC = () => {
         </div>
 
         {/* Pending Review */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-blue-800">
               Pending Review
@@ -117,7 +132,7 @@ export const LeaderOverview: React.FC = () => {
         </div>
 
         {/* Completed */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
               Completed
@@ -155,7 +170,7 @@ export const LeaderOverview: React.FC = () => {
       {/* ---------------------------------------------------------------------
           RECENT WORK SECTION
           --------------------------------------------------------------------- */}
-      <div className="bg-white rounded-xl border border-gdgoc-gray-200 shadow-2xs overflow-hidden">
+      <div className="bg-white rounded-xl border border-gdgoc-gray-200 card-bb overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-gdgoc-gray-100 flex items-center justify-between">
           <div>
             <h3 className="text-base font-bold text-gdgoc-gray-900">
@@ -247,6 +262,8 @@ export const LeaderOverview: React.FC = () => {
           setSelectedTask(null);
         }}
       />
+      </div>
     </div>
   );
 };
+

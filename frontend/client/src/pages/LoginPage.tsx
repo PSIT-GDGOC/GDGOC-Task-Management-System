@@ -1,13 +1,15 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/authContext';
 import { Logo } from '../components/common/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
+import { SignUpForm } from '../components/auth/SignUpForm';
 import { CollaborationVisual } from '../components/auth/CollaborationVisual';
 import { TypewriterBranding } from '../components/auth/TypewriterBranding';
 import { MarqueeStrip } from '../components/auth/MarqueeStrip';
 
 export const LoginPage: React.FC = () => {
+  const [isSignUp, setIsSignUp] = useState(false);
   const { user, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -126,9 +128,25 @@ export const LoginPage: React.FC = () => {
               <div className="google-border-beam-glow" aria-hidden="true" />
               {/* Card surface containing the login form */}
               <div className="google-border-beam-content p-6 sm:p-9 shadow-sm">
-                <LoginForm />
+                {isSignUp ? (
+                  <SignUpForm onLogIn={() => setIsSignUp(false)} />
+                ) : (
+                  <LoginForm />
+                )}
               </div>
             </div>
+            {!isSignUp && (
+              <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gdgoc-gray-700">
+                <span>New member here?</span>
+                <button
+                  type="button"
+                  onClick={() => setIsSignUp(true)}
+                  className="rounded-lg px-2 py-1 font-semibold text-gdgoc-blue transition-colors hover:bg-blue-50 hover:text-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gdgoc-blue"
+                >
+                  Sign Up
+                </button>
+              </div>
+            )}
           </section>
 
         </div>

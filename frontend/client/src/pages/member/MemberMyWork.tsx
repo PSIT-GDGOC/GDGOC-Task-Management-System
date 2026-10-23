@@ -75,7 +75,12 @@ export const MemberMyWork: React.FC = () => {
   }, [memberTasks, statusFilter, searchQuery]);
 
   return (
-    <div className="space-y-6 text-left">
+    <div
+      className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full"
+      style={{ backgroundImage: 'url(/dashboard-bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center top', backgroundRepeat: 'no-repeat' }}
+    >
+      <div className="absolute inset-0 bg-white/10 pointer-events-none" aria-hidden="true" />
+      <div className="relative z-10 p-4 sm:p-6 lg:p-8 space-y-6 text-left">
       {/* ---------------------------------------------------------------------
           HEADER SECTION
           --------------------------------------------------------------------- */}
@@ -96,7 +101,7 @@ export const MemberMyWork: React.FC = () => {
           --------------------------------------------------------------------- */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {/* Assigned Tasks */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-gdgoc-gray-500">
               Assigned Tasks
@@ -110,7 +115,7 @@ export const MemberMyWork: React.FC = () => {
         </div>
 
         {/* In Progress */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
           <div className="flex items-center justify-between text-amber-700 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">
               In Progress
@@ -124,7 +129,7 @@ export const MemberMyWork: React.FC = () => {
         </div>
 
         {/* Pending Review */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
           <div className="flex items-center justify-between text-blue-700 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-blue-800">
               Pending Review
@@ -138,7 +143,7 @@ export const MemberMyWork: React.FC = () => {
         </div>
 
         {/* Completed */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
           <div className="flex items-center justify-between text-emerald-700 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
               Completed
@@ -155,7 +160,7 @@ export const MemberMyWork: React.FC = () => {
       {/* ---------------------------------------------------------------------
           FILTER & SEARCH BAR
           --------------------------------------------------------------------- */}
-      <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb flex flex-col sm:flex-row items-center justify-between gap-3">
         {/* Search */}
         <div className="relative w-full sm:w-72">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gdgoc-gray-400">
@@ -166,7 +171,7 @@ export const MemberMyWork: React.FC = () => {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search my tasks..."
-            className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-gdgoc-gray-50 border border-gdgoc-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gdgoc-blue focus:bg-white transition-all placeholder:text-gdgoc-gray-400"
+            className="w-full pl-9 pr-3 py-2 text-xs sm:text-sm bg-gdgoc-gray-50 rounded-lg card-bb-sm focus:outline-none focus:ring-2 focus:ring-gdgoc-blue focus:bg-white transition-all placeholder:text-gdgoc-gray-400"
           />
         </div>
 
@@ -176,7 +181,7 @@ export const MemberMyWork: React.FC = () => {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 text-xs bg-gdgoc-gray-50 border border-gdgoc-gray-200 rounded-lg text-gdgoc-gray-700 focus:outline-none focus:ring-2 focus:ring-gdgoc-blue w-full sm:w-auto"
+            className="px-3 py-2 text-xs bg-gdgoc-gray-50 rounded-lg card-bb-sm text-gdgoc-gray-700 focus:outline-none focus:ring-2 focus:ring-gdgoc-blue w-full sm:w-auto"
           >
             <option value="ALL">All Statuses</option>
             <option value="Assigned">Assigned</option>
@@ -190,7 +195,7 @@ export const MemberMyWork: React.FC = () => {
       {/* ---------------------------------------------------------------------
           TASK LIST TABLE (CLICKABLE ROWS)
           --------------------------------------------------------------------- */}
-      <div className="bg-white rounded-xl border border-gdgoc-gray-200 shadow-2xs overflow-hidden">
+      <div className="bg-white rounded-xl border border-gdgoc-gray-200 card-bb overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-gdgoc-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CheckSquare className="w-4 h-4 text-gdgoc-green" />
@@ -301,7 +306,7 @@ export const MemberMyWork: React.FC = () => {
                             setSelectedTask(task);
                             setIsModalOpen(true);
                           }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-gdgoc-gray-200 bg-white group-hover:border-gdgoc-blue group-hover:text-gdgoc-blue text-[11px] font-semibold text-gdgoc-gray-700 transition-colors shadow-2xs"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white group-hover:text-gdgoc-blue text-[11px] font-semibold text-gdgoc-gray-700 transition-colors card-bb-sm"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>Details</span>
@@ -325,6 +330,7 @@ export const MemberMyWork: React.FC = () => {
           setSelectedTask(null);
         }}
       />
+      </div>
     </div>
   );
 };

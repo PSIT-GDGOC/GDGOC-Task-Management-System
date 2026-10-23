@@ -83,13 +83,13 @@ export class AuthService {
     const rawCode = `inv_${crypto.randomBytes(24).toString('base64url')}`;
     const hashedCode = this.hashInvitationCode(rawCode);
 
-    const expiresInHours = options.expiresInHours ?? 48; // default 48h expiration
+    const expiresInHours = 48;
     const expiresAt = new Date(Date.now() + expiresInHours * 60 * 60 * 1000);
 
     const invitation = await prisma.adminInvitation.create({
       data: {
         hashedCode,
-        intendedRole: options.role ?? SystemRole.ADMIN,
+        intendedRole: SystemRole.ADMIN,
         intendedPosition: options.position,
         intendedTeamId: options.teamId,
         createdById: issuerId,
@@ -100,8 +100,31 @@ export class AuthService {
     return {
       invitationId: invitation.id,
       rawCode, // Returned ONLY ONCE to the issuer; never stored in plaintext
+      createdAt: invitation.createdAt,
       expiresAt,
     };
+  }
+
+  static async listAdminInvitations() {
+    const now = new Date();
+    const records = await prisma.adminInvitation.findMany({
+      include: { createdBy: { select: { id: true, name: true } }, usedBy: { select: { id: true, name: true } } },
+      orderBy: { createdAt: 'desc' },
+    });
+    const data = records.map((invitation) => ({
+      id: invitation.id, reference: invitation.id.slice(-8).toUpperCase(), label: invitation.intendedPosition,
+      createdBy: invitation.createdBy, createdAt: invitation.createdAt, expiresAt: invitation.expiresAt,
+      redeemedAt: invitation.usedAt, redeemer: invitation.usedBy, revokedAt: invitation.revokedAt,
+      status: invitation.revokedAt ? 'REVOKED' : invitation.usedAt ? 'REDEEMED' : invitation.expiresAt <= now ? 'EXPIRED' : 'ACTIVE',
+    }));
+    return { data, summary: { total: data.length, active: data.filter(x => x.status === 'ACTIVE').length, redeemed: data.filter(x => x.status === 'REDEEMED').length, expired: data.filter(x => x.status === 'EXPIRED').length } };
+  }
+
+  static async revokeAdminInvitation(id: string) {
+    const result = await prisma.adminInvitation.updateMany({
+      where: { id, usedAt: null, revokedAt: null, expiresAt: { gt: new Date() } }, data: { revokedAt: new Date() },
+    });
+    if (!result.count) throw new AppError('Invitation is no longer active', 409);
   }
 
   /**
@@ -134,13 +157,11 @@ export class AuthService {
       }
 
       // Mark invitation as redeemed
-      await tx.adminInvitation.update({
-        where: { id: invitation.id },
-        data: {
-          usedById: userId,
-          usedAt: now,
-        },
+      const redeemed = await tx.adminInvitation.updateMany({
+        where: { id: invitation.id, usedAt: null, usedById: null, revokedAt: null, expiresAt: { gt: now } },
+        data: { usedById: userId, usedAt: now },
       });
+      if (!redeemed.count) throw new AppError('This invitation is no longer available', 409);
 
       // Promote user
       const updatedUser = await tx.user.update({

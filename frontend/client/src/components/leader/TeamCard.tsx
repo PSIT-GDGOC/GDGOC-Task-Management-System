@@ -1,4 +1,4 @@
-import React from 'react';
+﻿import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Team } from '../../types/task';
 import { getTeamMetrics } from '../../data/mockData';
@@ -51,7 +51,7 @@ export const TeamCard: React.FC<TeamCardProps> = ({ team }) => {
   return (
     <div
       onClick={() => navigate(`/leader/teams/${team.id}`)}
-      className={`group bg-white rounded-xl border border-gdgoc-gray-200 p-5 sm:p-6 shadow-xs hover:shadow-md transition-all cursor-pointer flex flex-col justify-between text-left ${styles.hoverBorder}`}
+      className={`group bg-white rounded-xl p-5 sm:p-6 card-bb transition-all cursor-pointer flex flex-col justify-between text-left hover:brightness-[0.97]`}
     >
       <div>
         {/* Header with Title and Team Badge */}
@@ -120,3 +120,4 @@ export const TeamCard: React.FC<TeamCardProps> = ({ team }) => {
     </div>
   );
 };
+
