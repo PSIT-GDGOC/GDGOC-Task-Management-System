@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import { AnyZodObject, ZodError } from 'zod';
+import { ZodTypeAny, ZodError } from 'zod';
 
 interface ValidationTargets {
-  body?: AnyZodObject;
-  query?: AnyZodObject;
-  params?: AnyZodObject;
+  body?: ZodTypeAny;
+  query?: ZodTypeAny;
+  params?: ZodTypeAny;
 }
 
 export const validate = (schemas: ValidationTargets) => {
@@ -27,7 +27,10 @@ export const validate = (schemas: ValidationTargets) => {
           error: {
             message: 'Invalid request data',
             code: 'VALIDATION_ERROR',
-            details: error.flatten().fieldErrors,
+            details: {
+              ...error.flatten().fieldErrors,
+              ...(error.flatten().formErrors.length && { _form: error.flatten().formErrors }),
+            },
           },
         });
         return;

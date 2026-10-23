@@ -2,6 +2,11 @@
 
 Base URL: `/api/v1`
 
+Users/teams endpoints and the current role/team permission matrix are documented
+in [Users and teams](backend/USERS_AND_TEAMS.md). The implemented OpenAPI contract
+is also available at `/api/v1/docs/openapi.json`. Task endpoints require a session
+and restrict visibility/actions by the rules in that document.
+
 All responses follow a consistent JSON format:
 ```json
 // Success Response
@@ -95,84 +100,27 @@ All responses follow a consistent JSON format:
 The Kanban columns follow:
 `FREE` → `ASSIGNED` → `IN_PROGRESS` → `IN_REVIEW` → `DONE`
 
-### 2.1 `GET /tasks`
-- **Description:** Lists active (non-soft-deleted) tasks for board polling and synchronization.
-- **Query Parameters:**
-  - `teamId` *(string, optional)*: Filter by specific team ID.
-  - `scope` *(string, optional)*: `'TEAM' | 'WHOLE_CLUB'`.
-  - `status` *(string, optional)*: `'FREE' | 'ASSIGNED' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE'`.
-  - `assigneeId` *(string, optional)*: Filter by assigned member ID.
-  - `search` *(string, optional)*: Full-text search on title & description.
-- **Response `200`:** Array of tasks with team, creator, assignee, and latest submission.
+The implemented request/response shapes, permissions, validations, and concurrency
+rules are documented in [Task Board workflow](backend/TASK_WORKFLOW.md) and at
+`/api/v1/docs/openapi.json`.
 
-### 2.2 `GET /tasks/:id`
-- **Description:** Retrieves task detail, full append-only audit trail (`activities`), and review history (`submissions`).
-- **Response `200`:** Task object.
-- **Response `404`:** Task not found or deleted.
+| Method and path | Purpose |
+| --- | --- |
+| GET `/tasks` | Visible tasks with page/limit, team, assignee, scope, status, priority, tag, and search filters |
+| GET `/tasks/:id` | Detail with activity and submission/review history |
+| POST `/tasks` | Create with optional initial assignee |
+| PATCH `/tasks/:id` | Edit metadata before review/completion |
+| POST `/tasks/:id/assign` | Assign, reassign, or unassign using assigneeId/null |
+| POST `/tasks/:id/claim` | Claim eligible Free work atomically |
+| POST `/tasks/:id/start` | Assignee starts Assigned work |
+| POST `/tasks/:id/submit` | Assignee submits a PR URL or note |
+| POST `/tasks/:id/review` | Authorized non-assignee approves or sends back with feedback |
+| DELETE `/tasks/:id` | Soft-delete before review/completion |
 
-### 2.3 `POST /tasks`
-- **Description:** Creates a new task.
-- **Permission:** `SYSTEM_OWNER`, `PRESIDENT`, `ADMIN`, or Team Head for the targeted team.
-- **Request Body:**
-  ```json
-  {
-    "title": "Build landing page hero section",
-    "description": "Implement responsive layout using Tailwind CSS with club logo assets.",
-    "priority": "HIGH",
-    "scope": "TEAM",
-    "teamId": "cuid_tech_team",
-    "deadline": "2026-11-01T18:00:00.000Z",
-    "tags": ["frontend", "tailwind", "react"]
-  }
-  ```
-- **Response `201`:** Created task with status `FREE` (or `ASSIGNED` if assigneeId provided).
-
-### 2.4 `POST /tasks/:id/claim`
-- **Description:** Concurrency-safe atomic task claim. If two members attempt to claim simultaneously, one succeeds and the other receives `409 Conflict`.
-- **Eligibility:**
-  - If task `scope` is `TEAM`, claimant must belong to that team in `TeamMembership`.
-  - If task `scope` is `WHOLE_CLUB`, any authenticated member may claim.
-- **Transition:** `FREE` → `ASSIGNED`
-- **Response `200`:** Updated task with assignee.
-- **Errors:** `403 Forbidden` (not in team), `409 Conflict` (already claimed / race lost).
-
-### 2.5 `POST /tasks/:id/start`
-- **Description:** Member indicates active work has begun.
-- **Permission:** Task assignee.
-- **Transition:** `ASSIGNED` → `IN_PROGRESS`
-- **Response `200`:** Updated task.
-
-### 2.6 `POST /tasks/:id/submit`
-- **Description:** Submits completed pull request for review.
-- **Permission:** Task assignee.
-- **Transition:** `IN_PROGRESS` → `IN_REVIEW`
-- **Request Body:**
-  ```json
-  {
-    "prUrl": "https://github.com/PSIT-GDGOC/GDGOC-Task-Management-System/pull/12",
-    "note": "Implemented hero component and added responsive breakpoints. Unit tests included."
-  }
-  ```
-- **Response `200`:** Updated task and new pending submission.
-
-### 2.7 `POST /tasks/:id/review`
-- **Description:** Reviewer inspects PR and decides outcome.
-- **Permission:** `SYSTEM_OWNER`, `PRESIDENT`, `ADMIN`, or Team Head.
-- **Request Body:**
-  ```json
-  {
-    "outcome": "APPROVED | SENT_BACK",
-    "reviewComment": "Great job on the responsiveness! Merging PR."
-  }
-  ```
-- **Transitions:**
-  - If `APPROVED`: `IN_REVIEW` → `DONE` (sets `completedAt`, `approvedById`, `isOnTime`).
-  - If `SENT_BACK`: `IN_REVIEW` → `IN_PROGRESS` (stores review comment for member to address).
-- **Response `200`:** Updated task.
-
-### 2.8 `DELETE /tasks/:id`
-- **Description:** Soft deletes task (`isDeleted = true`, `deletedAt = now()`) and records activity.
-- **Permission:** `SYSTEM_OWNER`, `PRESIDENT`, `ADMIN`.
+List responses preserve success/count/data and add pagination; the default page
+contains at most 20 tasks. Mutations return success/data. Self-review is forbidden.
+Tasks in review or Done are locked against edits, reassignment, and deletion.
+Approval measures timeliness from the approved attempt's submission timestamp.
 
 ---
 

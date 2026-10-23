@@ -1,39 +1,47 @@
 services:
   # Backend Express Service on Render
   - type: web
-    name: gdgoc-task-management-backend
+    name: gdgoc-tracking-backend
     runtime: node
+    branch: feat/backend
     plan: free
     region: oregon
-    buildCommand: npm install && npm run build:backend && npm run prisma:generate
-    startCommand: npm run start --workspace=backend
+    buildCommand: npm ci --workspace=backend --include-workspace-root --include=dev && npm run prisma:generate && npm run build:backend
+    startCommand: npm run config:check --workspace=backend && npm run prisma:deploy && npm run prisma:seed && npm run start --workspace=backend
+    healthCheckPath: /health/ready
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
         value: 5000
+      - key: NODE_VERSION
+        value: 22.23.4
+      - key: ENABLE_DEV_LOGIN
+        value: 'false'
+      - key: ALLOW_SELF_REGISTRATION
+        value: 'false'
+      - key: COOKIE_SAME_SITE
+        value: none
+      - key: GOOGLE_AUTH_ENABLED
+        value: 'false'
+      - key: WORKER_MODE
+        value: embedded
+      - key: REDIS_PREFIX
+        value: gdgoc-production
+      - key: REDIS_TRANSPORT
+        value: render-internal
+      - key: REDIS_URL
+        sync: false
       - key: DATABASE_URL
-        fromDatabase:
-          name: gdgoc-task-postgres
-          property: connectionString
+        sync: false
+      - key: DIRECT_URL
+        sync: false
       - key: SESSION_SECRET
         generateValue: true
       - key: SYSTEM_OWNER_EMAIL
-        sync: false
+        value: gdgoc.psit@gmail.com
       - key: CLIENT_ORIGIN
         sync: false
-      - key: GOOGLE_CLIENT_ID
+      - key: ADMIN_ORIGIN
         sync: false
-      - key: GOOGLE_CLIENT_SECRET
-        sync: false
-      - key: GOOGLE_CALLBACK_URL
-        sync: false
-      - key: GITHUB_WEBHOOK_SECRET
-        sync: false
-
-databases:
-  - name: gdgoc-task-postgres
-    plan: free
-    region: oregon
-    databaseName: gdgoc_tasks
-    user: gdgoc_admin
+      # Configure GitHub and Google secrets later in the dashboard, then enable Google.

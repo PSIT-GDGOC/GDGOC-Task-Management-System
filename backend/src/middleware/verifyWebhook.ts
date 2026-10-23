@@ -8,13 +8,16 @@ import { AppError } from './errorHandler';
  * Validates the raw body against the X-Hub-Signature-256 header using HMAC-SHA256
  * and constant-time buffer comparison to prevent timing attacks.
  */
-export const verifyGitHubWebhookSignature = (req: Request, res: Response, next: NextFunction): void => {
+export const verifyGitHubWebhookSignature = (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void => {
   const signatureHeader = req.headers['x-hub-signature-256'] as string | undefined;
   const webhookSecret = env.GITHUB_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
-    console.error('GITHUB_WEBHOOK_SECRET is not configured on the server.');
-    return next(new AppError('Webhook signature verification misconfigured on server', 500));
+    return next(new AppError('GitHub webhook is not configured', 503));
   }
 
   if (!signatureHeader) {

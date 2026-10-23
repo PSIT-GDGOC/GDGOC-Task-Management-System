@@ -162,7 +162,7 @@ GDGOC-Task-Management-System/
 | **Drag and Drop** | `@dnd-kit/core` | Accessible drag-and-drop primitives for Kanban column transitions. |
 | **Backend** | Express + TypeScript | Modular architecture separating routes, services, repositories, and middlewares. |
 | **Database & ORM** | PostgreSQL + Prisma ORM | ACID compliance, relational integrity, conditional atomic updates (`$transaction`). |
-| **Sessions** | `express-session` + `connect-pg-simple` | Secure, HTTP-only server sessions in PostgreSQL with dev memory fallback. |
+| **Sessions** | `express-session` + `connect-pg-simple` | Secure, HTTP-only server sessions in PostgreSQL; explicit memory store for isolated tests. |
 | **Validation** | Zod | Runtime schema validation for request bodies, queries, and params. |
 | **Testing** | Vitest + Supertest | Ultra-fast unit and API integration testing. |
 
@@ -191,8 +191,9 @@ PORT=5000
 NODE_ENV=development
 CLIENT_ORIGIN=http://localhost:5173
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gdgoc_tasks?schema=public"
+DIRECT_URL="postgresql://postgres:postgres@localhost:5432/gdgoc_tasks?schema=public"
 SESSION_SECRET="your-secure-random-32-byte-secret"
-SYSTEM_OWNER_EMAIL="aditya.lead@example.com"
+SYSTEM_OWNER_EMAIL="gdgoc.psit@gmail.com"
 GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
 GOOGLE_CLIENT_SECRET="your-google-client-secret"
 GOOGLE_CALLBACK_URL="http://localhost:5000/api/v1/auth/google/callback"
@@ -211,6 +212,15 @@ VITE_API_URL="http://localhost:5000/api/v1"
 
 ---
 
+## Database foundation
+
+See [database setup and verification](docs/backend/DATABASE.md) for PostgreSQL,
+Prisma migrations, seeding, Supabase connection settings, and database tests.
+See [users, teams, and permissions](docs/backend/USERS_AND_TEAMS.md) for the next
+backend stage and the API contract for profile/team integration.
+See [Task Board workflow](docs/backend/TASK_WORKFLOW.md) for assignment, lifecycle
+actions, review policies, and paginated task reads.
+
 ## 🚀 Local Setup & Development Commands
 
 ### 1. Installation
@@ -226,12 +236,12 @@ npm install
 ### 2. Configure Environment Files
 ```bash
 # Windows PowerShell
-Copy-Item .env.example backend\.env
+Copy-Item backend\.env.example backend\.env
 Copy-Item frontend\client\.env.example frontend\client\.env
 Copy-Item frontend\admin\.env.example frontend\admin\.env
 
 # Unix / macOS
-cp .env.example backend/.env
+cp backend/.env.example backend/.env
 cp frontend/client/.env.example frontend/client/.env
 cp frontend/admin/.env.example frontend/admin/.env
 ```
@@ -241,8 +251,8 @@ cp frontend/admin/.env.example frontend/admin/.env
 # Generate Prisma Client
 npm run prisma:generate
 
-# Apply migrations
-npm run prisma:migrate
+# Apply committed migrations (start PostgreSQL and configure both database URLs first)
+npm run prisma:deploy
 
 # Seed core teams (Tech, Media, Content) & System Owner
 npm run prisma:seed
@@ -277,8 +287,9 @@ npm run build
 
 ### Backend (Render)
 - Deploy using the provided `render.yaml` blueprint.
-- Provision a managed PostgreSQL instance and link `DATABASE_URL`.
+- Configure Supabase PostgreSQL using `DATABASE_URL` and `DIRECT_URL`; follow [Supabase setup](docs/backend/SUPABASE.md) for session pooling, SSL and API access restrictions.
 - Set `SESSION_SECRET`, `SYSTEM_OWNER_EMAIL`, and `CLIENT_ORIGIN` in Render dashboard.
+- Read the [deployment handoff](docs/backend/DEPLOYMENT_HANDOFF.md) for current hosting status, required settings, verification and the branch change after merging. Render follows `feat/backend` until its tracked branch is explicitly changed to `main`.
 
 ### Frontends (Vercel)
 - **Member Application:** Set root directory to `frontend/client`, build command `npm run build`, output `dist`, and set `VITE_API_URL`.
@@ -288,6 +299,6 @@ npm run build
 
 ## 🔍 Known Limitations & Planned Follow-Ups
 
-1. **Google OAuth 2.0 Credentials:** URL scaffolding is functional; production Google Cloud credentials (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) must be supplied. A local development role-switcher is included for instant local testing.
-2. **Database Provisioning:** A live PostgreSQL database is required for `npm run prisma:migrate`. The session store falls back to in-memory during local development if PostgreSQL is temporarily offline.
-3. **Automated GitHub PR Sync:** Webhook signature verification (`crypto.timingSafeEqual`) is fully tested; automated PR status reflection triggers when the webhook is pointed to the live backend URL.
+1. **Google OAuth 2.0 Credentials:** The backend login/session flow is implemented and locally tested. Live sign-in requires club Google Cloud credentials, exact callback/frontend origins and browser verification. Initial hosting sets `GOOGLE_AUTH_ENABLED=false`; development login is forbidden in production.
+2. **Database Provisioning:** Supabase hosts PostgreSQL. Deployment applies committed SQL with `npm run prisma:deploy` and seeds the club owner/teams before starting. Never run migration resets or `prisma db push` against shared data. See the handoff for live verification status.
+3. **Automated GitHub PR Sync:** Signed webhook acknowledgement and task-reference extraction exist. Actual GitHub synchronization and ownership verification remain for the team; configuring the webhook alone does not synchronize tasks.

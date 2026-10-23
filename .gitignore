@@ -10,10 +10,9 @@ out/
 .next/
 
 # Environment Variables
-.env
-.env.local
-.env.*.local
+.env*
 !.env.example
+!.env.*.example
 
 # Logs
 npm-debug.log*

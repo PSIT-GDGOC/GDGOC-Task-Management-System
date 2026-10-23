@@ -1,13 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
-import crypto from 'crypto';
 import app from '../src/app';
+import { env } from '../src/config/env';
+env.GITHUB_WEBHOOK_SECRET = 'test-only-webhook-secret-123456789';
 
 describe('POST /api/v1/webhooks/github', () => {
   it('should reject webhook request without signature', async () => {
-    const res = await request(app)
-      .post('/api/v1/webhooks/github')
-      .send({ action: 'opened' });
+    const res = await request(app).post('/api/v1/webhooks/github').send({ action: 'opened' });
 
     expect(res.status).toBe(401);
     expect(res.body.error.message).toContain('Missing X-Hub-Signature-256');
