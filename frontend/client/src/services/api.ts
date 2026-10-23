@@ -324,3 +324,96 @@ export const taskApi = {
     return formatBackendTask(res.data);
   },
 };
+
+
+// ============================================================================
+// Admin Services
+// ============================================================================
+
+export interface AdminInvitation {
+  id: string;
+  rawCode?: string;
+  role?: 'ADMIN' | 'PRESIDENT';
+  intendedRole?: 'ADMIN' | 'PRESIDENT';
+  position?: string | null;
+  intendedPosition?: string | null;
+  status: 'ACTIVE' | 'EXPIRED' | 'USED' | 'REVOKED';
+  expiresAt: string;
+  createdAt: string;
+  intendedEmail?: string | null;
+  intendedTeamId?: string | null;
+}
+
+export interface AdminUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  position?: string | null;
+  githubUsername?: string | null;
+  isActive: boolean;
+  createdAt: string;
+  memberships?: { team: { id: string; name: string; slug: string }; isTeamHead: boolean }[];
+}
+
+export const adminApi = {
+  async getInvitations(): Promise<AdminInvitation[]> {
+    const res = await apiRequest<{ success: boolean; data: any[] }>('/invitations');
+    return res.data || [];
+  },
+
+  async createInvitation(input: {
+    role: 'ADMIN' | 'PRESIDENT';
+    position?: string;
+    teamId?: string;
+    email?: string;
+    expiresInHours?: number;
+  }): Promise<AdminInvitation> {
+    const res = await apiRequest<{ success: boolean; data: any }>('/invitations', 'POST', {
+      role: input.role,
+      position: input.position || undefined,
+      teamId: input.teamId || undefined,
+      email: input.email || undefined,
+      expiresInHours: input.expiresInHours ?? 48,
+    });
+    return res.data;
+  },
+
+  async revokeInvitation(id: string): Promise<void> {
+    await apiRequest(`/invitations/${id}`, 'DELETE');
+  },
+
+  async getUsers(params: { search?: string; role?: string; isActive?: boolean } = {}): Promise<AdminUser[]> {
+    const query = new URLSearchParams();
+    if (params.search) query.append('search', params.search);
+    if (params.role) query.append('role', params.role);
+    if (params.isActive !== undefined) query.append('isActive', String(params.isActive));
+    query.append('limit', '100');
+
+    const res = await apiRequest<{ success: boolean; data: any[] }>(`/users?${query.toString()}`);
+    return res.data || [];
+  },
+
+  async toggleUserStatus(userId: string, isActive: boolean): Promise<void> {
+    await apiRequest(`/users/${userId}/status`, 'PATCH', { isActive });
+  },
+
+  async getTeams(): Promise<{ id: string; name: string; slug: string; description?: string; _count?: { members: number; tasks: number } }[]> {
+    const res = await apiRequest<{ success: boolean; data: any[] }>('/teams');
+    return res.data || [];
+  },
+
+  async createTeam(input: { name: string; slug: string; description?: string }): Promise<any> {
+    const res = await apiRequest<{ success: boolean; data: any }>('/teams', 'POST', input);
+    return res.data;
+  },
+
+  async getStatistics(): Promise<{ totalCompleted: number; onTimeRate: number | null; averageLeadTimeHours: number | null }> {
+    try {
+      const res = await apiRequest<{ success: boolean; data: any }>('/history/statistics');
+      return res.data || { totalCompleted: 0, onTimeRate: null, averageLeadTimeHours: null };
+    } catch {
+      return { totalCompleted: 0, onTimeRate: null, averageLeadTimeHours: null };
+    }
+  },
+};

@@ -6,7 +6,11 @@ import { AuthProvider, useAuth } from './auth/authContext';
 import { TaskProvider } from './context/TaskContext';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
-import { AdminDashboardPlaceholder } from './pages/AdminDashboardPlaceholder';
+import { AdminLayout } from './layouts/AdminLayout';
+import { AdminTasksPage } from './pages/admin/AdminTasksPage';
+import { AdminMembersTeamsPage } from './pages/admin/AdminMembersTeamsPage';
+import { AdminInvitationsPage } from './pages/admin/AdminInvitationsPage';
+import { AdminAnalyticsPage } from './pages/admin/AdminAnalyticsPage';
 import { LeaderLayout } from './layouts/LeaderLayout';
 import { LeaderOverview } from './pages/leader/LeaderOverview';
 import { TeamDetailPage } from './pages/leader/TeamDetailPage';
@@ -38,7 +42,7 @@ const RootRedirector: React.FC = () => {
 
   switch (user.role) {
     case 'ADMIN':
-      return <Navigate to="/admin" replace />;
+      return <Navigate to="/admin/tasks" replace />;
     case 'TEAM_LEADER':
       return <Navigate to="/leader/overview" replace />;
     case 'MEMBER':
@@ -61,15 +65,21 @@ export const App: React.FC = () => {
               {/* Public Login Route */}
               <Route path="/login" element={<LoginPage />} />
 
-              {/* Admin Route */}
+              {/* Admin Routes (Protected: Full Club Governance) */}
               <Route
                 path="/admin"
                 element={
                   <ProtectedRoute allowedRoles={['ADMIN']}>
-                    <AdminDashboardPlaceholder />
+                    <AdminLayout />
                   </ProtectedRoute>
                 }
-              />
+              >
+                <Route index element={<Navigate to="/admin/tasks" replace />} />
+                <Route path="tasks" element={<AdminTasksPage />} />
+                <Route path="teams" element={<AdminMembersTeamsPage />} />
+                <Route path="invitations" element={<AdminInvitationsPage />} />
+                <Route path="analytics" element={<AdminAnalyticsPage />} />
+              </Route>
 
               {/* Team Leader Routes (Protected) */}
               <Route
