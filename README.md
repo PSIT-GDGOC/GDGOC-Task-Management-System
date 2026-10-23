@@ -1,304 +1,200 @@
-# GDGOC Club Task Management System
+# GDGOC Task Management System
 
-A role-governed, concurrency-safe Kanban task management system designed specifically for student club workflows and open-source contribution tracking, featuring dedicated **Member** and **Admin** portals.
+Task management for the PSIT GDGOC club, with separate member and admin portals.
+Members claim tasks, submit work for review, and track their contributions.
+Administrators manage tasks, teams, memberships, and invitations.
 
----
+## Project status
 
-## 📌 Project Overview
+The backend is deployed on Render with Supabase PostgreSQL and Render Key Value
+(Redis-compatible). Backend changes are merged into `main`, which Render tracks
+for automatic deployment.
 
-The **GDGOC Club Task Management System** organizes student club operations into a unified Kanban lifecycle (**Free → Assigned → In Progress → In Review → Done**) linked directly to GitHub development workflows.
+The application still requires frontend integration and live Google sign-in setup.
+Google authentication is implemented in the backend but disabled in production
+until club OAuth credentials and frontend URLs are configured. GitHub task
+synchronization is also pending.
 
-To maintain clear operational boundaries and security, the system provides two distinct frontend portals backed by a single robust Express + PostgreSQL API:
-1. **Member Portal (`frontend/client/`):** Dedicated to regular club contributors to claim tasks, track active work, submit PR links for review, and inspect personal contribution history.
-2. **Admin Portal (`frontend/admin/`):** Dedicated to club executives (System Owner, President, Core Admins, Team Heads) to create tasks, assign work, review GitHub PR submissions, approve tasks to Done, send back work with feedback notes, maintain teams, and issue single-use admin invitation tokens.
+See the [deployment handoff](docs/backend/DEPLOYMENT_HANDOFF.md) for operational
+settings and the [23 October 2026 verification report](docs/backend/VERIFICATION_2026-10-23.md)
+for completed checks and outstanding issues.
 
----
+## Stack
 
-## 🔒 Strict Scope Lock — Approved Application Pages
+| Component                   | Technology                                      |
+| --------------------------- | ----------------------------------------------- |
+| Member and admin portals    | React 18, Vite, TypeScript, Tailwind CSS        |
+| Board data and interactions | TanStack Query, dnd-kit                         |
+| API                         | Express, TypeScript, Zod                        |
+| Database                    | PostgreSQL, Prisma                              |
+| Authentication              | Google OAuth, PostgreSQL-backed cookie sessions |
+| Cache and background jobs   | Redis, BullMQ                                   |
+| Tests                       | Vitest, Supertest                               |
+| Workspace management        | npm workspaces                                  |
 
-The page structure for both applications is finalized. No additional pages or navigation items exist beyond this exact approved list:
-
-### 1. Member Application (`frontend/client/`)
-- **Login:** Google OAuth entry point (`/login`)
-- **Task Board:** Kanban board (`/`) — View tasks, claim eligible free tasks, start assigned work, submit PR link for review.
-- **My Work History:** (`/history`) — View personal completed tasks, approvals, and on-time statistics.
-- **My Profile:** (`/profile`) — View verified Google email, manage position title, and link GitHub username.
-
-*Member Sidebar Navigation:*
-1. `Task Board`
-2. `My Work History`
-3. `My Profile`
-
----
-
-### 2. Admin Application (`frontend/admin/`)
-- **Login:** Google OAuth entry point (`/login`)
-- **Task Board:** Kanban board (`/`) — Create tasks (via inline modal), filter scopes, review submissions, approve to Done, or send back to In Progress.
-- **My Work History:** (`/history`) — Audit task completions across all members and teams.
-- **My Profile:** (`/profile`) — View administrative privileges, update position title, and manage GitHub identity.
-- **Members & Teams:** (`/members-teams`) — Manage team structures (`Tech`, `Media`, `Content`), assign team heads, and view member roles.
-- **Admin Invitations:** (`/invitations`) — Generate, track, and copy single-use 48-hour expiring invitation codes.
-
-*Admin Sidebar Navigation:*
-1. `Task Board`
-2. `My Work History`
-3. `My Profile`
-4. `Members & Teams`
-5. `Admin Invitations`
-
----
-
-## 📁 Repository Structure
+## Repository structure
 
 ```text
-GDGOC-Task-Management-System/
-│
-├── frontend/
-│   ├── client/                  # Member-facing application (Vite + React + Tailwind)
-│   │   ├── public/
-│   │   ├── src/
-│   │   │   ├── assets/
-│   │   │   ├── components/
-│   │   │   │   └── Board/       # Board, Column, TaskCard (dnd-kit)
-│   │   │   ├── layouts/
-│   │   │   │   └── MainLayout.tsx # Strict 3-item sidebar
-│   │   │   ├── pages/
-│   │   │   │   ├── Login.tsx
-│   │   │   │   ├── TaskBoard.tsx
-│   │   │   │   ├── MyWorkHistory.tsx
-│   │   │   │   └── MyProfile.tsx
-│   │   │   ├── hooks/
-│   │   │   │   └── useTasks.ts  # TanStack Query 12s polling hook
-│   │   │   ├── services/
-│   │   │   │   └── api.ts       # Central fetch client with credentials
-│   │   │   ├── types/
-│   │   │   │   └── task.ts
-│   │   │   ├── router/
-│   │   │   │   └── index.tsx
-│   │   │   ├── App.tsx
-│   │   │   └── main.tsx
-│   │   ├── index.html
-│   │   ├── package.json
-│   │   ├── tsconfig.json
-│   │   └── vite.config.ts
-│   │
-│   └── admin/                   # Admin-facing application (Vite + React + Tailwind)
-│       ├── public/
-│       ├── src/
-│       │   ├── assets/
-│       │   ├── components/
-│       │   │   ├── Board/       # Board, Column, TaskCard with review actions
-│       │   │   └── CreateTaskModal.tsx # In-board task creation
-│       │   ├── layouts/
-│       │   │   └── AdminLayout.tsx # Strict 5-item admin sidebar
-│       │   ├── pages/
-│       │   │   ├── Login.tsx
-│       │   │   ├── TaskBoard.tsx
-│       │   │   ├── MyWorkHistory.tsx
-│       │   │   ├── MyProfile.tsx
-│       │   │   ├── MembersTeams.tsx
-│       │   │   └── AdminInvitations.tsx
-│       │   ├── hooks/
-│       │   │   └── useTasks.ts
-│       │   ├── services/
-│       │   │   └── api.ts
-│       │   ├── types/
-│       │   │   └── task.ts
-│       │   ├── router/
-│       │   │   └── index.tsx
-│       │   ├── App.tsx
-│       │   └── main.tsx
-│       ├── index.html
-│       ├── package.json
-│       ├── tsconfig.json
-│       └── vite.config.ts
-│
-├── backend/                     # Node.js + Express + Prisma + PostgreSQL
-│   ├── src/
-│   │   ├── config/              # Zod runtime environment validation (env.ts)
-│   │   ├── middleware/          # requireAuth, requireRole, errorHandler, verifyWebhook
-│   │   ├── routes/              # task, auth, health, webhook, docs
-│   │   ├── services/            # task.service, auth.service, webhook.service
-│   │   ├── repositories/        # task.repository.ts
-│   │   ├── lib/                 # prisma.ts singleton
-│   │   ├── utils/               # sha256 hash and timingSafeEqual helpers
-│   │   ├── app.ts               # Express configuration, sessions, helmet, CORS
-│   │   └── server.ts            # HTTP server entrypoint
-│   ├── prisma/
-│   │   ├── schema.prisma        # 8 Prisma models, enums, composite indexes
-│   │   ├── migrations/          # Managed migration directory
-│   │   └── seed.ts              # Seeds Tech, Media, Content & System Owner
-│   ├── tests/                   # Vitest + Supertest integration tests
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── .env.example
-│
-├── docs/
-│   ├── API_CONTRACT.md          # REST API schema and state transitions
-│   └── GITHUB_WORKFLOW.md       # Branch naming and webhook signature verification
-│
-├── .github/
-│   └── pull_request_template.md # PR template with task ID checklist
-│
-├── .gitignore
-├── .prettierrc
-├── .env.example
-├── package.json                 # Root npm workspace
-├── package-lock.json
-├── README.md
-└── render.yaml                  # Render deployment blueprint
+backend/
+  prisma/           Database schema, migrations, and seed data
+  src/
+    routes/         HTTP endpoints
+    schemas/        Request validation
+    middleware/     Authentication, request handling, and errors
+    security/       Access control and request protection
+    services/       Business rules and transactions
+    repositories/   Database access
+    config/         Environment and application configuration
+    lib/            Shared database and Redis clients
+    cache/          Cached reads
+    jobs/           Background jobs and workers
+  tests/            Backend unit and integration tests
+  certs/            Public database CA certificate
+frontend/
+  client/           Member portal
+  admin/            Admin portal
+docs/
+  backend/          Feature documentation and deployment instructions
+  team/             Backend and frontend handoff guides
+compose.yaml        Local PostgreSQL and Redis services
+render.yaml         Backend deployment configuration
 ```
 
----
+## Local development
 
-## 🛠️ Technology Stack
+Use Node.js 22 (version 22.12 or later), npm, and Docker with Compose.
+Run the following commands from the repository root.
 
-| Layer | Technology | Rationale |
-| :--- | :--- | :--- |
-| **Monorepo** | npm workspaces (`frontend/client`, `frontend/admin`, `backend`) | Native node workspace management, shared scripts, zero extra monorepo bloat. |
-| **Frontend Apps** | React 18 + Vite + TypeScript | Blazing fast HMR, strict type safety. Port 5173 (Member) & 5174 (Admin). |
-| **Styling** | Tailwind CSS v3 | Utility-first styling with custom Google Developer Group brand tokens. |
-| **Board State & Sync** | TanStack Query v5 | Cross-user synchronization using 10–15s window-active polling. **No Socket.IO**. |
-| **Drag and Drop** | `@dnd-kit/core` | Accessible drag-and-drop primitives for Kanban column transitions. |
-| **Backend** | Express + TypeScript | Modular architecture separating routes, services, repositories, and middlewares. |
-| **Database & ORM** | PostgreSQL + Prisma ORM | ACID compliance, relational integrity, conditional atomic updates (`$transaction`). |
-| **Sessions** | `express-session` + `connect-pg-simple` | Secure, HTTP-only server sessions in PostgreSQL; explicit memory store for isolated tests. |
-| **Validation** | Zod | Runtime schema validation for request bodies, queries, and params. |
-| **Testing** | Vitest + Supertest | Ultra-fast unit and API integration testing. |
+### 1. Install dependencies
 
----
-
-## 👥 Roles & Permissions Matrix
-
-| Capability | System Owner (`SYSTEM_OWNER`) | President (`PRESIDENT`) | Core Admin / Team Head (`ADMIN`) | Member (`USER`) |
-| :--- | :---: | :---: | :---: | :---: |
-| **Bootstrap System** | ✅ via `SYSTEM_OWNER_EMAIL` | ❌ | ❌ | ❌ |
-| **Issue / Revoke Admin Invites** | ✅ | ✅ | ❌ | ❌ |
-| **Create / Soft-Delete Tasks** | ✅ | ✅ | ✅ (Own Team Scope) | ❌ |
-| **Claim Free Tasks** | ✅ | ✅ | ✅ | ✅ (Team Scope / Whole Club) |
-| **Submit PR for Review** | ✅ | ✅ | ✅ | ✅ (Assignee Only) |
-| **Approve Task to Done** | ✅ | ✅ | ✅ (Own Team Scope) | ❌ |
-| **Send Back with Comment** | ✅ | ✅ | ✅ (Own Team Scope) | ❌ |
-| **View Contribution History** | ✅ (All Members) | ✅ (All Members) | ✅ (All Members) | ✅ (Own History Only) |
-
----
-
-## ⚙️ Environment Configuration
-
-### 1. Root & Backend (`backend/.env`)
-```env
-PORT=5000
-NODE_ENV=development
-CLIENT_ORIGIN=http://localhost:5173
-DATABASE_URL="postgresql://postgres:postgres@localhost:5432/gdgoc_tasks?schema=public"
-DIRECT_URL="postgresql://postgres:postgres@localhost:5432/gdgoc_tasks?schema=public"
-SESSION_SECRET="your-secure-random-32-byte-secret"
-SYSTEM_OWNER_EMAIL="gdgoc.psit@gmail.com"
-GOOGLE_CLIENT_ID="your-client-id.apps.googleusercontent.com"
-GOOGLE_CLIENT_SECRET="your-google-client-secret"
-GOOGLE_CALLBACK_URL="http://localhost:5000/api/v1/auth/google/callback"
-GITHUB_WEBHOOK_SECRET="your-github-webhook-shared-secret"
-```
-
-### 2. Member Frontend (`frontend/client/.env`)
-```env
-VITE_API_URL="http://localhost:5000/api/v1"
-```
-
-### 3. Admin Frontend (`frontend/admin/.env`)
-```env
-VITE_API_URL="http://localhost:5000/api/v1"
-```
-
----
-
-## Database foundation
-
-See [database setup and verification](docs/backend/DATABASE.md) for PostgreSQL,
-Prisma migrations, seeding, Supabase connection settings, and database tests.
-See [users, teams, and permissions](docs/backend/USERS_AND_TEAMS.md) for the next
-backend stage and the API contract for profile/team integration.
-See [Task Board workflow](docs/backend/TASK_WORKFLOW.md) for assignment, lifecycle
-actions, review policies, and paginated task reads.
-
-## 🚀 Local Setup & Development Commands
-
-### 1. Installation
-```bash
-# Clone the repository
+```sh
 git clone https://github.com/PSIT-GDGOC/GDGOC-Task-Management-System.git
 cd GDGOC-Task-Management-System
-
-# Install all workspace dependencies
-npm install
+npm ci
 ```
 
-### 2. Configure Environment Files
-```bash
-# Windows PowerShell
-Copy-Item backend\.env.example backend\.env
-Copy-Item frontend\client\.env.example frontend\client\.env
-Copy-Item frontend\admin\.env.example frontend\admin\.env
+### 2. Configure the environment
 
-# Unix / macOS
+Copy the example files, then review the values for your environment:
+
+```sh
 cp backend/.env.example backend/.env
 cp frontend/client/.env.example frontend/client/.env
 cp frontend/admin/.env.example frontend/admin/.env
 ```
 
-### 3. Database Migration & Seed
-```bash
-# Generate Prisma Client
+In PowerShell, use `Copy-Item` in place of `cp`.
+
+Keep `DATABASE_URL` and `DIRECT_URL` pointed at local PostgreSQL during development.
+Replace the example `SESSION_SECRET` with a generated value and keep credentials
+out of Git. Both frontend examples point to `http://localhost:5000/api/v1`.
+
+The backend example enables development login for trusted local testing. It must
+be disabled in production. Set `GOOGLE_AUTH_ENABLED=false` while Google credentials
+are unavailable; see [Google authentication](docs/backend/GOOGLE_AUTH.md) for setup.
+
+### 3. Prepare the database
+
+```sh
+docker compose up -d postgres
 npm run prisma:generate
-
-# Apply committed migrations (start PostgreSQL and configure both database URLs first)
 npm run prisma:deploy
-
-# Seed core teams (Tech, Media, Content) & System Owner
 npm run prisma:seed
 ```
 
-### 4. Running the Applications
-```bash
-# Run all three services concurrently (Member: 5173, Admin: 5174, Backend: 5000)
-npm run dev
+The seed creates the Tech, Media, and Content teams and the club system owner
+configured by `SYSTEM_OWNER_EMAIL` (`gdgoc.psit@gmail.com`). Generate Prisma Client
+after a fresh dependency installation before building or checking types.
 
-# Or run services individually:
-npm run dev:client     # Member portal on http://localhost:5173
-npm run dev:admin      # Admin console on http://localhost:5174
-npm run dev:backend    # Express backend on http://localhost:5000
+For cache and background jobs, also start Redis:
+
+```sh
+docker compose up -d redis
 ```
 
-### 5. Quality Checks & Test Suite
-```bash
-# Typecheck all 3 workspaces (Member, Admin, Backend)
+Set `REDIS_URL=redis://127.0.0.1:6379/0` in `backend/.env` when using local Redis.
+It can remain unset for local database and API work.
+
+### 4. Start the applications
+
+Run each command in a separate terminal:
+
+| Command               | Address                        |
+| --------------------- | ------------------------------ |
+| `npm run dev:backend` | `http://localhost:5000/api/v1` |
+| `npm run dev:client`  | `http://localhost:5173`        |
+| `npm run dev:admin`   | `http://localhost:5174`        |
+
+Backend health endpoints are `/health` and `/health/ready`. Interactive API docs
+are available locally at `/api/v1/docs`; endpoint coverage is currently incomplete.
+
+## Task workflow and permissions
+
+```text
+FREE → ASSIGNED → IN_PROGRESS → IN_REVIEW → DONE
+                      ↑             |
+                      └─ Sent back ─┘
+```
+
+Only the current assignee can start or submit a task. A different authorized
+manager must review the submission. Sending work back requires feedback, and each
+submission and review remains in the task history.
+
+System owners and presidents manage club-wide work. Admins manage teams they
+belong to; members designated as team heads manage teams they head. Other members
+can claim eligible tasks and manage their assigned work. The API enforces these
+permissions independently of the portal used.
+
+| Portal | Sidebar navigation                                                          |
+| ------ | --------------------------------------------------------------------------- |
+| Member | Task Board, My Work History, My Profile                                     |
+| Admin  | Task Board, My Work History, My Profile, Members & Teams, Admin Invitations |
+
+See the [task workflow](docs/backend/TASK_WORKFLOW.md) and
+[users and teams](docs/backend/USERS_AND_TEAMS.md) guides for endpoint details.
+
+## Checks
+
+```sh
 npm run typecheck
-
-# Run automated tests (Vitest + Supertest)
-npm run test
-
-# Production build of all three applications
 npm run build
+npm run lint --workspace=backend
+npm run test --workspace=backend
 ```
 
----
+Database/API and Redis integration tests run separately:
 
-## 🚢 Deployment Outline
+```sh
+npm run test:database
+npm run test:redis
+```
 
-### Backend (Render)
-- Deploy using the provided `render.yaml` blueprint.
-- Configure Supabase PostgreSQL using `DATABASE_URL` and `DIRECT_URL`; follow [Supabase setup](docs/backend/SUPABASE.md) for session pooling, SSL and API access restrictions.
-- Set `SESSION_SECRET`, `SYSTEM_OWNER_EMAIL`, and `CLIENT_ORIGIN` in Render dashboard.
-- Read the [deployment handoff](docs/backend/DEPLOYMENT_HANDOFF.md) for hosting status, required settings and verification. After merging backend PR #1, Render follows `main`; future backend changes should be reviewed and merged there before deployment.
+Configure `TEST_DATABASE_URL` and `TEST_REDIS_URL` for disposable local test
+resources before running integration tests. See [database setup](docs/backend/DATABASE.md)
+and the [backend team guide](docs/team/BACKEND_GUIDE.md) for details.
 
-### Frontends (Vercel)
-- **Member Application:** Set root directory to `frontend/client`, build command `npm run build`, output `dist`, and set `VITE_API_URL`.
-- **Admin Application:** Set root directory to `frontend/admin`, build command `npm run build`, output `dist`, and set `VITE_API_URL`.
+## Deployment
 
----
+The hosted API is available at
+[gdgoc-tracking-backend.onrender.com/api/v1](https://gdgoc-tracking-backend.onrender.com/api/v1).
+Use the [readiness endpoint](https://gdgoc-tracking-backend.onrender.com/health/ready)
+to check database and Redis connectivity. The API root is not a web page.
 
-## 🔍 Known Limitations & Planned Follow-Ups
+`render.yaml` defines the backend build and startup commands. Startup validates
+configuration, applies committed migrations, seeds the owner and teams, and starts
+the server. Keep production credentials in the hosting environment. Follow the
+[Supabase guide](docs/backend/SUPABASE.md) for connection and certificate settings;
+never reset the shared database or use `prisma db push` against it.
 
-1. **Google OAuth 2.0 Credentials:** The backend login/session flow is implemented and locally tested. Live sign-in requires club Google Cloud credentials, exact callback/frontend origins and browser verification. Initial hosting sets `GOOGLE_AUTH_ENABLED=false`; development login is forbidden in production.
-2. **Database Provisioning:** Supabase hosts PostgreSQL. Deployment applies committed SQL with `npm run prisma:deploy` and seeds the club owner/teams before starting. Never run migration resets or `prisma db push` against shared data. See the handoff for live verification status.
-3. **Automated GitHub PR Sync:** Signed webhook acknowledgement and task-reference extraction exist. Actual GitHub synchronization and ownership verification remain for the team; configuring the webhook alone does not synchronize tasks.
+Render's free web service can sleep, which also pauses its embedded worker. Free
+Key Value hosting has no disk persistence. Always-on reminders and durable queues
+require a suitable hosting plan.
+
+## Team documentation
+
+- [Backend guide](docs/team/BACKEND_GUIDE.md): setup, responsibilities, and remaining backend work.
+- [Frontend brief](docs/team/FRONTEND_BRIEF.md): API integration, sessions, CSRF, and portal behavior.
+- [Deployment handoff](docs/backend/DEPLOYMENT_HANDOFF.md): hosting configuration and outstanding deployment work.
+- [Work history and statistics](docs/backend/HISTORY.md): history queries and contribution metrics.
+- [Admin invitations](docs/backend/INVITATIONS.md): invitation creation and redemption.
+- [GitHub workflow](docs/GITHUB_WORKFLOW.md): contribution conventions and webhook scope.
