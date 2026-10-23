@@ -76,9 +76,10 @@ export const errorHandler = (
   }
 
   // Log unhandled exceptions
-  const code = 'code' in err && typeof err.code === 'string' && /^[A-Z0-9_]{1,64}$/.test(err.code)
-    ? err.code
-    : undefined;
+  const code =
+    'code' in err && typeof err.code === 'string' && /^[A-Z0-9_]{1,64}$/.test(err.code)
+      ? err.code
+      : undefined;
   console.error('[UNHANDLED_EXCEPTION]', { name: err.name, code });
 
   const isProduction = process.env.NODE_ENV === 'production';

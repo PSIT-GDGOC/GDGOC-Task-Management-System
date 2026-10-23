@@ -7,6 +7,7 @@ import { PrismaClient } from '@prisma/client';
 import session from 'express-session';
 import pgSession from 'connect-pg-simple';
 import { seedDatabase } from '../../prisma/seed-data';
+import { sessionConnectionOptions } from '../../src/config/session-connection';
 
 const resolveModule = createRequire(`${process.cwd()}/package.json`);
 const schema = `gdgoc_test_${randomUUID().replaceAll('-', '')}`;
@@ -281,7 +282,7 @@ describe('PostgreSQL database foundation', () => {
   it('persists and reads sessions using the actual connect-pg-simple adapter', async () => {
     const Store = pgSession(session);
     const store = new Store({
-      conString: testUrl,
+      conObject: sessionConnectionOptions(testUrl),
       schemaName: schema,
       tableName: 'session',
       createTableIfMissing: false,
@@ -303,6 +304,10 @@ describe('PostgreSQL database foundation', () => {
       );
       expect(saved).toMatchObject({ userId: memberId });
       expect(await prisma.session.count({ where: { sid } })).toBe(1);
+      await new Promise<void>((resolve, reject) =>
+        store.destroy(sid, (error) => (error ? reject(error) : resolve())),
+      );
+      expect(await prisma.session.count({ where: { sid } })).toBe(0);
     } finally {
       await store.close();
     }
