@@ -10,7 +10,7 @@ Hosted API base: `https://gdgoc-tracking-backend.onrender.com/api/v1`. Before
 calling it from deployed portals, coordinate their exact HTTPS origins with the
 backend team. The initial deployment allows only its own origin.
 
-**Dependency:** use the latest `feat/backend` work. Backend Redis/build fixes now pass local checks; real Google setup remains
+**Dependency:** use current `main`, which includes merged backend PR #1. Backend Redis/build fixes pass local checks; real Google setup remains
 pending. Read `docs/backend/DEPLOYMENT_HANDOFF.md` for the live URL and verification
 status. Google login is explicitly disabled until real credentials are supplied.
 
