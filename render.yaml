@@ -1,7 +1,7 @@
 services:
   # Backend Express Service on Render
   - type: web
-    name: gdgoc-task-management-backend
+    name: gdgoc-tracking-backend
     runtime: node
     branch: feat/backend
     plan: free

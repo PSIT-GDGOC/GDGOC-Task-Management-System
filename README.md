@@ -289,6 +289,7 @@ npm run build
 - Deploy using the provided `render.yaml` blueprint.
 - Configure Supabase PostgreSQL using `DATABASE_URL` and `DIRECT_URL`; follow [Supabase setup](docs/backend/SUPABASE.md) for session pooling, SSL and API access restrictions.
 - Set `SESSION_SECRET`, `SYSTEM_OWNER_EMAIL`, and `CLIENT_ORIGIN` in Render dashboard.
+- Read the [deployment handoff](docs/backend/DEPLOYMENT_HANDOFF.md) for current hosting status, required settings, verification and the branch change after merging. Render follows `feat/backend` until its tracked branch is explicitly changed to `main`.
 
 ### Frontends (Vercel)
 - **Member Application:** Set root directory to `frontend/client`, build command `npm run build`, output `dist`, and set `VITE_API_URL`.
@@ -298,6 +299,6 @@ npm run build
 
 ## 🔍 Known Limitations & Planned Follow-Ups
 
-1. **Google OAuth 2.0 Credentials:** URL scaffolding is functional; production Google Cloud credentials (`GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`) must be supplied. A local development role-switcher is included for instant local testing.
-2. **Database Provisioning:** A live PostgreSQL database is required for `npm run prisma:migrate`. Startup checks require PostgreSQL and migrated user/session tables; database outages do not silently switch session storage.
-3. **Automated GitHub PR Sync:** Webhook signature verification (`crypto.timingSafeEqual`) is fully tested; automated PR status reflection triggers when the webhook is pointed to the live backend URL.
+1. **Google OAuth 2.0 Credentials:** The backend login/session flow is implemented and locally tested. Live sign-in requires club Google Cloud credentials, exact callback/frontend origins and browser verification. Initial hosting sets `GOOGLE_AUTH_ENABLED=false`; development login is forbidden in production.
+2. **Database Provisioning:** Supabase hosts PostgreSQL. Deployment applies committed SQL with `npm run prisma:deploy` and seeds the club owner/teams before starting. Never run migration resets or `prisma db push` against shared data. See the handoff for live verification status.
+3. **Automated GitHub PR Sync:** Signed webhook acknowledgement and task-reference extraction exist. Actual GitHub synchronization and ownership verification remain for the team; configuring the webhook alone does not synchronize tasks.
