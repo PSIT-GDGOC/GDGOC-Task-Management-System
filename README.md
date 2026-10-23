@@ -289,7 +289,7 @@ npm run build
 - Deploy using the provided `render.yaml` blueprint.
 - Configure Supabase PostgreSQL using `DATABASE_URL` and `DIRECT_URL`; follow [Supabase setup](docs/backend/SUPABASE.md) for session pooling, SSL and API access restrictions.
 - Set `SESSION_SECRET`, `SYSTEM_OWNER_EMAIL`, and `CLIENT_ORIGIN` in Render dashboard.
-- Read the [deployment handoff](docs/backend/DEPLOYMENT_HANDOFF.md) for current hosting status, required settings, verification and the branch change after merging. Render follows `feat/backend` until its tracked branch is explicitly changed to `main`.
+- Read the [deployment handoff](docs/backend/DEPLOYMENT_HANDOFF.md) for hosting status, required settings and verification. After merging backend PR #1, Render follows `main`; future backend changes should be reviewed and merged there before deployment.
 
 ### Frontends (Vercel)
 - **Member Application:** Set root directory to `frontend/client`, build command `npm run build`, output `dist`, and set `VITE_API_URL`.

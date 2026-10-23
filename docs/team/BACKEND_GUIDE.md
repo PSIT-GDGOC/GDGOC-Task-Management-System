@@ -4,7 +4,8 @@ Handoff snapshot: 23 October 2026. Club account: `gdgoc.psit@gmail.com`.
 
 ## Start here
 
-Continue on **`feat/backend`**. The deployment follows this branch until the work is reviewed and merged.
+The backend work is merged into **`main`**, which Render now follows. Start from
+current `main`; submit future backend changes through a reviewed pull request.
 BullMQ startup and lint configuration have been repaired; local checks now pass.
 Read `docs/backend/DEPLOYMENT_HANDOFF.md` for current hosting and verification
 status. Live Google login still needs real credentials and browser testing.
@@ -32,7 +33,7 @@ Use **Node 22.12+ within Node 22**, Docker for local PostgreSQL, and commands fr
 the repository root. After obtaining the latest work:
 
 ```sh
-git switch feat/backend
+git switch main
 npm ci
 cp backend/.env.example backend/.env
 docker compose up -d postgres
@@ -79,8 +80,8 @@ For database/API-only development, leave `REDIS_URL` unset. Start local Redis wi
    worker/queue hosting if always-on reminders are required.
 4. Coordinate frontend integration and its dependency fixes. Actual GitHub
    synchronization remains team work.
-5. After review/merge, change Render's tracked branch and `render.yaml` to `main`,
-   keeping the database/Redis/secrets; verify the redeploy. Never reset shared data.
+5. Render and `render.yaml` now track `main`. Verify deployments after future
+   merges while preserving the database/Redis/secrets. Never reset shared data.
 
 Run these checks with `TEST_DATABASE_URL` set to a disposable PostgreSQL database
 and `TEST_REDIS_URL` to a disposable Redis instance:

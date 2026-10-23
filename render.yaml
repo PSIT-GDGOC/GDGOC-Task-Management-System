@@ -3,7 +3,7 @@ services:
   - type: web
     name: gdgoc-tracking-backend
     runtime: node
-    branch: feat/backend
+    branch: main
     plan: free
     region: oregon
     buildCommand: npm ci --workspace=backend --include-workspace-root --include=dev && npm run prisma:generate && npm run build:backend

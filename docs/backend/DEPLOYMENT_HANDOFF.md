@@ -31,7 +31,7 @@ This document supersedes the release-blocker status in the earlier
   Oregon. The dashboard reports Available. Free plan, noeviction, no disk
   persistence; external access is blocked. Its private URL stays within Render.
 - Render backend: [gdgoc-tracking-backend](https://dashboard.render.com/web/srv-dbdcd6jncjis739n3bj0),
-  Node 22.23.4, free compute, Oregon, branch `feat/backend`, health path
+  Node 22.23.4, free compute, Oregon, branch `main`, health path
   `/health/ready`. The session transport fix `3dc29d1` is confirmed Live.
 - API base: `https://gdgoc-tracking-backend.onrender.com/api/v1`.
 - [Live readiness](https://gdgoc-tracking-backend.onrender.com/health/ready).
@@ -76,10 +76,11 @@ session persistence, CSRF, both portals and logout afterward.
 
 ## Branch and migration workflow
 
-The deployment follows `feat/backend` while its changes are unmerged. Deploying
-the older `main` now would omit these features. After review/merge, change the
-Render service's tracked branch **and** the `branch` field in `render.yaml` to
-`main`, then redeploy and verify. Keep the same database, Redis and secret values.
+Backend [PR #1](https://github.com/PSIT-GDGOC/GDGOC-Task-Management-System/pull/1)
+was merged into `main` as `8e1f71b` on 23 October 2026. Its tree matches the tested
+backend branch. Render's tracked branch and `render.yaml` now use `main`; changes
+merged into `main` can auto-deploy. Future backend work should go through review
+before merging. Keep the same database, Redis and secret values.
 Never reset the shared database. Migrations remain forward-only; an older code
 rollback must be checked for compatibility with already-applied schema changes.
 
