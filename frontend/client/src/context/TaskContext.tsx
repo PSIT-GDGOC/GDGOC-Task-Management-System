@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Task, AttachedFile, TeamId } from '../types/task';
 import { INITIAL_SAMPLE_TASKS, TEAMS } from '../data/mockData';
+import { taskApi } from '../services/api';
 
 export interface NewTaskInput {
   title: string;
@@ -18,12 +19,39 @@ interface TaskContextType {
   claimTask: (taskId: string, memberId?: string, memberName?: string) => Task | null;
   submitTask: (taskId: string) => Task | null;
   approveTask: (taskId: string) => Task | null;
+  refreshTasks: () => Promise<void>;
+  isLoading: boolean;
 }
 
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [tasks, setTasks] = useState<Task[]>(INITIAL_SAMPLE_TASKS);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
+  // Sync tasks from live backend / database on mount
+  const refreshTasks = async () => {
+    setIsLoading(true);
+    try {
+      const liveTasks = await taskApi.fetchTasks();
+      if (liveTasks && liveTasks.length > 0) {
+        // Merge with initial sample tasks so the board has rich content
+        setTasks((prev) => {
+          const liveIds = new Set(liveTasks.map((t) => t.id));
+          const nonOverlapping = prev.filter((t) => !liveIds.has(t.id));
+          return [...liveTasks, ...nonOverlapping];
+        });
+      }
+    } catch {
+      // Backend not running or offline; keep in-memory/mock state
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    refreshTasks();
+  }, []);
 
   const assignTask = (input: NewTaskInput): Task => {
     const selectedTeam = TEAMS.find((t) => t.id === input.teamId);
@@ -69,7 +97,26 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       attachments: input.attachments || [],
     };
 
+    // Optimistically update UI
     setTasks((prev) => [newTask, ...prev]);
+
+    // Persist to live Supabase backend asynchronously
+    taskApi
+      .createTask({
+        title: input.title,
+        description: input.description,
+        teamId: input.teamId,
+        assigneeId: input.assigneeId,
+        deadline: input.deadline,
+      })
+      .then((serverTask) => {
+        // Swap temp id with real server generated id if available
+        setTasks((prev) => prev.map((t) => (t.id === newTask.id ? serverTask : t)));
+      })
+      .catch((err) => {
+        console.warn('[TaskSync] Saved locally (server sync skipped):', err);
+      });
+
     return newTask;
   };
 
@@ -89,6 +136,12 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return t;
       })
     );
+
+    // Call live server
+    taskApi.claimTask(taskId).catch((err) => {
+      console.warn('[TaskSync] Claimed locally (server sync skipped):', err);
+    });
+
     return updatedTask;
   };
 
@@ -106,6 +159,12 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return t;
       })
     );
+
+    // Call live server
+    taskApi.submitTask(taskId).catch((err) => {
+      console.warn('[TaskSync] Submitted locally (server sync skipped):', err);
+    });
+
     return updatedTask;
   };
 
@@ -123,6 +182,12 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return t;
       })
     );
+
+    // Call live server
+    taskApi.reviewTask(taskId, 'APPROVED').catch((err) => {
+      console.warn('[TaskSync] Approved locally (server sync skipped):', err);
+    });
+
     return updatedTask;
   };
 
@@ -139,6 +204,8 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         claimTask,
         submitTask,
         approveTask,
+        refreshTasks,
+        isLoading,
       }}
     >
       {children}

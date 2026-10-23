@@ -26,22 +26,25 @@ export async function seedDatabase(prisma: PrismaClient, ownerEmail?: string) {
       ? undefined
       : z.string().trim().toLowerCase().email().parse(ownerEmail);
 
-  return prisma.$transaction(async (tx) => {
-    for (const team of coreTeams) {
-      await tx.team.upsert({ where: { slug: team.slug }, update: {}, create: team });
-    }
+  return prisma.$transaction(
+    async (tx) => {
+      for (const team of coreTeams) {
+        await tx.team.upsert({ where: { slug: team.slug }, update: {}, create: team });
+      }
 
-    if (normalizedEmail) {
-      await tx.user.upsert({
-        where: { email: normalizedEmail },
-        update: { role: SystemRole.SYSTEM_OWNER },
-        create: {
-          email: normalizedEmail,
-          name: 'Initial System Owner',
-          role: SystemRole.SYSTEM_OWNER,
-          position: 'System Administrator',
-        },
-      });
-    }
-  });
+      if (normalizedEmail) {
+        await tx.user.upsert({
+          where: { email: normalizedEmail },
+          update: { role: SystemRole.SYSTEM_OWNER },
+          create: {
+            email: normalizedEmail,
+            name: 'Initial System Owner',
+            role: SystemRole.SYSTEM_OWNER,
+            position: 'System Administrator',
+          },
+        });
+      }
+    },
+    { maxWait: 15000, timeout: 30000 }
+  );
 }
