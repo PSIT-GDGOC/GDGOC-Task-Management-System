@@ -120,12 +120,8 @@ router.post(
   authenticationLimit,
   validate({ body: devLoginSchema }),
   async (req: Request, res: Response, next: NextFunction) => {
-    if (
-      env.NODE_ENV === 'production' ||
-      process.env.NODE_ENV === 'production' ||
-      !env.ENABLE_DEV_LOGIN
-    ) {
-      return next(new AppError('Development login is disabled in production', 403));
+    if (!env.ENABLE_DEV_LOGIN) {
+      return next(new AppError('Development login is disabled', 403));
     }
 
     try {

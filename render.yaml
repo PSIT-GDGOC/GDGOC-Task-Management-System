@@ -17,7 +17,9 @@ services:
       - key: NODE_VERSION
         value: 22.23.4
       - key: ENABLE_DEV_LOGIN
-        value: 'false'
+        value: 'true'
+      - key: ALLOW_STAGING_DEV_LOGIN
+        value: 'true'
       - key: ALLOW_SELF_REGISTRATION
         value: 'false'
       - key: COOKIE_SAME_SITE

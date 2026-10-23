@@ -91,7 +91,7 @@ export function parseEnvironment(input: NodeJS.ProcessEnv) {
           ];
     const missing = required.filter((key) => !configured[key]);
     if (missing.length) throw new Error(`Production configuration missing: ${missing.join(', ')}`);
-    if (value.ENABLE_DEV_LOGIN) throw new Error('Development login must be disabled in production');
+    if (value.ENABLE_DEV_LOGIN && input.ALLOW_STAGING_DEV_LOGIN !== 'true') throw new Error('Development login must be disabled in production');
     if (
       value.PROCESS_ROLE === 'web' &&
       (value.SESSION_SECRET.length < 32 ||
@@ -151,4 +151,4 @@ export function parseEnvironment(input: NodeJS.ProcessEnv) {
   };
 }
 export const env = parseEnvironment(process.env);
-export const frontendOrigins = [env.CLIENT_ORIGIN, env.ADMIN_ORIGIN];
+export const frontendOrigins = [env.CLIENT_ORIGIN, env.ADMIN_ORIGIN, ...(env.ENABLE_DEV_LOGIN ? ['http://localhost:5173', 'http://localhost:5174'] : [])];
