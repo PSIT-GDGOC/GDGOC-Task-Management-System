@@ -1,8 +1,19 @@
 import { SystemRole } from '@prisma/client';
 import { AuthenticatedUser } from '../types/auth';
 
-export function isClubManager(user: Pick<AuthenticatedUser, 'role'>): boolean {
-  return user.role === SystemRole.SYSTEM_OWNER || user.role === SystemRole.PRESIDENT;
+export function isClubManager(
+  user: Pick<AuthenticatedUser, 'role'> & { position?: string | null },
+): boolean {
+  if (user.role === SystemRole.SYSTEM_OWNER || user.role === SystemRole.PRESIDENT) return true;
+  const pos = user.position?.toLowerCase() || '';
+  return (
+    user.role === SystemRole.ADMIN &&
+    (pos.includes('vice') ||
+      pos.includes('secretary') ||
+      pos.includes('organizer') ||
+      pos.includes('president') ||
+      pos.includes('super admin'))
+  );
 }
 
 export function managedTeamIds(user: AuthenticatedUser): string[] {
