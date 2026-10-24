@@ -347,17 +347,6 @@ export const taskApi = {
     return formatBackendTask(res.data);
   },
 
-  async claimTask(taskId: string): Promise<Task> {
-    // 1. Claim task
-    let res = await apiRequest<{ success: boolean; data: any }>(`/tasks/${taskId}/claim`, 'POST');
-    // 2. Start task (transitions to IN_PROGRESS)
-    try {
-      res = await apiRequest<{ success: boolean; data: any }>(`/tasks/${taskId}/start`, 'POST');
-    } catch {
-      // already in progress or transition skipped
-    }
-    return formatBackendTask(res.data);
-  },
 
   async submitTask(taskId: string, payload: { note?: string; prUrl?: string } = {}): Promise<Task> {
     const res = await apiRequest<{ success: boolean; data: any }>(`/tasks/${taskId}/submit`, 'POST', {

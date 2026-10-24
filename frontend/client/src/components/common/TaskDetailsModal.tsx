@@ -19,7 +19,6 @@ interface TaskDetailsModalProps {
   isOpen?: boolean;
   onClose: () => void;
   onApprove?: (task: Task) => void;
-  onClaim?: (task: Task) => void;
   onSubmitForReview?: (task: Task) => void;
   userRole?: string;
 }
@@ -29,7 +28,6 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
   isOpen = true,
   onClose,
   onApprove: _onApprove,
-  onClaim: _onClaim,
   onSubmitForReview: _onSubmitForReview,
   userRole: _userRole,
 }) => {

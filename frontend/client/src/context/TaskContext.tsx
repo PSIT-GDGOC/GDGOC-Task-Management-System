@@ -16,7 +16,6 @@ interface TaskContextType {
   tasks: Task[];
   assignTask: (input: NewTaskInput) => Task;
   getTaskById: (id: string) => Task | undefined;
-  claimTask: (taskId: string, memberId?: string, memberName?: string) => Task | null;
   submitTask: (taskId: string) => Task | null;
   approveTask: (taskId: string) => Task | null;
   refreshTasks: () => Promise<void>;
@@ -120,30 +119,6 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return newTask;
   };
 
-  const claimTask = (taskId: string, memberId?: string, memberName?: string): Task | null => {
-    let updatedTask: Task | null = null;
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          updatedTask = {
-            ...t,
-            status: 'In Progress',
-            ...(memberId && { assigneeId: memberId }),
-            ...(memberName && { assigneeName: memberName }),
-          };
-          return updatedTask;
-        }
-        return t;
-      })
-    );
-
-    // Call live server
-    taskApi.claimTask(taskId).catch((err) => {
-      console.warn('[TaskSync] Claimed locally (server sync skipped):', err);
-    });
-
-    return updatedTask;
-  };
 
   const submitTask = (taskId: string): Task | null => {
     let updatedTask: Task | null = null;
@@ -201,7 +176,6 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         tasks,
         assignTask,
         getTaskById,
-        claimTask,
         submitTask,
         approveTask,
         refreshTasks,

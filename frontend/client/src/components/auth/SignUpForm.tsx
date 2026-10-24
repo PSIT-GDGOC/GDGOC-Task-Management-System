@@ -119,7 +119,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onLogIn }) => {
           Create Your Account
         </h2>
         <p className="text-xs text-gdgoc-gray-500 mt-0.5">
-          Join GDGoC PSIT TaskHub to claim deliverables & build
+          Join GDGoC PSIT TaskHub to work on your assigned deliverables
         </p>
       </div>
 

@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { CheckCircle2, Award, X, Sparkles } from 'lucide-react';
 
-export type CelebrationType = 'claim' | 'approve';
+export type CelebrationType = 'submit' | 'approve';
 
 export interface CelebrationState {
   isOpen: boolean;
@@ -30,7 +30,7 @@ export const CelebrationNotification: React.FC<CelebrationNotificationProps> = (
 
   if (!state || !state.isOpen) return null;
 
-  const isClaim = state.type === 'claim';
+  const isSubmit = state.type === 'submit';
 
   return (
     <div className="fixed top-6 right-6 z-50 animate-hero-reveal max-w-md w-full p-4 select-none">
@@ -42,12 +42,12 @@ export const CelebrationNotification: React.FC<CelebrationNotificationProps> = (
           {/* Animated Icon Badge */}
           <div
             className={`w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 animate-click-pop shadow-md ${
-              isClaim
+              isSubmit
                 ? 'bg-blue-50 text-[#4285F4] border border-blue-200'
                 : 'bg-emerald-50 text-[#34A853] border border-emerald-200'
             }`}
           >
-            {isClaim ? (
+            {isSubmit ? (
               <CheckCircle2 className="w-7 h-7 text-[#4285F4]" />
             ) : (
               <Award className="w-7 h-7 text-[#34A853]" />
@@ -59,18 +59,18 @@ export const CelebrationNotification: React.FC<CelebrationNotificationProps> = (
             <div className="flex items-center gap-1.5 mb-1">
               <span
                 className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
-                  isClaim
+                  isSubmit
                     ? 'bg-blue-50 text-[#4285F4] border-blue-200'
                     : 'bg-emerald-50 text-[#34A853] border-emerald-200'
                 }`}
               >
-                {isClaim ? '⚡ Task Claimed' : '🏆 Work Approved'}
+                {isSubmit ? '🚀 Work Submitted' : '🏆 Work Approved'}
               </span>
               <Sparkles className="w-3.5 h-3.5 text-[#FBBC04] animate-spin" />
             </div>
 
             <h4 className="text-sm font-extrabold text-gdgoc-gray-900 leading-snug truncate">
-              {isClaim ? 'You claimed this task!' : 'Deliverable approved & completed!'}
+              {isSubmit ? 'Submitted for Review!' : 'Deliverable approved & completed!'}
             </h4>
 
             <p className="text-xs text-gdgoc-gray-600 line-clamp-2 mt-0.5 font-medium">
@@ -79,8 +79,8 @@ export const CelebrationNotification: React.FC<CelebrationNotificationProps> = (
 
             <p className="text-[11px] text-gdgoc-gray-400 mt-1">
               {state.subtitle ||
-                (isClaim
-                  ? 'Moved to "In Progress". Go build something awesome!'
+                (isSubmit
+                  ? 'Your deliverable was submitted to the team lead for review.'
                   : 'Milestone verified and recorded in club deliverables.')}
             </p>
           </div>
@@ -89,7 +89,8 @@ export const CelebrationNotification: React.FC<CelebrationNotificationProps> = (
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-gdgoc-gray-400 hover:text-gdgoc-gray-700 hover:bg-gdgoc-gray-100 transition-colors"
+            className="text-gdgoc-gray-400 hover:text-gdgoc-gray-600 p-1.5 rounded-lg hover:bg-gdgoc-gray-100 transition-colors"
+            aria-label="Close notification"
           >
             <X className="w-4 h-4" />
           </button>

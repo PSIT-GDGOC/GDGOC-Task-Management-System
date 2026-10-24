@@ -210,20 +210,8 @@ export class TaskService {
     });
   }
 
-  static claimTask(id: string, actor: AuthenticatedUser) {
-    return this.mutate(actor, async (tx, current) => {
-      const task = await TaskRepository.active(tx, id);
-      assertVisible(current, task);
-      if (task.status !== TaskStatus.FREE)
-        throw new AppError('Task is no longer free to claim', 409);
-      await eligible(tx, current.id, task.teamId);
-      await TaskRepository.update(tx, task, {
-        assigneeId: current.id,
-        status: TaskStatus.ASSIGNED,
-      });
-      await log(tx, id, current.id, TaskAction.CLAIMED, task.status, TaskStatus.ASSIGNED);
-      return TaskRepository.summary(tx, id);
-    });
+  static claimTask(_id: string, _actor: AuthenticatedUser) {
+    throw new AppError('Task claiming has been deprecated. Tasks must be assigned directly by Squad Leads or Super Admins.', 400);
   }
 
   static startTask(id: string, actor: AuthenticatedUser) {

@@ -300,7 +300,7 @@ export const LoginForm: React.FC = () => {
               >
                 Select Your Team
               </label>
-              <span className="text-[10px] text-gdgoc-gray-500">Claim & work on team tasks</span>
+              <span className="text-[10px] text-gdgoc-gray-500">View & work on assigned tasks</span>
             </div>
             <select
               id="team-crew-select"
