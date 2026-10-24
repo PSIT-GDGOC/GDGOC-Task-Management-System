@@ -105,7 +105,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => 
             className={navItemClasses}
           >
             <KeyRound className="w-4 h-4 flex-shrink-0" />
-            <span>Onboarding Invites</span>
+            <span>President's Key Vault</span>
           </NavLink>
 
           {/* 4. Analytics */}

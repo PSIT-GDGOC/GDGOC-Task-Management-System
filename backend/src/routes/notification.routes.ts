@@ -16,13 +16,6 @@ function visible(user: AuthenticatedUser): Prisma.NotificationWhereInput {
     userId: user.id,
     task: {
       isDeleted: false,
-      assigneeId: user.id,
-      ...(!isClubManager(user) && {
-        OR: [
-          { scope: 'WHOLE_CLUB' },
-          { teamId: { in: user.teamMemberships.map((m) => m.teamId) } },
-        ],
-      }),
     },
   };
 }
@@ -80,4 +73,37 @@ router.patch(
     });
   }),
 );
+router.post(
+  '/read-all',
+  asyncHandler(async (req, res) => {
+    await prisma.notification.updateMany({
+      where: { userId: req.user!.id, readAt: null },
+      data: { readAt: new Date() },
+    });
+    res.json({ success: true, message: 'All notifications marked as read' });
+  }),
+);
+
+router.post(
+  '/:id/read',
+  validate({ params: z.object({ id: idSchema }) }),
+  asyncHandler(async (req, res) => {
+    const notification = await prisma.notification.findFirst({
+      where: { ...visible(req.user!), id: req.params.id },
+    });
+    if (!notification) throw new AppError('Notification not found', 404);
+    await prisma.notification.updateMany({
+      where: { id: notification.id, userId: req.user!.id, readAt: null },
+      data: { readAt: new Date() },
+    });
+    res.json({
+      success: true,
+      data: await prisma.notification.findUnique({
+        where: { id: notification.id },
+        select: { id: true, readAt: true },
+      }),
+    });
+  }),
+);
+
 export default router;

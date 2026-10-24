@@ -75,6 +75,7 @@ app.use((_req, res, next) => {
 // API Routes
 app.use('/health', healthRoutes);
 app.use('/api/v1/auth/invitations', invitationRoutes);
+app.use('/api/v1/invitations', invitationRoutes);
 app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/tasks', taskRoutes);
 app.use('/api/v1/users', userRoutes);

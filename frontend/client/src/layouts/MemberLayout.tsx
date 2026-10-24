@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { MemberSidebar } from '../components/member/MemberSidebar';
-import { Menu } from 'lucide-react';
+import { Menu, UserCheck } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
+import { NotificationBell } from '../components/common/NotificationBell';
 
 export const MemberLayout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -33,19 +34,33 @@ export const MemberLayout: React.FC = () => {
 
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 min-h-screen">
-        {/* Mobile Top Header */}
-        <header className="lg:hidden bg-white border-b-2 border-[#111111] px-4 py-3 flex items-center justify-between sticky top-0 z-30">
-          <button
-            onClick={() => setMobileMenuOpen(true)}
-            className="p-1.5 rounded-lg border border-gdgoc-gray-200 text-gdgoc-gray-700 hover:bg-gdgoc-gray-100"
-            aria-label="Open menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
-          <Logo size="sm" showSubtitle={false} />
-          <span className="text-[10px] font-bold text-gdgoc-green bg-green-50 border border-green-200 px-2 py-0.5 rounded-full">
-            Member
-          </span>
+        {/* Top Navbar Header */}
+        <header className="bg-white/90 backdrop-blur-xs border-b border-gdgoc-gray-200 px-4 sm:px-6 lg:px-8 py-2.5 flex items-center justify-between sticky top-0 z-30 shadow-2xs">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="lg:hidden p-1.5 rounded-lg border border-gdgoc-gray-200 text-gdgoc-gray-700 hover:bg-gdgoc-gray-100"
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="lg:hidden">
+              <Logo size="sm" showSubtitle={false} />
+            </div>
+            <div className="hidden lg:flex items-center gap-2 text-xs text-gdgoc-gray-500 font-medium">
+              <span className="font-bold text-gdgoc-gray-800">GDGOC PSIT</span>
+              <span>•</span>
+              <span className="text-gdgoc-gray-600">Member Workspace</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <NotificationBell />
+            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-gdgoc-green bg-green-50 border border-green-200 px-2.5 py-1 rounded-full shadow-2xs">
+              <UserCheck className="w-3 h-3 text-gdgoc-green" />
+              <span>Squad Crew</span>
+            </span>
+          </div>
         </header>
 
         {/* Dynamic Route Content */}

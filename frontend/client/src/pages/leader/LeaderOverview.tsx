@@ -1,3 +1,4 @@
+import { SquadActivityFeed } from '../../components/common/SquadActivityFeed';
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/authContext';
@@ -241,6 +242,11 @@ export const LeaderOverview: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Live Squad Activity Feed */}
+      <div className="pt-2">
+        <SquadActivityFeed title="Live Squad Activity Stream" />
       </div>
 
       {/* Task Details Modal */}

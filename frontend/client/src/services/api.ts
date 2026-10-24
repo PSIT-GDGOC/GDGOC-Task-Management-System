@@ -363,6 +363,15 @@ export const taskApi = {
     });
     return formatBackendTask(res.data);
   },
+
+  async getActivityFeed(): Promise<TaskActivityItem[]> {
+    try {
+      const res = await apiRequest<{ success: boolean; data: TaskActivityItem[] }>('/tasks/activity/feed');
+      return res.data || [];
+    } catch {
+      return [];
+    }
+  },
 };
 
 
@@ -408,6 +417,7 @@ export const adminApi = {
     teamId?: string;
     email?: string;
     expiresInHours?: number;
+    customKey?: string;
   }): Promise<AdminInvitation> {
     const res = await apiRequest<{ success: boolean; data: any }>('/invitations', 'POST', {
       role: input.role,
@@ -415,6 +425,7 @@ export const adminApi = {
       teamId: input.teamId || undefined,
       email: input.email || undefined,
       expiresInHours: input.expiresInHours ?? 48,
+      customKey: input.customKey || undefined,
     });
     return res.data;
   },
@@ -454,6 +465,74 @@ export const adminApi = {
       return res.data || { totalCompleted: 0, onTimeRate: null, averageLeadTimeHours: null };
     } catch {
       return { totalCompleted: 0, onTimeRate: null, averageLeadTimeHours: null };
+    }
+  },
+};
+
+export interface TaskActivityItem {
+  id: string;
+  taskId: string;
+  actorId: string;
+  action: string;
+  oldValue?: string | null;
+  newValue?: string | null;
+  timestamp: string;
+  actor?: {
+    id: string;
+    name: string;
+    email: string;
+    position?: string | null;
+    role: string;
+  };
+  task?: {
+    id: string;
+    title: string;
+    status: string;
+    team?: { id: string; name: string; slug: string };
+    assignee?: { id: string; name: string };
+  };
+}
+
+export interface AppNotification {
+  id: string;
+  userId: string;
+  taskId: string;
+  kind: 'TASK_ASSIGNED' | 'TASK_SUBMITTED' | 'TASK_APPROVED' | 'CHANGES_REQUESTED' | 'TASK_OVERDUE' | string;
+  readAt: string | null;
+  createdAt: string;
+  task?: {
+    id: string;
+    title: string;
+    status: string;
+    deadline?: string | null;
+  };
+}
+
+export const notificationApi = {
+  async getNotifications(unreadOnly = false): Promise<{ notifications: AppNotification[]; unreadCount: number }> {
+    try {
+      const res = await apiRequest<{ success: boolean; data: AppNotification[]; unreadCount: number }>(
+        `/notifications?limit=25&unreadOnly=${unreadOnly}`
+      );
+      return { notifications: res.data || [], unreadCount: res.unreadCount || 0 };
+    } catch {
+      return { notifications: [], unreadCount: 0 };
+    }
+  },
+
+  async markAsRead(notificationId: string): Promise<void> {
+    try {
+      await apiRequest(`/notifications/${notificationId}/read`, 'POST');
+    } catch {
+      // fallback
+    }
+  },
+
+  async markAllAsRead(): Promise<void> {
+    try {
+      await apiRequest('/notifications/read-all', 'POST');
+    } catch {
+      // fallback
     }
   },
 };

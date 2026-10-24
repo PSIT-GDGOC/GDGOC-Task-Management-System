@@ -66,4 +66,13 @@ router.post(
     res.json({ success: true, data: await InvitationService.revoke(req.user!, req.params.id) }),
   ),
 );
+router.delete(
+  '/:id',
+  invitationLimit,
+  validate({ params: invitationParams }),
+  asyncHandler(async (req, res) =>
+    res.json({ success: true, data: await InvitationService.revoke(req.user!, req.params.id) }),
+  ),
+);
+
 export default router;
