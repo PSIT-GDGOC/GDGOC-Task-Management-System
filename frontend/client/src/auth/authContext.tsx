@@ -43,26 +43,47 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (credentials: LoginCredentials): Promise<User> => {
     setIsLoading(true);
     try {
-      // Determine intended role from credentials
       let role: Role = 'MEMBER';
-      if (credentials.membershipStatus === 'CORE_MEMBER') {
-        role = 'TEAM_LEADER';
-      }
-      if (credentials.email.toLowerCase().includes('admin')) {
+      const pos = credentials.position?.toLowerCase() || '';
+      if (
+        pos.includes('president') ||
+        pos.includes('secretary') ||
+        pos.includes('organizer') ||
+        credentials.email.toLowerCase().includes('admin')
+      ) {
         role = 'ADMIN';
+      } else if (
+        credentials.isTeamHead ||
+        credentials.membershipStatus === 'CORE_MEMBER' ||
+        pos.includes('lead')
+      ) {
+        role = 'TEAM_LEADER';
       }
 
       const name = credentials.email.split('@')[0];
+      const teamSlug =
+        credentials.teamSlug ||
+        (credentials.team?.toLowerCase().includes('media')
+          ? 'media'
+          : credentials.team?.toLowerCase().includes('content')
+            ? 'content'
+            : 'tech');
 
       try {
-        // Attempt live backend authentication
-        const liveUser = await authApi.loginDev(credentials.email, name, role);
+        const liveUser = await authApi.loginDev(
+          credentials.email,
+          name,
+          role,
+          credentials.position,
+          teamSlug,
+          credentials.isTeamHead,
+          credentials.invitationKey,
+        );
         setUser(liveUser);
         localStorage.setItem('gdgoc_current_user', JSON.stringify(liveUser));
         return liveUser;
       } catch (err) {
         console.warn('[Auth] Live server dev-login unavailable; falling back to local preview session:', err);
-        // Fallback to mockAuthService so development preview always works smoothly
         const fallbackUser = await mockAuthService.login(credentials);
         setUser(fallbackUser);
         return fallbackUser;

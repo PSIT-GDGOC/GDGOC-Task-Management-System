@@ -11,6 +11,7 @@ type ProfilePanelProps = {
 };
 
 const roleName = (user: User) => {
+  if (user.position) return user.position;
   if (user.role === 'TEAM_LEADER') return 'Team Leader';
   if (user.role === 'ADMIN') return 'Admin';
   return 'Member';

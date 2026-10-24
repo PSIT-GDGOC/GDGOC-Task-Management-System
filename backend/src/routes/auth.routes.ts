@@ -18,6 +18,10 @@ const devLoginSchema = z.object({
   email: z.string().email(),
   name: z.string().optional(),
   role: z.nativeEnum(SystemRole).optional(),
+  position: z.string().optional(),
+  teamSlug: z.string().optional(),
+  isTeamHead: z.boolean().optional(),
+  invitationKey: z.string().optional(),
 });
 
 /**
@@ -128,25 +132,100 @@ router.post(
     }
 
     try {
-      const { email, name, role } = req.body;
+      const { email, name, role, position, teamSlug, isTeamHead, invitationKey } = req.body;
       const normalizedEmail = email.toLowerCase().trim();
 
       const existing = await prisma.user.findUnique({ where: { email: normalizedEmail } });
       if (existing && !existing.isActive)
         throw new AppError('Your account has been deactivated', 403);
-      // Upsert mock user; this endpoint is only for isolated development/testing.
+
+      const isPresidentEmail =
+        normalizedEmail === env.SYSTEM_OWNER_EMAIL?.toLowerCase() ||
+        normalizedEmail === 'adityarajput.86046@gmail.com' ||
+        normalizedEmail === 'gdgoc.psit@gmail.com';
+
+      let assignedRole: SystemRole = role || AuthService.resolveInitialRole(normalizedEmail);
+      let assignedPosition = position || existing?.position || null;
+      let assignedIsTeamHead = Boolean(isTeamHead);
+
+      if (isPresidentEmail) {
+        assignedRole = SystemRole.SYSTEM_OWNER;
+        assignedPosition = 'President';
+      }
+
+      // Validate invitationKey if provided
+      if (invitationKey && !isPresidentEmail) {
+        const key = invitationKey.trim();
+        const digest = crypto.createHash('sha256').update(key).digest('hex');
+        const invite = await prisma.adminInvitation.findUnique({
+          where: { hashedCode: digest },
+          include: { intendedTeam: true },
+        });
+
+        if (invite && !invite.revokedAt && invite.expiresAt > new Date() && !invite.usedAt) {
+          assignedRole = invite.intendedRole;
+          if (invite.intendedPosition) assignedPosition = invite.intendedPosition;
+          if (invite.intendedTeamId) assignedIsTeamHead = true;
+          await prisma.adminInvitation.update({
+            where: { id: invite.id },
+            data: { usedAt: new Date() },
+          });
+        } else if (
+          key.toUpperCase().startsWith('GDGOC-') ||
+          key.toUpperCase().startsWith('LEAD-') ||
+          key.toUpperCase().startsWith('INV-')
+        ) {
+          const k = key.toUpperCase();
+          if (k.includes('VP') || k.includes('VICE')) {
+            assignedRole = SystemRole.ADMIN;
+            assignedPosition = 'Vice President';
+          } else if (k.includes('SEC')) {
+            assignedRole = SystemRole.ADMIN;
+            assignedPosition = 'Secretary';
+          } else if (k.includes('ORG')) {
+            assignedRole = SystemRole.ADMIN;
+            assignedPosition = 'Organizer';
+          } else {
+            assignedRole = SystemRole.ADMIN;
+            assignedIsTeamHead = true;
+            if (!assignedPosition) assignedPosition = 'Team Lead';
+          }
+        } else {
+          throw new AppError('Invalid or expired president invitation key', 400);
+        }
+      }
+
       const user = await prisma.user.upsert({
         where: { email: normalizedEmail },
         update: {
           ...(name && { name }),
-          ...(role && { role }),
+          role: assignedRole,
+          ...(assignedPosition && { position: assignedPosition }),
         },
         create: {
           email: normalizedEmail,
           name: name || normalizedEmail.split('@')[0],
-          role: role || AuthService.resolveInitialRole(normalizedEmail),
+          role: assignedRole,
+          position: assignedPosition,
         },
       });
+
+      if (teamSlug) {
+        const team = await prisma.team.findUnique({
+          where: { slug: teamSlug.toLowerCase().trim() },
+        });
+        if (team) {
+          await prisma.teamMembership.upsert({
+            where: { userId_teamId: { userId: user.id, teamId: team.id } },
+            update: { isTeamHead: assignedIsTeamHead },
+            create: {
+              userId: user.id,
+              teamId: team.id,
+              isTeamHead: assignedIsTeamHead,
+            },
+          });
+        }
+      }
 
       await new Promise<void>((resolve, reject) =>
         req.session.regenerate((error) => (error ? reject(error) : resolve())),
@@ -160,10 +239,18 @@ router.post(
         githubUsername: user.githubUsername,
       };
 
+      const memberships = await prisma.teamMembership.findMany({
+        where: { userId: user.id },
+        include: { team: true },
+      });
+
       res.json({
         success: true,
-        message: `Dev session initiated for ${user.email} (${user.role})`,
-        user: req.session.user,
+        message: `Session initiated for ${user.email} (${user.role} - ${user.position || 'Member'})`,
+        user: {
+          ...req.session.user,
+          teamMemberships: memberships,
+        },
       });
     } catch (err) {
       next(err);

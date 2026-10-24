@@ -4,7 +4,21 @@ import { useAuth } from '../../auth/authContext';
 import { DevAccount } from '../../auth/mockAuthService';
 import { DevAccountSelector } from './DevAccountSelector';
 import { MembershipStatus } from '../../types/auth';
-import { Eye, EyeOff, Lock, Mail, AlertCircle, Loader2, Info, CheckCircle2 } from 'lucide-react';
+import {
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  AlertCircle,
+  Loader2,
+  Info,
+  Key,
+  Shield,
+  Crown,
+  Users,
+} from 'lucide-react';
+
+type ClubTier = 'CREW' | 'LEAD' | 'PRESIDENT';
 
 export const LoginForm: React.FC = () => {
   const navigate = useNavigate();
@@ -13,18 +27,20 @@ export const LoginForm: React.FC = () => {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [membershipStatus, setMembershipStatus] = useState<MembershipStatus | null>(null);
+  const [tier, setTier] = useState<ClubTier>('CREW');
+  const [selectedTeam, setSelectedTeam] = useState('tech');
+  const [leadPosition, setLeadPosition] = useState('Tech Lead');
+  const [invitationKey, setInvitationKey] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   // Validation state
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [membershipError, setMembershipError] = useState<string | null>(null);
+  const [keyError, setKeyError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [forgotPasswordNotice, setForgotPasswordNotice] = useState(false);
 
-  // Email format validation
   const validateEmail = (val: string): boolean => {
     if (!val.trim()) {
       setEmailError('Email address is required');
@@ -39,7 +55,6 @@ export const LoginForm: React.FC = () => {
     return true;
   };
 
-  // Password validation
   const validatePassword = (val: string): boolean => {
     if (!val) {
       setPasswordError('Password is required');
@@ -50,16 +65,6 @@ export const LoginForm: React.FC = () => {
       return false;
     }
     setPasswordError(null);
-    return true;
-  };
-
-  // Membership validation
-  const validateMembership = (val: MembershipStatus | null): boolean => {
-    if (!val) {
-      setMembershipError('Please select whether you are a core member or regular member.');
-      return false;
-    }
-    setMembershipError(null);
     return true;
   };
 
@@ -75,19 +80,22 @@ export const LoginForm: React.FC = () => {
     if (formError) setFormError(null);
   };
 
-  const handleSelectMembership = (status: MembershipStatus) => {
-    setMembershipStatus(status);
-    setMembershipError(null);
-    if (formError) setFormError(null);
-  };
-
   const handleSelectDevAccount = (account: DevAccount) => {
     setEmail(account.user.email);
     setPassword(account.password);
-    setMembershipStatus(account.user.membershipStatus || 'CORE_MEMBER');
+    if (account.user.role === 'ADMIN') {
+      setTier('PRESIDENT');
+    } else if (account.user.role === 'TEAM_LEADER') {
+      setTier('LEAD');
+      setLeadPosition('Tech Lead');
+      setInvitationKey('GDGOC-LEAD-KEY');
+    } else {
+      setTier('CREW');
+      setSelectedTeam('tech');
+    }
     setEmailError(null);
     setPasswordError(null);
-    setMembershipError(null);
+    setKeyError(null);
     setFormError(null);
     setForgotPasswordNotice(false);
   };
@@ -96,22 +104,45 @@ export const LoginForm: React.FC = () => {
     e.preventDefault();
     setFormError(null);
     setForgotPasswordNotice(false);
+    setKeyError(null);
 
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
-    const isMembershipValid = validateMembership(membershipStatus);
 
-    if (!isEmailValid || !isPasswordValid || !isMembershipValid) {
+    if (tier === 'LEAD' && !invitationKey.trim()) {
+      setKeyError('President invitation key is required for Leads and Officers');
+      return;
+    }
+
+    if (!isEmailValid || !isPasswordValid) {
       return;
     }
 
     setIsSubmitting(true);
 
     try {
+      const isTeamHead = tier === 'LEAD' && leadPosition.toLowerCase().includes('lead');
+      const membershipStatus: MembershipStatus =
+        tier === 'CREW' ? 'REGULAR_MEMBER' : 'CORE_MEMBER';
+      const position =
+        tier === 'PRESIDENT' ? 'President' : tier === 'LEAD' ? leadPosition : 'Team Member';
+
+      // Auto-derive teamSlug based on selection or lead position
+      let teamSlug = selectedTeam;
+      if (tier === 'LEAD') {
+        if (leadPosition.toLowerCase().includes('media')) teamSlug = 'media';
+        else if (leadPosition.toLowerCase().includes('content')) teamSlug = 'content';
+        else if (leadPosition.toLowerCase().includes('tech')) teamSlug = 'tech';
+      }
+
       const user = await login({
         email: email.trim(),
         password,
-        membershipStatus: membershipStatus!,
+        membershipStatus,
+        position,
+        teamSlug,
+        isTeamHead,
+        invitationKey: tier === 'LEAD' ? invitationKey.trim() : undefined,
       });
 
       // Role-based routing redirect
@@ -146,9 +177,9 @@ export const LoginForm: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-[420px] mx-auto">
+    <div className="w-full max-w-[440px] mx-auto">
       {/* Form Header with Google 4-Color Brackets Emblem */}
-      <div className="mb-6 text-left flex items-start gap-3">
+      <div className="mb-5 text-left flex items-start gap-3">
         <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200/80 p-2 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-2xs">
           <svg viewBox="0 0 40 40" className="w-full h-full" fill="none">
             <path d="M12 20L19 13L16 10L6 20L16 30L19 27L12 20Z" fill="#EA4335" />
@@ -158,48 +189,210 @@ export const LoginForm: React.FC = () => {
           </svg>
         </div>
         <div>
-          <h2 className="text-2xl font-bold text-gdgoc-gray-900 tracking-tight leading-tight">
+          <h2 className="text-xl font-bold text-gdgoc-gray-900 tracking-tight leading-snug">
             Welcome to TaskHub
           </h2>
-          <p className="mt-1 text-xs sm:text-sm text-gdgoc-gray-500">
-            Sign in with your GitHub-linked account
+          <p className="text-xs text-gdgoc-gray-500 mt-0.5">
+            GDG on Campus PSIT • Chapter Task Operations
           </p>
         </div>
       </div>
 
-      {/* Global Form Error Message */}
-      {formError && (
-        <div 
-          role="alert" 
-          className="mb-5 p-3 rounded-xl bg-red-50/90 border border-red-200 text-sm text-red-800 flex items-start gap-2.5 transition-all shadow-2xs"
-        >
-          <AlertCircle className="w-4 h-4 text-gdgoc-red flex-shrink-0 mt-0.5" />
-          <div className="flex-1 font-medium text-xs leading-relaxed">{formError}</div>
-        </div>
-      )}
-
-      {/* Forgot Password Informational Banner */}
+      {/* Forgot Password Notice */}
       {forgotPasswordNotice && (
-        <div 
-          role="status" 
-          className="mb-5 p-3 rounded-xl bg-blue-50/90 border border-blue-200 text-sm text-blue-900 flex items-start gap-2.5 transition-all shadow-2xs"
+        <div
+          role="status"
+          className="mb-4 flex items-start gap-2.5 p-3 rounded-xl border border-blue-200 bg-blue-50/90 text-xs text-blue-900 shadow-2xs"
         >
           <Info className="w-4 h-4 text-gdgoc-blue flex-shrink-0 mt-0.5" />
-          <div className="flex-1 text-xs leading-relaxed">
-            Password recovery for GDGoC PSIT is currently managed by workspace leads. Please contact your Chapter Administrator for credentials reset.
+          <div>
+            <span className="font-semibold">Password Assistance:</span> During preview testing, any
+            password with 6+ characters is accepted.
           </div>
         </div>
       )}
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} noValidate className="space-y-4 text-left">
-        {/* Email Field */}
+      {/* Form-level Error Alert */}
+      {formError && (
+        <div
+          role="alert"
+          className="mb-4 flex items-start gap-2.5 p-3 rounded-xl border border-red-200 bg-red-50 text-xs text-gdgoc-red shadow-2xs animate-shake"
+        >
+          <AlertCircle className="w-4 h-4 text-gdgoc-red flex-shrink-0 mt-0.5" />
+          <div className="flex-1 font-medium">{formError}</div>
+        </div>
+      )}
+
+      <form noValidate onSubmit={handleSubmit} className="space-y-3.5 text-left">
+        {/* Tier Hierarchy Selection */}
         <div>
-          <label 
-            htmlFor="email-input" 
-            className="block text-xs font-semibold text-gdgoc-gray-700 uppercase tracking-wider mb-1.5"
+          <label className="block text-xs font-semibold text-gdgoc-gray-800 mb-1.5 uppercase tracking-wider">
+            Joining As <span className="text-gdgoc-red">*</span>
+          </label>
+          <div className="grid grid-cols-3 gap-2">
+            {/* Tier 1: Crew */}
+            <button
+              type="button"
+              onClick={() => {
+                setTier('CREW');
+                setKeyError(null);
+              }}
+              className={`px-2.5 py-2 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1 ${
+                tier === 'CREW'
+                  ? 'border-gdgoc-green bg-green-50/70 text-green-900 ring-2 ring-green-500/30 font-semibold'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Users
+                className={`w-4 h-4 ${tier === 'CREW' ? 'text-gdgoc-green' : 'text-gray-400'}`}
+              />
+              <span className="text-xs">Team Crew</span>
+            </button>
+
+            {/* Tier 2: Lead */}
+            <button
+              type="button"
+              onClick={() => {
+                setTier('LEAD');
+                setKeyError(null);
+              }}
+              className={`px-2.5 py-2 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1 ${
+                tier === 'LEAD'
+                  ? 'border-gdgoc-blue bg-blue-50/70 text-blue-900 ring-2 ring-blue-500/30 font-semibold'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Shield
+                className={`w-4 h-4 ${tier === 'LEAD' ? 'text-gdgoc-blue' : 'text-gray-400'}`}
+              />
+              <span className="text-xs">Team Lead</span>
+            </button>
+
+            {/* Tier 3: President */}
+            <button
+              type="button"
+              onClick={() => {
+                setTier('PRESIDENT');
+                setEmail('adityarajput.86046@gmail.com');
+                setKeyError(null);
+              }}
+              className={`px-2.5 py-2 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1 ${
+                tier === 'PRESIDENT'
+                  ? 'border-amber-400 bg-amber-50/70 text-amber-900 ring-2 ring-amber-500/30 font-semibold'
+                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <Crown
+                className={`w-4 h-4 ${tier === 'PRESIDENT' ? 'text-amber-600' : 'text-gray-400'}`}
+              />
+              <span className="text-xs">President</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Dynamic Context Fields */}
+        {tier === 'CREW' && (
+          <div className="p-3 bg-gray-50/80 rounded-xl border border-gray-200/70 space-y-2">
+            <div className="flex items-center justify-between">
+              <label
+                htmlFor="team-crew-select"
+                className="text-xs font-semibold text-gdgoc-gray-700"
+              >
+                Select Your Team
+              </label>
+              <span className="text-[10px] text-gdgoc-gray-500">Claim & work on team tasks</span>
+            </div>
+            <select
+              id="team-crew-select"
+              value={selectedTeam}
+              onChange={(e) => setSelectedTeam(e.target.value)}
+              className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-lg text-gdgoc-gray-900 focus:outline-none focus:ring-2 focus:ring-gdgoc-blue"
+            >
+              <option value="tech">💻 Tech Team (Web, Cloud, AI)</option>
+              <option value="media">🎨 Media Team (Design, Video, Branding)</option>
+              <option value="content">📝 Content Team (Writing, PR, Documentation)</option>
+            </select>
+          </div>
+        )}
+
+        {tier === 'LEAD' && (
+          <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 space-y-2.5">
+            <div>
+              <label
+                htmlFor="lead-position-select"
+                className="block text-xs font-semibold text-gdgoc-gray-800 mb-1"
+              >
+                Leadership Position
+              </label>
+              <select
+                id="lead-position-select"
+                value={leadPosition}
+                onChange={(e) => setLeadPosition(e.target.value)}
+                className="w-full px-3 py-2 text-xs bg-white border border-blue-200 rounded-lg text-gdgoc-gray-900 focus:outline-none focus:ring-2 focus:ring-gdgoc-blue"
+              >
+                <option value="Tech Lead">💻 Tech Lead (Creates & Assigns Tech Tasks)</option>
+                <option value="Media Lead">🎨 Media Lead (Oversees Design & Media)</option>
+                <option value="Content Lead">📝 Content Lead (Oversees PR & Writing)</option>
+                <option value="Vice President">🛡️ Vice President (Executive Co-Lead)</option>
+                <option value="Secretary">📋 Secretary (Documentation & Records)</option>
+                <option value="Organizer">🎯 Organizer (Events & Logistics)</option>
+              </select>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label
+                  htmlFor="invitation-key-input"
+                  className="text-xs font-semibold text-gdgoc-gray-800 flex items-center gap-1"
+                >
+                  <Key className="w-3.5 h-3.5 text-gdgoc-blue" />
+                  <span>President Invitation Key *</span>
+                </label>
+                <span className="text-[10px] text-gdgoc-blue font-medium">Issued by President</span>
+              </div>
+              <input
+                id="invitation-key-input"
+                type="text"
+                value={invitationKey}
+                onChange={(e) => {
+                  setInvitationKey(e.target.value);
+                  if (keyError) setKeyError(null);
+                }}
+                placeholder="e.g. GDGOC-LEAD-KEY or inv_..."
+                className={`w-full px-3 py-2 text-xs bg-white border rounded-lg focus:outline-none focus:ring-2 ${
+                  keyError
+                    ? 'border-red-300 focus:ring-red-100'
+                    : 'border-blue-200 focus:ring-blue-100'
+                }`}
+              />
+              {keyError && <p className="mt-1 text-[11px] text-gdgoc-red font-medium">{keyError}</p>}
+              <p className="mt-1 text-[10px] text-gray-500">
+                Tip: Enter any President key or use <code>GDGOC-LEAD-KEY</code> for testing.
+              </p>
+            </div>
+          </div>
+        )}
+
+        {tier === 'PRESIDENT' && (
+          <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200/80 text-xs text-amber-900 space-y-1">
+            <div className="font-semibold flex items-center gap-1.5">
+              <Crown className="w-3.5 h-3.5 text-amber-700" />
+              <span>Executive Root of Trust</span>
+            </div>
+            <p className="text-[11px] text-amber-800/90 leading-relaxed">
+              Authorized President emails have root executive access, can generate lead keys, and
+              manage chapter deliverables.
+            </p>
+          </div>
+        )}
+
+        {/* Email Address Field */}
+        <div>
+          <label
+            htmlFor="email-input"
+            className="block text-xs font-semibold text-gdgoc-gray-700 uppercase tracking-wider mb-1"
           >
-            GitHub-linked Gmail
+            Email Address
           </label>
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gdgoc-gray-400">
@@ -214,7 +407,7 @@ export const LoginForm: React.FC = () => {
               onBlur={() => validateEmail(email)}
               placeholder="you@gmail.com"
               aria-invalid={!!emailError}
-              aria-describedby={emailError ? 'email-error-text' : 'email-helper-text'}
+              aria-describedby={emailError ? 'email-error-text' : undefined}
               className={`w-full pl-9 pr-3 py-2.5 text-sm bg-white border rounded-xl transition-all placeholder:text-gdgoc-gray-400 focus:outline-none focus:ring-4 ${
                 emailError
                   ? 'border-red-300 focus:border-red-500 focus:ring-red-100/70'
@@ -222,11 +415,12 @@ export const LoginForm: React.FC = () => {
               }`}
             />
           </div>
-          <p id="email-helper-text" className="mt-1 text-[11px] text-gdgoc-gray-500">
-            Use the Gmail address associated with your GitHub account.
-          </p>
           {emailError && (
-            <p id="email-error-text" role="alert" className="mt-1 text-xs text-gdgoc-red flex items-center gap-1">
+            <p
+              id="email-error-text"
+              role="alert"
+              className="mt-1 text-xs text-gdgoc-red flex items-center gap-1"
+            >
               <AlertCircle className="w-3.5 h-3.5" />
               {emailError}
             </p>
@@ -235,9 +429,9 @@ export const LoginForm: React.FC = () => {
 
         {/* Password Field */}
         <div>
-          <div className="flex items-center justify-between mb-1.5">
-            <label 
-              htmlFor="password-input" 
+          <div className="flex items-center justify-between mb-1">
+            <label
+              htmlFor="password-input"
               className="block text-xs font-semibold text-gdgoc-gray-700 uppercase tracking-wider"
             >
               Password
@@ -280,75 +474,13 @@ export const LoginForm: React.FC = () => {
             </button>
           </div>
           {passwordError && (
-            <p id="password-error-text" role="alert" className="mt-1 text-xs text-gdgoc-red flex items-center gap-1">
+            <p
+              id="password-error-text"
+              role="alert"
+              className="mt-1 text-xs text-gdgoc-red flex items-center gap-1"
+            >
               <AlertCircle className="w-3.5 h-3.5" />
               {passwordError}
-            </p>
-          )}
-        </div>
-
-        {/* Membership Question (Required) */}
-        <div className="pt-1">
-          <label 
-            id="membership-question-label"
-            className="block text-xs font-semibold text-gdgoc-gray-800 mb-2"
-          >
-            Are you a GDGoC PSIT core member? <span className="text-gdgoc-red">*</span>
-          </label>
-          <div 
-            role="radiogroup" 
-            aria-labelledby="membership-question-label"
-            aria-required="true"
-            className="grid grid-cols-1 sm:grid-cols-2 gap-2"
-          >
-            {/* Option 1: Yes, I'm a core member */}
-            <button
-              type="button"
-              role="radio"
-              aria-checked={membershipStatus === 'CORE_MEMBER'}
-              onClick={() => handleSelectMembership('CORE_MEMBER')}
-              className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-gdgoc-blue ${
-                membershipStatus === 'CORE_MEMBER'
-                  ? 'border-gdgoc-blue bg-blue-50/60 text-gdgoc-gray-900 ring-1 ring-gdgoc-blue shadow-2xs'
-                  : 'border-gdgoc-gray-200 bg-white text-gdgoc-gray-700 hover:border-gdgoc-gray-300 hover:bg-gdgoc-gray-50/80'
-              }`}
-            >
-              <span>Yes, I'm a core member</span>
-              <span className={`w-4 h-4 rounded-full flex items-center justify-center border transition-all flex-shrink-0 ml-1.5 ${
-                membershipStatus === 'CORE_MEMBER'
-                  ? 'bg-gdgoc-blue border-gdgoc-blue text-white'
-                  : 'border-gdgoc-gray-300 bg-white'
-              }`}>
-                {membershipStatus === 'CORE_MEMBER' && <CheckCircle2 className="w-3.5 h-3.5 fill-current" />}
-              </span>
-            </button>
-
-            {/* Option 2: No, I'm a regular member */}
-            <button
-              type="button"
-              role="radio"
-              aria-checked={membershipStatus === 'REGULAR_MEMBER'}
-              onClick={() => handleSelectMembership('REGULAR_MEMBER')}
-              className={`px-3 py-2.5 rounded-xl border text-xs font-medium transition-all flex items-center justify-between text-left focus:outline-none focus:ring-2 focus:ring-gdgoc-blue ${
-                membershipStatus === 'REGULAR_MEMBER'
-                  ? 'border-gdgoc-blue bg-blue-50/60 text-gdgoc-gray-900 ring-1 ring-gdgoc-blue shadow-2xs'
-                  : 'border-gdgoc-gray-200 bg-white text-gdgoc-gray-700 hover:border-gdgoc-gray-300 hover:bg-gdgoc-gray-50/80'
-              }`}
-            >
-              <span>No, I'm a regular member</span>
-              <span className={`w-4 h-4 rounded-full flex items-center justify-center border transition-all flex-shrink-0 ml-1.5 ${
-                membershipStatus === 'REGULAR_MEMBER'
-                  ? 'bg-gdgoc-blue border-gdgoc-blue text-white'
-                  : 'border-gdgoc-gray-300 bg-white'
-              }`}>
-                {membershipStatus === 'REGULAR_MEMBER' && <CheckCircle2 className="w-3.5 h-3.5 fill-current" />}
-              </span>
-            </button>
-          </div>
-          {membershipError && (
-            <p role="alert" className="mt-1.5 text-xs text-gdgoc-red flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5" />
-              {membershipError}
             </p>
           )}
         </div>
@@ -357,27 +489,26 @@ export const LoginForm: React.FC = () => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full mt-3 py-2.5 px-4 rounded-xl bg-[#1A73E8] hover:bg-blue-600 active:bg-blue-700 text-white font-semibold text-sm transition-all shadow-xs hover:shadow focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full mt-2 py-2.5 px-4 rounded-xl bg-[#1A73E8] hover:bg-blue-600 active:bg-blue-700 text-white font-semibold text-sm transition-all shadow-xs hover:shadow focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isSubmitting ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Continuing...</span>
+              <span>Authenticating...</span>
             </>
           ) : (
-            <span>Continue →</span>
+            <span>
+              Sign In as {tier === 'PRESIDENT' ? 'President' : tier === 'LEAD' ? leadPosition : 'Member'} →
+            </span>
           )}
         </button>
       </form>
 
-      {/* Discreet Development Testing Adapter in DEV mode */}
-      <DevAccountSelector 
-        onSelectAccount={handleSelectDevAccount} 
-        selectedEmail={email} 
-      />
+      {/* Discreet Development Testing Profiles */}
+      <DevAccountSelector onSelectAccount={handleSelectDevAccount} selectedEmail={email} />
 
       {/* Clean Brand Footnote */}
-      <div className="mt-8 pt-4 border-t border-gdgoc-gray-100 text-center text-xs text-gdgoc-gray-400">
+      <div className="mt-6 pt-3 border-t border-gdgoc-gray-100 text-center text-xs text-gdgoc-gray-400">
         <span>GDGoC PSIT Kanpur</span>
         <span className="mx-2 text-gdgoc-gray-300">•</span>
         <span className="font-medium text-gdgoc-gray-500">TaskHub</span>

@@ -7,15 +7,22 @@ export interface User {
   name: string;
   email: string;
   role: Role;
+  position?: string;
   membershipStatus?: MembershipStatus;
   team?: string;
   avatarUrl?: string;
+  isTeamHead?: boolean;
 }
 
 export interface LoginCredentials {
   email: string;
-  password: string;
+  password?: string;
   membershipStatus?: MembershipStatus;
+  position?: string;
+  team?: string;
+  teamSlug?: string;
+  isTeamHead?: boolean;
+  invitationKey?: string;
   rememberMe?: boolean;
 }
 

@@ -224,23 +224,48 @@ export function formatBackendTask(backendTask: any): Task {
 // ============================================================================
 
 export const authApi = {
-  async loginDev(email: string, name?: string, role: Role = 'MEMBER'): Promise<User> {
+  async loginDev(
+    email: string,
+    name?: string,
+    role: Role = 'MEMBER',
+    position?: string,
+    teamSlug?: string,
+    isTeamHead?: boolean,
+    invitationKey?: string,
+  ): Promise<User> {
     const backendRole = role === 'ADMIN' ? 'ADMIN' : 'USER';
     const res = await apiRequest<{ success: boolean; user: any }>('/auth/dev-login', 'POST', {
       email,
       name,
       role: backendRole,
+      position,
+      teamSlug,
+      isTeamHead,
+      invitationKey,
     });
 
     // Refresh CSRF
     await getCsrfToken();
 
+    let resolvedRole: Role = 'MEMBER';
+    const isHead = Boolean(isTeamHead) || res.user.teamMemberships?.some((m: any) => m.isTeamHead);
+    if (res.user.role === 'ADMIN' || res.user.role === 'PRESIDENT' || res.user.role === 'SYSTEM_OWNER') {
+      resolvedRole = 'ADMIN';
+    } else if (isHead || res.user.position?.toLowerCase().includes('lead')) {
+      resolvedRole = 'TEAM_LEADER';
+    }
+
+    const teamName = res.user.teamMemberships?.[0]?.team?.name || (teamSlug ? teamSlug.toUpperCase() + ' Team' : 'Tech Team');
+
     return {
       id: res.user.id,
       name: res.user.name,
       email: res.user.email,
-      role: role,
-      membershipStatus: role === 'TEAM_LEADER' || role === 'ADMIN' ? 'CORE_MEMBER' : 'REGULAR_MEMBER',
+      role: resolvedRole,
+      position: res.user.position || position,
+      team: teamName,
+      isTeamHead: isHead,
+      membershipStatus: resolvedRole === 'TEAM_LEADER' || resolvedRole === 'ADMIN' ? 'CORE_MEMBER' : 'REGULAR_MEMBER',
       avatarUrl: res.user.avatarUrl,
     };
   },
@@ -250,16 +275,24 @@ export const authApi = {
       const res = await apiRequest<{ success: boolean; user: any }>('/auth/me');
       if (res.user) {
         let role: Role = 'MEMBER';
+        const isHead = res.user.teamMemberships?.some((m: any) => m.isTeamHead);
         if (res.user.role === 'ADMIN' || res.user.role === 'PRESIDENT' || res.user.role === 'SYSTEM_OWNER') {
           role = 'ADMIN';
+        } else if (isHead || res.user.position?.toLowerCase().includes('lead')) {
+          role = 'TEAM_LEADER';
         }
+
+        const teamName = res.user.teamMemberships?.[0]?.team?.name || 'Tech Team';
 
         return {
           id: res.user.id,
           name: res.user.name,
           email: res.user.email,
           role,
-          membershipStatus: role === 'ADMIN' ? 'CORE_MEMBER' : 'REGULAR_MEMBER',
+          position: res.user.position,
+          team: teamName,
+          isTeamHead: isHead,
+          membershipStatus: role === 'ADMIN' || role === 'TEAM_LEADER' ? 'CORE_MEMBER' : 'REGULAR_MEMBER',
           avatarUrl: res.user.avatarUrl,
         };
       }
