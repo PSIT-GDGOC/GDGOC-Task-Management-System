@@ -144,7 +144,7 @@ router.post(
         normalizedEmail === 'adityarajput.86046@gmail.com' ||
         normalizedEmail === 'gdgoc.psit@gmail.com';
 
-      let assignedRole: SystemRole = role || AuthService.resolveInitialRole(normalizedEmail);
+      let assignedRole: SystemRole = role || existing?.role || AuthService.resolveInitialRole(normalizedEmail);
       let assignedPosition = position || existing?.position || null;
       let assignedIsTeamHead = Boolean(isTeamHead);
 

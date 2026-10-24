@@ -44,7 +44,7 @@ export class InvitationService {
         if (input.teamId && !(await tx.team.findUnique({ where: { id: input.teamId } })))
           throw new AppError('Team not found', 404);
         const now = await clock(tx);
-        const rawCode = input.customKey && input.customKey.trim() ? input.customKey.trim() : 'GDGOC-' + (input.position ? input.position.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 4) : 'LEAD') + '-' + crypto.randomBytes(4).toString('hex').toUpperCase();
+        const rawCode = input.customKey && input.customKey.trim() ? input.customKey.trim() : 'inv_' + crypto.randomBytes(32).toString('base64url');
         const invitation = await tx.adminInvitation.create({
           data: {
             hashedCode: digest(rawCode),
