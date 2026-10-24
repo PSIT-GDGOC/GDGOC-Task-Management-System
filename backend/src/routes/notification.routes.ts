@@ -7,7 +7,6 @@ import { validate } from '../middleware/validate';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../utils/asyncHandler';
 import { idSchema, paginationSchema, Pagination } from '../schemas/directory';
-import { isClubManager } from '../utils/permissions';
 import { AuthenticatedUser } from '../types/auth';
 const router = Router();
 router.use(requireAuth);
