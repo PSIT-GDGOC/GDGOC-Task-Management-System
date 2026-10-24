@@ -8,7 +8,7 @@ export const LeaderLayout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex bg-gdgoc-gray-50 text-gdgoc-gray-900">
+    <div className="dashboard-background min-h-screen flex text-gdgoc-gray-900">
       {/* Desktop Sidebar */}
       <div className="hidden lg:block w-64 flex-shrink-0 h-screen sticky top-0">
         <LeaderSidebar />
@@ -49,7 +49,7 @@ export const LeaderLayout: React.FC = () => {
         </header>
 
         {/* Dynamic Route Content */}
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto flex flex-col">
           <Outlet />
         </main>
       </div>

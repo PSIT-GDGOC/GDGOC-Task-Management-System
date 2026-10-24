@@ -5,6 +5,7 @@ import { TEAMS } from '../../data/mockData';
 import { Task } from '../../types/task';
 import { TaskStatusBadge } from '../../components/common/TaskStatusBadge';
 import { TaskDetailsModal } from '../../components/common/TaskDetailsModal';
+import { HelpButton } from '../../components/tour/HelpButton';
 import { 
   ArrowLeft, 
   PlusCircle, 
@@ -54,20 +55,8 @@ export const LeaderWorkOverview: React.FC = () => {
 
   return (
     <div
-      className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full"
-      style={{
-        backgroundImage: 'url(/dashboard-bg.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center top',
-        backgroundRepeat: 'no-repeat',
-      }}
+      className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full flex-1"
     >
-      {/* Subtle white overlay */}
-      <div
-        className="absolute inset-0 bg-white/10 pointer-events-none"
-        aria-hidden="true"
-      />
-
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 space-y-6 text-left">
         {/* ---------------------------------------------------------------------
             NAVIGATION & BACK BUTTON
@@ -82,14 +71,17 @@ export const LeaderWorkOverview: React.FC = () => {
             <span>Back to Overview</span>
           </button>
 
-          <button
-            type="button"
-            onClick={() => navigate('/leader/assign-work')}
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gdgoc-blue hover:bg-blue-600 active:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all card-bb"
-          >
-            <PlusCircle className="w-4 h-4" />
-            <span>+ Assign Work</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <HelpButton sectionTourId="leader-view" sectionTitle="View Work" />
+            <button
+              type="button"
+              onClick={() => navigate('/leader/assign-work')}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gdgoc-blue hover:bg-blue-600 active:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all card-bb"
+            >
+              <PlusCircle className="w-4 h-4" />
+              <span>+ Assign Work</span>
+            </button>
+          </div>
         </div>
 
         {/* ---------------------------------------------------------------------
@@ -110,7 +102,7 @@ export const LeaderWorkOverview: React.FC = () => {
       {/* ---------------------------------------------------------------------
           SEARCH & FILTER TOOLBAR
           --------------------------------------------------------------------- */}
-      <div className="bg-white rounded-xl p-4 card-bb space-y-3">
+      <div data-tour="view-work-filters" className="bg-white rounded-xl p-4 card-bb space-y-3">
         <div className="flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Search by Task Title or Assignee */}
           <div className="relative w-full md:w-80">
@@ -183,7 +175,7 @@ export const LeaderWorkOverview: React.FC = () => {
       {/* ---------------------------------------------------------------------
           TASK TABLE (RESPONSIVE & CLICKABLE ROWS)
           --------------------------------------------------------------------- */}
-      <div className="bg-white rounded-xl card-bb overflow-hidden">
+      <div data-tour="view-work-list" className="bg-white rounded-xl card-bb overflow-hidden">
         {filteredTasks.length === 0 ? (
           <div className="p-12 text-center space-y-3">
             <div className="w-12 h-12 rounded-full bg-gdgoc-gray-100 text-gdgoc-gray-400 flex items-center justify-center mx-auto">

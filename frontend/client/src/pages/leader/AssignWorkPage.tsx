@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTasks } from '../../context/TaskContext';
 import { TEAMS } from '../../data/mockData';
 import { TeamId, AttachedFile } from '../../types/task';
+import { HelpButton } from '../../components/tour/HelpButton';
 import { 
   ArrowLeft, 
   PlusCircle, 
@@ -221,19 +222,17 @@ export const AssignWorkPage: React.FC = () => {
 
   return (
     <div
-      className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full"
+      className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full flex-1"
       style={{
         backgroundImage: 'url(/dashboard-bg.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center top',
+        backgroundSize: 'contain',
+        backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
+        backgroundColor: '#F1F9FB',
       }}
     >
       {/* Subtle white overlay */}
-      <div
-        className="absolute inset-0 bg-white/10 pointer-events-none"
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: 'rgba(255, 255, 255, 0.35)' }} aria-hidden="true" />
 
       <div className="relative z-10 p-4 sm:p-6 lg:p-8">
         <div className="max-w-4xl mx-auto space-y-6 text-left">
@@ -241,14 +240,17 @@ export const AssignWorkPage: React.FC = () => {
               NAVIGATION HEADER
               --------------------------------------------------------------------- */}
           <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => navigate('/leader/overview')}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-gdgoc-gray-600 hover:text-gdgoc-blue transition-colors p-1 -ml-1 rounded"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              <span>Back to Overview</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => navigate('/leader/overview')}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-gdgoc-gray-600 hover:text-gdgoc-blue transition-colors p-1 -ml-1 rounded"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                <span>Back to Overview</span>
+              </button>
+              <HelpButton sectionTourId="leader-assign" sectionTitle="Assign Work" />
+            </div>
 
             <button
               type="button"
@@ -338,7 +340,7 @@ export const AssignWorkPage: React.FC = () => {
                 Select Team <span className="text-gdgoc-red">*</span>
               </label>
               <select
-                id="assign-team-select"
+                id="assign-team-select" data-tour="assign-team-select"
                 value={selectedTeamId}
                 onChange={handleTeamChange}
                 className={`w-full px-3 py-2.5 text-xs sm:text-sm bg-white rounded-xl transition-all card-bb-sm focus:outline-none focus:ring-2 ${
@@ -418,7 +420,7 @@ export const AssignWorkPage: React.FC = () => {
               Task Title <span className="text-gdgoc-red">*</span>
             </label>
             <input
-              id="assign-task-title"
+              id="assign-task-title" data-tour="assign-title-field"
               type="text"
               value={taskTitle}
               onChange={(e) => {

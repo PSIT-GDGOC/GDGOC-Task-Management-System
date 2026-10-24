@@ -6,6 +6,7 @@ import { TEAMS, getDashboardStats } from '../../data/mockData';
 import { TeamCard } from '../../components/leader/TeamCard';
 import { TaskStatusBadge } from '../../components/common/TaskStatusBadge';
 import { TaskDetailsModal } from '../../components/common/TaskDetailsModal';
+import { HelpButton } from '../../components/tour/HelpButton';
 import { Task } from '../../types/task';
 import { 
   PlusCircle, 
@@ -34,26 +35,14 @@ export const LeaderOverview: React.FC = () => {
 
   return (
     <div
-      className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full"
-      style={{
-        backgroundImage: 'url(/dashboard-bg.jpg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center top',
-        backgroundRepeat: 'no-repeat',
-      }}
+      className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full flex-1"
     >
-      {/* Subtle white overlay */}
-      <div
-        className="absolute inset-0 bg-white/10 pointer-events-none"
-        aria-hidden="true"
-      />
-
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 space-y-8 text-left">
         {/* ---------------------------------------------------------------------
             HEADER SECTION
             --------------------------------------------------------------------- */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2">
-          <div className="space-y-1">
+          <div data-tour="overview-heading" className="space-y-1">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white border border-[#111111] text-[10px] font-bold uppercase tracking-wider text-gdgoc-gray-900 shadow-2xs">
               Team Workspace
             </div>
@@ -67,6 +56,7 @@ export const LeaderOverview: React.FC = () => {
 
           {/* Action Buttons */}
           <div className="flex items-center gap-2.5 flex-shrink-0">
+            <HelpButton sectionTourId="leader-overview" sectionTitle="Overview" />
             <button
               onClick={() => navigate('/leader/assign-work')}
               className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gdgoc-blue hover:bg-blue-600 active:bg-blue-700 text-white text-xs sm:text-sm font-semibold transition-all card-bb"
@@ -88,9 +78,9 @@ export const LeaderOverview: React.FC = () => {
       {/* ---------------------------------------------------------------------
           ORGANIZATION STATISTICS METRICS
           --------------------------------------------------------------------- */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+      <div data-tour="overview-stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Tasks */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
+        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#FDECEC' }}>
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-gdgoc-gray-500">
               Total Tasks
@@ -104,7 +94,7 @@ export const LeaderOverview: React.FC = () => {
         </div>
 
         {/* In Progress */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
+        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#E8F7EE' }}>
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">
               In Progress
@@ -118,7 +108,7 @@ export const LeaderOverview: React.FC = () => {
         </div>
 
         {/* Pending Review */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
+        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#EAF3FF' }}>
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-blue-800">
               Pending Review
@@ -132,7 +122,7 @@ export const LeaderOverview: React.FC = () => {
         </div>
 
         {/* Completed */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
+        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#FDECEC' }}>
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
               Completed

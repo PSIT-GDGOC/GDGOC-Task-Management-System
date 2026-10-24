@@ -4,6 +4,8 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/queryClient';
 import { AuthProvider, useAuth } from './auth/authContext';
 import { TaskProvider } from './context/TaskContext';
+import { TourProvider } from './context/TourContext';
+import { TourManager } from './components/tour/TourManager';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { AdminLayout } from './layouts/AdminLayout';
@@ -58,7 +60,9 @@ export const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <AuthProvider>
+          <TourProvider>
           <TaskProvider>
+            <TourManager />
             <Routes>
               {/* Root */}
               <Route path="/" element={<RootRedirector />} />
@@ -119,6 +123,7 @@ export const App: React.FC = () => {
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </TaskProvider>
+        </TourProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

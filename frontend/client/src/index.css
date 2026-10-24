@@ -20,6 +20,17 @@
 }
 
 @layer utilities {
+  .dashboard-background {
+    background-color: #F1F9FB;
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.78), rgba(255, 255, 255, 0.78)),
+      url('/dashboard-bg.jpg');
+    background-attachment: fixed, fixed;
+    background-size: auto, cover;
+    background-position: 0 0, center center;
+    background-repeat: no-repeat;
+  }
+
   .bg-ambient-dots {
     background-image: radial-gradient(rgba(148, 163, 184, 0.15) 1px, transparent 1px);
     background-size: 28px 28px;

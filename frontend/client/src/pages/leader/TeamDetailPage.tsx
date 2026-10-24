@@ -128,7 +128,7 @@ export const TeamDetailPage: React.FC = () => {
 
             {/* Team Task Metrics Grid */}
             <div className="mt-6 pt-5 border-t border-gdgoc-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
-              <div className="p-3 rounded-lg bg-gdgoc-gray-50 card-bb-sm">
+              <div className="p-3 rounded-lg card-bb-sm" style={{ backgroundColor: '#FDECEC' }}>
                 <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
                   <span className="text-[11px] font-semibold uppercase tracking-wider">Assigned</span>
                   <FolderKanban className="w-3.5 h-3.5 text-gdgoc-gray-400" />
@@ -136,7 +136,7 @@ export const TeamDetailPage: React.FC = () => {
                 <div className="text-xl font-bold text-gdgoc-gray-900">{metrics.totalTasks}</div>
               </div>
 
-              <div className="p-3 rounded-lg bg-amber-50/60 card-bb-sm">
+              <div className="p-3 rounded-lg card-bb-sm" style={{ backgroundColor: '#E8F7EE' }}>
                 <div className="flex items-center justify-between text-amber-700 mb-1">
                   <span className="text-[11px] font-semibold uppercase tracking-wider">In Progress</span>
                   <Clock className="w-3.5 h-3.5 text-amber-500" />
@@ -144,7 +144,7 @@ export const TeamDetailPage: React.FC = () => {
                 <div className="text-xl font-bold text-amber-900">{metrics.inProgressTasks}</div>
               </div>
 
-              <div className="p-3 rounded-lg bg-blue-50/60 card-bb-sm">
+              <div className="p-3 rounded-lg card-bb-sm" style={{ backgroundColor: '#EAF3FF' }}>
                 <div className="flex items-center justify-between text-blue-700 mb-1">
                   <span className="text-[11px] font-semibold uppercase tracking-wider">Review</span>
                   <AlertCircle className="w-3.5 h-3.5 text-gdgoc-blue" />
@@ -152,7 +152,7 @@ export const TeamDetailPage: React.FC = () => {
                 <div className="text-xl font-bold text-blue-900">{metrics.pendingReviewTasks}</div>
               </div>
 
-              <div className="p-3 rounded-lg bg-emerald-50/60 card-bb-sm">
+              <div className="p-3 rounded-lg card-bb-sm" style={{ backgroundColor: '#FDECEC' }}>
                 <div className="flex items-center justify-between text-emerald-700 mb-1">
                   <span className="text-[11px] font-semibold uppercase tracking-wider">Completed</span>
                   <CheckCircle2 className="w-3.5 h-3.5 text-gdgoc-green" />

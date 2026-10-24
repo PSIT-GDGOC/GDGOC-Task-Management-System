@@ -3,31 +3,27 @@
    ========================================================================= */
 
 @keyframes typewriter-cursor-blink {
-  0%, 49% {
+  0%, 45% {
     opacity: 1;
   }
-  50%, 100% {
+  50%, 95% {
     opacity: 0;
+  }
+  100% {
+    opacity: 1;
   }
 }
 
 .typewriter-cursor {
   display: inline-block;
   width: 3px;
-  border-radius: 1px;
+  height: 0.85em;
+  border-radius: 1.5px;
   background: #4285F4;
   margin-left: 3px;
   vertical-align: -0.05em;
-  animation: typewriter-cursor-blink 0.85s infinite;
-}
-
-.typewriter-cursor-line1 {
-  height: 0.8em;
-}
-
-.typewriter-cursor-line2 {
-  height: 0.8em;
-  width: 2.5px;
+  animation: typewriter-cursor-blink 0.8s infinite;
+  box-shadow: 0 0 4px rgba(66, 133, 244, 0.35);
 }
 
 @media (prefers-reduced-motion: reduce) {

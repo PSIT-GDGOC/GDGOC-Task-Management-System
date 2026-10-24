@@ -3,6 +3,7 @@ import { useAuth } from '../../auth/authContext';
 import { useTasks } from '../../context/TaskContext';
 import { Task } from '../../types/task';
 import { TaskStatusBadge } from '../../components/common/TaskStatusBadge';
+import { HelpButton } from '../../components/tour/HelpButton';
 import { TaskDetailsModal } from '../../components/common/TaskDetailsModal';
 import { 
   CheckSquare, 
@@ -76,32 +77,43 @@ export const MemberMyWork: React.FC = () => {
 
   return (
     <div
-      className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full"
-      style={{ backgroundImage: 'url(/dashboard-bg.jpg)', backgroundSize: 'cover', backgroundPosition: 'center top', backgroundRepeat: 'no-repeat' }}
+      className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full flex-1"
+      style={{
+        backgroundImage: 'url(/dashboard-bg.jpg)',
+        backgroundSize: 'contain',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundColor: '#F1F9FB',
+      }}
     >
-      <div className="absolute inset-0 bg-white/10 pointer-events-none" aria-hidden="true" />
+      <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: 'rgba(255, 255, 255, 0.35)' }} aria-hidden="true" />
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 space-y-6 text-left">
       {/* ---------------------------------------------------------------------
           HEADER SECTION
           --------------------------------------------------------------------- */}
-      <div className="space-y-1">
-        <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-green-50 border border-green-200 text-[10px] font-bold uppercase tracking-wider text-gdgoc-green">
-          Personal Workspace
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div data-tour="mywork-heading" className="space-y-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-green-50 border border-green-200 text-[10px] font-bold uppercase tracking-wider text-gdgoc-green">
+            Personal Workspace
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gdgoc-gray-900 tracking-tight">
+            Welcome back, {user?.name || 'Rohan Gupta'}
+          </h1>
+          <p className="text-xs sm:text-sm text-gdgoc-gray-600">
+            My Work • Track your assigned sprint deliverables, deadlines, and submissions. Click any task row to inspect full details.
+          </p>
         </div>
-        <h1 className="text-2xl sm:text-3xl font-extrabold text-gdgoc-gray-900 tracking-tight">
-          Welcome back, {user?.name || 'Rohan Gupta'}
-        </h1>
-        <p className="text-xs sm:text-sm text-gdgoc-gray-600">
-          My Work • Track your assigned sprint deliverables, deadlines, and submissions. Click any task row to inspect full details.
-        </p>
+        <div className="flex-shrink-0">
+          <HelpButton sectionTourId="member-mywork" sectionTitle="My Work" />
+        </div>
       </div>
 
       {/* ---------------------------------------------------------------------
           MEMBER STATISTICS METRICS
           --------------------------------------------------------------------- */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+      <div data-tour="mywork-stats" className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
         {/* Assigned Tasks */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
+        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#FDECEC' }}>
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-gdgoc-gray-500">
               Assigned Tasks
@@ -115,7 +127,7 @@ export const MemberMyWork: React.FC = () => {
         </div>
 
         {/* In Progress */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
+        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#E8F7EE' }}>
           <div className="flex items-center justify-between text-amber-700 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">
               In Progress
@@ -129,7 +141,7 @@ export const MemberMyWork: React.FC = () => {
         </div>
 
         {/* Pending Review */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
+        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#EAF3FF' }}>
           <div className="flex items-center justify-between text-blue-700 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-blue-800">
               Pending Review
@@ -143,7 +155,7 @@ export const MemberMyWork: React.FC = () => {
         </div>
 
         {/* Completed */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb">
+        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#FDECEC' }}>
           <div className="flex items-center justify-between text-emerald-700 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
               Completed
@@ -195,7 +207,7 @@ export const MemberMyWork: React.FC = () => {
       {/* ---------------------------------------------------------------------
           TASK LIST TABLE (CLICKABLE ROWS)
           --------------------------------------------------------------------- */}
-      <div className="bg-white rounded-xl border border-gdgoc-gray-200 card-bb overflow-hidden">
+      <div data-tour="mywork-tasklist" className="bg-white rounded-xl border border-gdgoc-gray-200 card-bb overflow-hidden">
         <div className="p-4 sm:p-5 border-b border-gdgoc-gray-100 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <CheckSquare className="w-4 h-4 text-gdgoc-green" />

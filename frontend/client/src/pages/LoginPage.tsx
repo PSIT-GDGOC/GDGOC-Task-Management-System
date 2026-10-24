@@ -6,6 +6,7 @@ import { LoginForm } from '../components/auth/LoginForm';
 import { SignUpForm } from '../components/auth/SignUpForm';
 import { CollaborationVisual } from '../components/auth/CollaborationVisual';
 import { TypewriterBranding } from '../components/auth/TypewriterBranding';
+import { TypewriterTagline } from '../components/auth/TypewriterTagline';
 import { MarqueeStrip } from '../components/auth/MarqueeStrip';
 
 export const LoginPage: React.FC = () => {
@@ -85,23 +86,7 @@ export const LoginPage: React.FC = () => {
 
             {/* Hero Heading: "Great teams. Great things done." */}
             <div className="space-y-2">
-              <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-gdgoc-gray-900 tracking-tight leading-[1.18]">
-                Great teams.<br />
-                <span className="text-[#4285F4]">Great </span>
-                <span className="text-[#EA4335]">things </span>
-                <span className="text-[#34A853]">done</span>
-                <span className="text-[#FBBC04]">.</span>
-                
-                {/* Playful Google brackets doodle accent from the reference design */}
-                <span className="inline-flex items-center ml-2.5 align-middle select-none">
-                  <svg className="w-7 h-7 sm:w-8 sm:h-8 inline-block drop-shadow-2xs" viewBox="0 0 40 40" fill="none">
-                    <path d="M13 20L20 13L17 10L7 20L17 30L20 27L13 20Z" fill="#EA4335" />
-                    <path d="M27 20L20 27L23 30L33 20L23 10L20 13L27 20Z" fill="#4285F4" />
-                    <circle cx="20" cy="8" r="2.5" fill="#34A853" />
-                    <circle cx="20" cy="32" r="2.5" fill="#FBBC04" />
-                  </svg>
-                </span>
-              </h2>
+              <TypewriterTagline />
               <p className="text-sm sm:text-base text-gdgoc-gray-600 leading-relaxed font-normal pt-1">
                 One workspace to assign tasks, track progress, and keep every GDGoC team moving forward.
               </p>

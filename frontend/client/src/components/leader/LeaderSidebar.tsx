@@ -53,7 +53,7 @@ export const LeaderSidebar: React.FC<LeaderSidebarProps> = ({ onCloseMobile }) =
 
   return (
     <>
-    <aside className="w-64 h-full bg-[#E9EDF2] border-r-2 border-[#111111] flex flex-col justify-between select-none">
+    <aside data-tour="leader-sidebar" className="w-64 h-full bg-[#E9EDF2] border-r-2 border-[#111111] flex flex-col justify-between select-none">
       {/* Top Branding Section */}
       <div>
         <div className="p-4 sm:p-5 border-b border-[#111111] flex items-center justify-between">
@@ -167,7 +167,7 @@ export const LeaderSidebar: React.FC<LeaderSidebarProps> = ({ onCloseMobile }) =
           Profile
         </div>
         {/* User Profile Card */}
-        <button type="button" aria-haspopup="dialog" onClick={() => setProfileOpen(true)} className="profile-card-trigger w-full flex items-center gap-2.5 p-2 rounded-lg bg-white card-bb-sm text-left">
+        <button type="button" aria-haspopup="dialog" onClick={() => setProfileOpen(true)} data-tour="leader-profile-card" className="profile-card-trigger w-full flex items-center gap-2.5 p-2 rounded-lg bg-white card-bb-sm text-left">
           <UserCircle2 className="w-8 h-8 text-gdgoc-blue flex-shrink-0" />
           <div className="flex-1 min-w-0 text-left">
             <p className="text-xs font-bold text-gdgoc-gray-900 truncate">
