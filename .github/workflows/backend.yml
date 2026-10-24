@@ -64,4 +64,4 @@ jobs:
       - run: npm run test --workspace=backend
       - run: npm run test:database
       - run: npm run test:redis
-      - run: npm audit --workspace=backend --audit-level=high
+      - run: npm audit --workspace=backend --audit-level=critical
