@@ -149,7 +149,7 @@ export const AdminTasksPage: React.FC = () => {
             Refresh
           </button>
           <button
-            onClick={() => navigate('/leader/assign-work')}
+            onClick={() => navigate('/admin/assign-work')}
             className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-gdgoc-blue hover:bg-blue-600 rounded-lg shadow-sm transition-colors"
           >
             <PlusCircle className="w-4 h-4" />

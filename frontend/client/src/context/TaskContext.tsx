@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Task, AttachedFile, TeamId } from '../types/task';
-import { INITIAL_SAMPLE_TASKS, TEAMS } from '../data/mockData';
+import { TEAMS } from '../data/mockData';
 import { taskApi } from '../services/api';
 
 export interface NewTaskInput {
@@ -25,7 +25,7 @@ interface TaskContextType {
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_SAMPLE_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Sync tasks from live backend / database on mount
@@ -33,16 +33,9 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setIsLoading(true);
     try {
       const liveTasks = await taskApi.fetchTasks();
-      if (liveTasks && liveTasks.length > 0) {
-        // Merge with initial sample tasks so the board has rich content
-        setTasks((prev) => {
-          const liveIds = new Set(liveTasks.map((t) => t.id));
-          const nonOverlapping = prev.filter((t) => !liveIds.has(t.id));
-          return [...liveTasks, ...nonOverlapping];
-        });
-      }
+      setTasks(liveTasks || []);
     } catch {
-      // Backend not running or offline; keep in-memory/mock state
+      setTasks([]);
     } finally {
       setIsLoading(false);
     }

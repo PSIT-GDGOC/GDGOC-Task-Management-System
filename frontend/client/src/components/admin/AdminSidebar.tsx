@@ -10,7 +10,7 @@ import {
   ShieldCheck, 
   LogOut, 
   X,
-  ExternalLink
+  PlusCircle
 } from 'lucide-react';
 
 interface AdminSidebarProps {
@@ -61,11 +61,13 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => 
           )}
         </div>
 
-        {/* Admin Badge */}
+        {/* Admin / Executive Badge */}
         <div className="px-5 pt-3 pb-1">
           <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-red-50 border border-red-200/70 text-gdgoc-red">
             <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="text-[11px] font-bold tracking-wide uppercase">Admin Console</span>
+            <span className="text-[11px] font-bold tracking-wide uppercase">
+              {user?.position ? `${user.position} Console` : 'President Console'}
+            </span>
           </div>
         </div>
 
@@ -86,6 +88,16 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => 
           >
             <FolderKanban className="w-4 h-4 flex-shrink-0" />
             <span>Club Deliverables</span>
+          </NavLink>
+
+          {/* 2. Assign Deliverable */}
+          <NavLink
+            to="/admin/assign-work"
+            onClick={onCloseMobile}
+            className={navItemClasses}
+          >
+            <PlusCircle className="w-4 h-4 flex-shrink-0" />
+            <span>Assign Deliverable</span>
           </NavLink>
 
           {/* 2. Members & Teams */}
@@ -118,31 +130,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => 
             <span>Chapter Analytics</span>
           </NavLink>
         </nav>
-
-        {/* Quick Links Section */}
-        <div className="px-5 pt-6 pb-2">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-gdgoc-gray-400">
-            Switch Perspective
-          </span>
-        </div>
-        <div className="px-3 space-y-1">
-          <NavLink
-            to="/leader/overview"
-            onClick={onCloseMobile}
-            className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-gdgoc-gray-600 hover:bg-gdgoc-gray-100 hover:text-gdgoc-gray-900 transition-colors"
-          >
-            <span>Lead Workspace</span>
-            <ExternalLink className="w-3 h-3 text-gdgoc-gray-400" />
-          </NavLink>
-          <NavLink
-            to="/member"
-            onClick={onCloseMobile}
-            className="flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-gdgoc-gray-600 hover:bg-gdgoc-gray-100 hover:text-gdgoc-gray-900 transition-colors"
-          >
-            <span>Member My Work</span>
-            <ExternalLink className="w-3 h-3 text-gdgoc-gray-400" />
-          </NavLink>
-        </div>
       </div>
 
       {/* Bottom Profile & Logout Footer */}
@@ -153,10 +140,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => 
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-bold text-gdgoc-gray-900 truncate">
-              {user?.name || 'Administrator'}
+              {user?.name || user?.position || 'President'}
             </p>
             <p className="text-[10px] text-gdgoc-gray-500 truncate">
-              {user?.email || 'admin@psit.gdgoc.dev'}
+              {user?.position ? `${user.position} • ` : 'Executive • '}{user?.email || 'admin@psit.gdgoc.dev'}
             </p>
           </div>
           <button

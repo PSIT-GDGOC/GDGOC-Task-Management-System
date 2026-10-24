@@ -81,16 +81,17 @@ export const App: React.FC = () => {
               >
                 <Route index element={<Navigate to="/admin/tasks" replace />} />
                 <Route path="tasks" element={<AdminTasksPage />} />
+                <Route path="assign-work" element={<AssignWorkPage />} />
                 <Route path="teams" element={<AdminMembersTeamsPage />} />
                 <Route path="invitations" element={<AdminInvitationsPage />} />
                 <Route path="analytics" element={<AdminAnalyticsPage />} />
               </Route>
 
-              {/* Team Leader Routes (Protected) */}
+              {/* Team Leader Routes (Protected: Leaders and Super Admins/President) */}
               <Route
                 path="/leader"
                 element={
-                  <ProtectedRoute allowedRoles={['TEAM_LEADER']}>
+                  <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER']}>
                     <LeaderLayout />
                   </ProtectedRoute>
                 }
@@ -102,11 +103,11 @@ export const App: React.FC = () => {
                 <Route path="view-work" element={<LeaderWorkOverview />} />
               </Route>
 
-              {/* Member Routes (Protected: MY WORK ONLY) */}
+              {/* Member Routes (Protected: All Roles can view personal work) */}
               <Route
                 path="/member"
                 element={
-                  <ProtectedRoute allowedRoles={['MEMBER']}>
+                  <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER', 'MEMBER']}>
                     <MemberLayout />
                   </ProtectedRoute>
                 }

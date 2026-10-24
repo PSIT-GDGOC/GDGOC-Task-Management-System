@@ -1,3 +1,6 @@
+import { TaskScope } from '@prisma/client';
+import { prisma } from '../lib/prisma';
+import { DeadlineReminderService } from '../services/deadline-reminder.service';
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -27,6 +30,57 @@ router.get(
     });
   }),
 );
+router.post(
+  '/reminders/trigger',
+  asyncHandler(async (_req, res) => {
+    const result = await DeadlineReminderService.scanAndSendReminders();
+    res.json({ success: true, data: result });
+  }),
+);
+
+router.get(
+  '/activity/feed',
+  asyncHandler(async (req, res) => {
+    const user = req.user!;
+    const isManager = ['SYSTEM_OWNER', 'PRESIDENT', 'ADMIN'].includes(user.role);
+    const userTeamIds = user.teamMemberships.map((m) => m.teamId);
+
+    const where = isManager
+      ? {}
+      : {
+          task: {
+            is: {
+              OR: [
+                { scope: TaskScope.WHOLE_CLUB },
+                { teamId: { in: userTeamIds } },
+                { assigneeId: user.id },
+              ],
+            },
+          },
+        };
+
+    const activities = await prisma.taskActivity.findMany({
+      where,
+      orderBy: { timestamp: 'desc' },
+      take: 40,
+      include: {
+        actor: { select: { id: true, name: true, email: true, position: true, role: true } },
+        task: {
+          select: {
+            id: true,
+            title: true,
+            status: true,
+            team: { select: { id: true, name: true, slug: true } },
+            assignee: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+
+    res.json({ success: true, data: activities });
+  }),
+);
+
 router.get(
   '/:id',
   validate({ params: taskParamsSchema }),

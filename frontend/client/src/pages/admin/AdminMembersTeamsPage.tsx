@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { TEAMS } from '../../data/mockData';
 import { adminApi, AdminUser } from '../../services/api';
 import { 
   Users, 
@@ -29,7 +28,7 @@ export const AdminMembersTeamsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'TEAMS' | 'MEMBERS'>('TEAMS');
 
   // Teams state
-  const [teams, setTeams] = useState<any[]>(TEAMS);
+  const [teams, setTeams] = useState<any[]>([]);
   const [isNewTeamModalOpen, setIsNewTeamModalOpen] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
   const [newTeamSlug, setNewTeamSlug] = useState('');
@@ -49,17 +48,15 @@ export const AdminMembersTeamsPage: React.FC = () => {
 
   const loadData = async () => {
     try {
-      // Fetch teams
+      // Fetch real teams from database
       const liveTeams = await adminApi.getTeams();
-      if (liveTeams && liveTeams.length > 0) {
-        setTeams(liveTeams);
-      }
+      setTeams(liveTeams || []);
     } catch {
-      // fallback to mock TEAMS
+      setTeams([]);
     }
 
     try {
-      // Fetch users
+      // Fetch real verified users from database
       const liveUsers = await adminApi.getUsers();
       if (liveUsers && liveUsers.length > 0) {
         const mapped: MockMemberRecord[] = liveUsers.map((u: AdminUser) => ({
@@ -80,43 +77,11 @@ export const AdminMembersTeamsPage: React.FC = () => {
         }));
         setMembers(mapped);
       } else {
-        fallbackMockMembers();
+        setMembers([]);
       }
     } catch {
-      fallbackMockMembers();
+      setMembers([]);
     }
-  };
-
-  const fallbackMockMembers = () => {
-    const list: MockMemberRecord[] = [];
-    TEAMS.forEach((team) => {
-      team.members.forEach((m) => {
-        list.push({
-          id: m.id,
-          name: m.name,
-          email: m.email,
-          role: m.name.includes('Dr.') || m.name.includes('Aman') ? 'ADMIN' : 'MEMBER',
-          position: m.role,
-          team: team.name,
-          isTeamHead: m.name === team.leadName,
-          isActive: true,
-          initials: m.initials,
-        });
-      });
-    });
-    // Add club executive
-    list.unshift({
-      id: 'usr_sys_01',
-      name: 'Aditya Rajput',
-      email: 'aditya.lead@example.com',
-      role: 'SYSTEM_OWNER',
-      position: 'GDGOC PSIT Chapter Lead',
-      team: 'Core Team',
-      isTeamHead: true,
-      isActive: true,
-      initials: 'AR',
-    });
-    setMembers(list);
   };
 
   const handleToggleStatus = async (member: MockMemberRecord) => {
@@ -287,8 +252,8 @@ export const AdminMembersTeamsPage: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {teams.map((team) => {
-              const count = team.members ? team.members.length : (team._count?.members || 6);
-              const lead = team.leadName || 'Assigned via Admin';
+              const count = team.members ? team.members.length : (team._count?.memberships ?? team._count?.members ?? 0);
+              const lead = team.leadName || (count > 0 ? 'Assigned' : 'Unassigned');
 
               return (
                 <div

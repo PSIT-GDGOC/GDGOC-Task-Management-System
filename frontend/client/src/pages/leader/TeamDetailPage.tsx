@@ -174,26 +174,30 @@ export const TeamDetailPage: React.FC = () => {
               <span className="text-xs text-gdgoc-gray-400">GDGoC PSIT Core &amp; Members</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-              {currentTeam.members.map((member) => (
-                <div
-                  key={member.id}
-                  className="p-3 rounded-xl bg-gdgoc-gray-50/50 flex items-center gap-3 hover:bg-white transition-all card-bb-sm"
-                >
-                  <div className="w-9 h-9 rounded-full bg-blue-50 text-gdgoc-blue border border-blue-200 text-xs font-bold flex items-center justify-center flex-shrink-0">
-                    {member.initials}
+            {currentTeam.members.length === 0 ? (
+              <p className="text-xs text-gdgoc-gray-500 py-2">No members registered in this squad yet.</p>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {currentTeam.members.map((member) => (
+                  <div
+                    key={member.id}
+                    className="p-3 rounded-xl bg-gdgoc-gray-50/50 flex items-center gap-3 hover:bg-white transition-all card-bb-sm"
+                  >
+                    <div className="w-9 h-9 rounded-full bg-blue-50 text-gdgoc-blue border border-blue-200 text-xs font-bold flex items-center justify-center flex-shrink-0">
+                      {member.initials}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-gdgoc-gray-900 truncate">
+                        {member.name}
+                      </p>
+                      <p className="text-[11px] text-gdgoc-gray-500 truncate">
+                        {member.role}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-bold text-gdgoc-gray-900 truncate">
-                      {member.name}
-                    </p>
-                    <p className="text-[11px] text-gdgoc-gray-500 truncate">
-                      {member.role}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Assigned Work Section — opaque white card */}

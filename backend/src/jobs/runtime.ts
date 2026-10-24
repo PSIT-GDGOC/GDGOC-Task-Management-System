@@ -1,3 +1,4 @@
+import { DeadlineReminderService } from '../services/deadline-reminder.service';
 import { Queue, Worker } from 'bullmq';
 import { PrismaClient } from '@prisma/client';
 import { prisma } from '../lib/prisma';
@@ -84,6 +85,7 @@ export async function startJobs(
     'maintenance',
     async (job) => {
       if (job.name === 'overdue-scan') return scanOverdue(database);
+      if (job.name === 'deadline-reminders') return DeadlineReminderService.scanAndSendReminders(database);
       if (job.name === 'cleanup') return maintenance(database);
       throw new Error('Unknown maintenance job');
     },

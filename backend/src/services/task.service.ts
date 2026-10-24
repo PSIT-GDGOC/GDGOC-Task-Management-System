@@ -4,6 +4,7 @@ import { prisma } from '../lib/prisma';
 import { AppError } from '../middleware/errorHandler';
 import { TaskRepository, taskSummaryInclude } from '../repositories/task.repository';
 import { userProfileSelect } from '../repositories/user.repository';
+import { EmailService } from './email.service';
 import {
   CreateTaskInput,
   UpdateTaskInput,
@@ -50,6 +51,33 @@ async function log(
   details?: Prisma.InputJsonValue,
 ) {
   await tx.taskActivity.create({ data: { taskId, actorId, action, oldValue, newValue, details } });
+}
+
+async function notifyUser(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  taskId: string,
+  kind: string,
+) {
+  try {
+    await tx.notification.upsert({
+      where: {
+        userId_taskId_kind: {
+          userId,
+          taskId,
+          kind,
+        },
+      },
+      update: { readAt: null, createdAt: new Date() },
+      create: {
+        userId,
+        taskId,
+        kind,
+      },
+    });
+  } catch (err) {
+    console.error('[TaskService] Notification creation error:', err);
+  }
 }
 
 export class TaskService {
@@ -146,6 +174,30 @@ export class TaskService {
         teamId,
         assigneeId: task.assigneeId,
       });
+      if (task.assigneeId) {
+        await notifyUser(tx, task.assigneeId, task.id, 'TASK_ASSIGNED');
+        const assignee = await tx.user.findUnique({
+          where: { id: task.assigneeId },
+          select: { name: true, email: true },
+        });
+        if (assignee?.email) {
+          const teamName = task.team?.name;
+          setImmediate(() => {
+            EmailService.sendTaskAssignedEmail(
+              { name: assignee.name, email: assignee.email },
+              {
+                id: task.id,
+                title: task.title,
+                description: task.description,
+                deadline: task.deadline,
+                priority: task.priority,
+                teamName,
+              },
+              { name: current.name, position: current.position },
+            ).catch((err) => console.error('[EmailService] Task assigned email error:', err));
+          });
+        }
+      }
       return task;
     });
   }
@@ -206,6 +258,34 @@ export class TaskService {
         assigneeId,
         { previousStatus: task.status, status },
       );
+      if (assigneeId && assigneeId !== task.assigneeId) {
+        await notifyUser(tx, assigneeId, id, 'TASK_ASSIGNED');
+        const assignee = await tx.user.findUnique({
+          where: { id: assigneeId },
+          select: { name: true, email: true },
+        });
+        if (assignee?.email) {
+          let teamName: string | undefined;
+          if (task.teamId) {
+            const team = await tx.team.findUnique({ where: { id: task.teamId }, select: { name: true } });
+            teamName = team?.name;
+          }
+          setImmediate(() => {
+            EmailService.sendTaskAssignedEmail(
+              { name: assignee.name, email: assignee.email },
+              {
+                id: task.id,
+                title: task.title,
+                description: task.description,
+                deadline: task.deadline,
+                priority: task.priority,
+                teamName,
+              },
+              { name: current.name, position: current.position },
+            ).catch((err) => console.error('[EmailService] Task assigned email error:', err));
+          });
+        }
+      }
       return TaskRepository.summary(tx, id);
     });
   }
@@ -269,6 +349,48 @@ export class TaskService {
         TaskStatus.IN_REVIEW,
         { submissionId: saved.id },
       );
+      const recipients: Array<{ id: string; name: string; email: string }> = [];
+      if (task.creatorId && task.creatorId !== current.id) {
+        const creator = await tx.user.findUnique({
+          where: { id: task.creatorId },
+          select: { id: true, name: true, email: true },
+        });
+        if (creator) recipients.push(creator);
+      }
+      if (task.teamId) {
+        const teamHeads = await tx.teamMembership.findMany({
+          where: { teamId: task.teamId, isTeamHead: true, userId: { not: current.id } },
+          include: { user: { select: { id: true, name: true, email: true } } },
+        });
+        for (const th of teamHeads) {
+          if (th.user && !recipients.some((r) => r.id === th.user.id)) {
+            recipients.push(th.user);
+          }
+        }
+      }
+
+      for (const r of recipients) {
+        await notifyUser(tx, r.id, id, 'TASK_SUBMITTED');
+      }
+
+      if (recipients.length > 0) {
+        let teamName: string | undefined;
+        if (task.teamId) {
+          const team = await tx.team.findUnique({ where: { id: task.teamId }, select: { name: true } });
+          teamName = team?.name;
+        }
+        for (const r of recipients) {
+          setImmediate(() => {
+            EmailService.sendTaskSubmittedEmail(
+              { name: r.name, email: r.email },
+              { id: task.id, title: task.title, teamName },
+              { name: current.name },
+              submission.note,
+              submission.prUrl,
+            ).catch((err) => console.error('[EmailService] Task submitted email error:', err));
+          });
+        }
+      }
       return TaskRepository.summary(tx, id);
     });
   }
@@ -319,6 +441,25 @@ export class TaskService {
         status,
         { submissionId: submission.id, reviewComment: review.reviewComment ?? null },
       );
+      if (task.assigneeId) {
+        const kind = approved ? 'TASK_APPROVED' : 'CHANGES_REQUESTED';
+        await notifyUser(tx, task.assigneeId, id, kind);
+        const assignee = await tx.user.findUnique({
+          where: { id: task.assigneeId },
+          select: { name: true, email: true },
+        });
+        if (assignee?.email) {
+          setImmediate(() => {
+            EmailService.sendTaskReviewedEmail(
+              { name: assignee.name, email: assignee.email },
+              { title: task.title },
+              { name: current.name, position: current.position },
+              approved,
+              review.reviewComment,
+            ).catch((err) => console.error('[EmailService] Task review email error:', err));
+          });
+        }
+      }
       return TaskRepository.summary(tx, id);
     });
   }

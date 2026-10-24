@@ -10,6 +10,12 @@ export const teamSummarySelect = {
   description: true,
   createdAt: true,
   updatedAt: true,
+  _count: {
+    select: {
+      memberships: true,
+      tasks: true,
+    },
+  },
 } satisfies Prisma.TeamSelect;
 
 export class TeamRepository {

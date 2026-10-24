@@ -25,12 +25,17 @@ export const NotificationBell: React.FC = () => {
   useEffect(() => {
     fetchNotifications();
 
-    // Poll for notifications every 20 seconds
+    // Poll for notifications every 8 seconds and refresh on window focus for real-time reactivity
+    const handleFocus = () => fetchNotifications(true);
+    window.addEventListener('focus', handleFocus);
     const interval = setInterval(() => {
       fetchNotifications(true);
-    }, 20000);
+    }, 8000);
 
-    return () => clearInterval(interval);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(interval);
+    };
   }, [user?.id]);
 
   useEffect(() => {
@@ -98,6 +103,8 @@ export const NotificationBell: React.FC = () => {
         return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
       case 'CHANGES_REQUESTED':
         return <AlertCircle className="w-4 h-4 text-gdgoc-red" />;
+      case 'DEADLINE_REMINDER':
+        return <Clock className="w-4 h-4 text-gdgoc-yellow animate-pulse" />;
       default:
         return <Sparkles className="w-4 h-4 text-purple-500" />;
     }
@@ -113,6 +120,8 @@ export const NotificationBell: React.FC = () => {
         return 'Work Approved! 🎉';
       case 'CHANGES_REQUESTED':
         return 'Changes Requested';
+      case 'DEADLINE_REMINDER':
+        return 'Milestone Deadline Approaching ⏳';
       default:
         return 'Club Notification';
     }

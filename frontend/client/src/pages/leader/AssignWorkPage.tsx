@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../../auth/authContext';
 import { useTasks } from '../../context/TaskContext';
-import { TEAMS } from '../../data/mockData';
+import { adminApi } from '../../services/api';
 import { TeamId, AttachedFile } from '../../types/task';
 import { HelpButton } from '../../components/tour/HelpButton';
 import { 
@@ -21,7 +22,11 @@ import {
 
 export const AssignWorkPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const { assignTask } = useTasks();
+
+  const overviewPath = user?.role === 'ADMIN' ? '/admin/tasks' : '/leader/overview';
+  const viewWorkPath = user?.role === 'ADMIN' ? '/admin/tasks' : '/leader/view-work';
 
   // Form State
   const [selectedTeamId, setSelectedTeamId] = useState<TeamId | ''>('');
@@ -31,6 +36,36 @@ export const AssignWorkPage: React.FC = () => {
   const [deadline, setDeadline] = useState<string>('');
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+
+  // Live database teams and members
+  const [liveTeams, setLiveTeams] = useState<Array<{ id: string; name: string; slug: string }>>([]);
+  const [liveUsers, setLiveUsers] = useState<Array<{ id: string; name: string; email: string; role: string; teamIds: string[] }>>([]);
+
+  useEffect(() => {
+    async function loadFormOptions() {
+      try {
+        const [teamsData, usersData] = await Promise.all([
+          adminApi.getTeams(),
+          adminApi.getUsers({ isActive: true }),
+        ]);
+        if (teamsData && teamsData.length > 0) setLiveTeams(teamsData);
+        if (usersData && usersData.length > 0) {
+          setLiveUsers(
+            usersData.map((u) => ({
+              id: u.id,
+              name: u.name,
+              email: u.email,
+              role: u.position || u.role,
+              teamIds: (u.memberships || []).map((m: any) => m.teamId),
+            }))
+          );
+        }
+      } catch (err) {
+        console.error('[AssignWorkPage] Failed to fetch live teams or users:', err);
+      }
+    }
+    loadFormOptions();
+  }, []);
 
   // Field-specific validation errors
   const [errors, setErrors] = useState<{
@@ -45,9 +80,16 @@ export const AssignWorkPage: React.FC = () => {
   // Success Notification Banner
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Get active team members based on selected team
-  const activeTeam = TEAMS.find((t) => t.id === selectedTeamId);
-  const teamMembers = activeTeam ? activeTeam.members : [];
+  // Get active verified members from database based on selected team
+  const teamMembers = useMemo(() => {
+    if (!selectedTeamId) return [];
+    const filtered = liveUsers.filter((u) => u.teamIds.includes(selectedTeamId));
+    // If user is Super Admin/President and squad has no assigned members yet, allow selecting any real user in DB
+    if (filtered.length === 0 && user?.role === 'ADMIN') {
+      return liveUsers;
+    }
+    return filtered;
+  }, [liveUsers, selectedTeamId, user?.role]);
 
   // Reset member selection when team changes
   const handleTeamChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -243,22 +285,22 @@ export const AssignWorkPage: React.FC = () => {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => navigate('/leader/overview')}
+                onClick={() => navigate(overviewPath)}
                 className="inline-flex items-center gap-1.5 text-xs font-semibold text-gdgoc-gray-600 hover:text-gdgoc-blue transition-colors p-1 -ml-1 rounded"
               >
                 <ArrowLeft className="w-4 h-4" />
-                <span>Back to Overview</span>
+                <span>{user?.role === 'ADMIN' ? 'Back to Deliverables' : 'Back to Overview'}</span>
               </button>
               <HelpButton sectionTourId="leader-assign" sectionTitle="Assign Work" />
             </div>
 
             <button
               type="button"
-              onClick={() => navigate('/leader/view-work')}
+              onClick={() => navigate(viewWorkPath)}
               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white text-xs font-semibold text-gdgoc-blue hover:text-blue-700 transition-colors card-bb-sm"
             >
               <Layers className="w-4 h-4" />
-              <span>View All Work</span>
+              <span>{user?.role === 'ADMIN' ? 'View All Deliverables' : 'View All Work'}</span>
             </button>
           </div>
 
@@ -296,10 +338,10 @@ export const AssignWorkPage: React.FC = () => {
             <div className="pt-1">
               <button
                 type="button"
-                onClick={() => navigate('/leader/view-work')}
+                onClick={() => navigate(viewWorkPath)}
                 className="text-xs font-bold text-emerald-900 underline hover:text-emerald-950"
               >
-                Go to View Work â†’
+                {user?.role === 'ADMIN' ? 'Go to Club Deliverables →' : 'Go to View Work →'}
               </button>
             </div>
           </div>
@@ -349,8 +391,8 @@ export const AssignWorkPage: React.FC = () => {
                     : 'border-gdgoc-gray-300 hover:border-gdgoc-gray-400 focus:border-gdgoc-blue focus:ring-blue-100'
                 }`}
               >
-                <option value="">-- Choose a team --</option>
-                {TEAMS.map((team) => (
+                <option value="">-- Choose a squad / track --</option>
+                {liveTeams.map((team) => (
                   <option key={team.id} value={team.id}>
                     {team.name}
                   </option>
@@ -370,7 +412,7 @@ export const AssignWorkPage: React.FC = () => {
                 htmlFor="assign-member-select" 
                 className="block text-xs font-semibold text-gdgoc-gray-700 mb-1.5"
               >
-                Select Team Member <span className="text-gdgoc-red">*</span>
+                Select Verified Member <span className="text-gdgoc-red">*</span>
               </label>
               <select
                 id="assign-member-select"
@@ -384,11 +426,15 @@ export const AssignWorkPage: React.FC = () => {
                 }`}
               >
                 <option value="">
-                  {selectedTeamId ? '-- Select an active member --' : 'First select a team'}
+                  {selectedTeamId
+                    ? teamMembers.length > 0
+                      ? '-- Select a verified member --'
+                      : '-- No verified members registered in this squad --'
+                    : 'First select a squad'}
                 </option>
                 {teamMembers.map((member) => (
                   <option key={member.id} value={member.id}>
-                    {member.name} ({member.role})
+                    {member.name} ({member.email})
                   </option>
                 ))}
               </select>
