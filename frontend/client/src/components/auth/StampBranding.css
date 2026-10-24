@@ -46,7 +46,7 @@
 
 /* Typography styles applied within SVG */
 .stamp-line1 {
-  font-family: 'Alfa Slab One', 'Impact', 'Arial Black', sans-serif;
+  font-family: 'Fredoka', sans-serif;
   font-weight: 900;
   font-size: 40px;
   letter-spacing: 0.04em;
@@ -55,7 +55,7 @@
 }
 
 .stamp-line2 {
-  font-family: 'Alfa Slab One', 'Impact', 'Arial Black', sans-serif;
+  font-family: 'Fredoka', sans-serif;
   font-weight: 800;
   font-size: 24px;
   letter-spacing: 0.14em;

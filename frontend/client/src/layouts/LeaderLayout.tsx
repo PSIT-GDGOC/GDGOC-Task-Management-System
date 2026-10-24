@@ -24,7 +24,7 @@ export const LeaderLayout: React.FC = () => {
 
       {/* Mobile Drawer */}
       <div
-        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-white transform transition-transform duration-200 ease-in-out ${
+        className={`lg:hidden fixed inset-y-0 left-0 z-50 w-64 bg-[#E9EDF2] transform transition-transform duration-200 ease-in-out ${
           mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
         }`}
       >

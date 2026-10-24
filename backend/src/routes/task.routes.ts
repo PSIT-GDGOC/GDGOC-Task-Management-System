@@ -16,6 +16,7 @@ import {
 
 const router = Router();
 router.use(requireAuth);
+
 router.get(
   '/',
   validate({ query: taskListSchema }),

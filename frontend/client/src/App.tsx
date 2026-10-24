@@ -20,6 +20,7 @@ import { MemberLayout } from './layouts/MemberLayout';
 import { MemberMyWork } from './pages/member/MemberMyWork';
 import { UnauthorizedPage } from './pages/UnauthorizedPage';
 import { NotFoundPage } from './pages/NotFoundPage';
+import { MyWorkHistory } from './pages/MyWorkHistory';
 
 /**
  * Smart Root Redirector
@@ -107,6 +108,10 @@ export const App: React.FC = () => {
                 }
               >
                 <Route index element={<MemberMyWork />} />
+              </Route>
+
+              <Route path="/history" element={<ProtectedRoute allowedRoles={['MEMBER']}><MemberLayout /></ProtectedRoute>}>
+                <Route index element={<MyWorkHistory />} />
               </Route>
 
               {/* Error & Fallback Routes */}

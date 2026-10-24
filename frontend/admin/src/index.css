@@ -4,7 +4,107 @@
 
 body {
   margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+  font-family: 'Fredoka', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
     sans-serif;
+  font-weight: 400;
   background-color: #f8fafc;
+}
+
+*,
+*::before,
+*::after,
+input::placeholder,
+textarea::placeholder {
+  font-family: 'Fredoka', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+main h1,
+main h2 {
+  font-weight: 600;
+}
+
+main .bg-white h2,
+main .bg-white h3,
+main [class*='bg-white/'] h2,
+main [class*='bg-white/'] h3 {
+  font-weight: 600;
+}
+
+aside nav a,
+aside nav button {
+  font-weight: 600;
+}
+
+button[class],
+[role='button'] {
+  font-weight: 600;
+}
+
+.text-2xl:not(h1),
+.text-3xl:not(h1) {
+  font-weight: 700;
+}
+
+.admin-profile-backdrop {
+  animation: admin-profile-backdrop-in 180ms ease-out both;
+}
+
+.admin-profile-card {
+  animation: admin-profile-card-in 180ms ease-out both;
+}
+
+.admin-profile-backdrop.is-closing {
+  animation: admin-profile-backdrop-out 160ms ease-in both;
+}
+
+.admin-profile-card.is-closing {
+  animation: admin-profile-card-out 160ms ease-in both;
+}
+
+@keyframes admin-profile-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes admin-profile-backdrop-out {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+@keyframes admin-profile-card-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes admin-profile-card-out {
+  from { opacity: 1; transform: translateY(0); }
+  to { opacity: 0; transform: translateY(6px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .admin-profile-backdrop,
+  .admin-profile-card,
+  .admin-profile-backdrop.is-closing,
+  .admin-profile-card.is-closing {
+    animation-duration: 0.01ms;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  main [class~='bg-white'][class*='rounded-'][class*='shadow-']:not(button):not(a):not(input):not(select):not(textarea):not(.fixed):not(.fixed *):not(:has(div[class~='bg-white'][class*='rounded-'][class*='shadow-'])):not([style*='translate3d']) {
+    transition-property: transform, box-shadow, background-color, border-color, color, filter;
+    transition-duration: 220ms;
+    transition-timing-function: ease;
+  }
+
+  main [class~='bg-white'][class*='rounded-'][class*='shadow-']:not(button):not(a):not(input):not(select):not(textarea):not(.fixed):not(.fixed *):not(:has(div[class~='bg-white'][class*='rounded-'][class*='shadow-'])):not([style*='translate3d']):hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 14px rgba(17, 17, 17, 0.16);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  main [class~='bg-white'][class*='rounded-'][class*='shadow-'] {
+    transition-duration: 0.01ms !important;
+  }
 }
