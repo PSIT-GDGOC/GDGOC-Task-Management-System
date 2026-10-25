@@ -58,6 +58,8 @@ export function parseEnvironment(input: NodeJS.ProcessEnv) {
   // Before frontends are hosted, an explicitly disabled Google deployment only
   // accepts its own Render origin. Enabling Google requires explicit app origins.
   const configured = { ...input };
+  configured.COOKIE_SAME_SITE ??=
+    input.NODE_ENV === 'production' || input.RENDER === 'true' ? 'none' : 'lax';
   if (
     input.NODE_ENV === 'production' &&
     input.GOOGLE_AUTH_ENABLED === 'false' &&
@@ -91,7 +93,8 @@ export function parseEnvironment(input: NodeJS.ProcessEnv) {
           ];
     const missing = required.filter((key) => !configured[key]);
     if (missing.length) throw new Error(`Production configuration missing: ${missing.join(', ')}`);
-    if (value.ENABLE_DEV_LOGIN && input.ALLOW_STAGING_DEV_LOGIN !== 'true') throw new Error('Development login must be disabled in production');
+    if (value.ENABLE_DEV_LOGIN && input.ALLOW_STAGING_DEV_LOGIN !== 'true')
+      throw new Error('Development login must be disabled in production');
     if (
       value.PROCESS_ROLE === 'web' &&
       (value.SESSION_SECRET.length < 32 ||
@@ -151,4 +154,16 @@ export function parseEnvironment(input: NodeJS.ProcessEnv) {
   };
 }
 export const env = parseEnvironment(process.env);
-export const frontendOrigins = [env.CLIENT_ORIGIN, env.ADMIN_ORIGIN, ...(env.ENABLE_DEV_LOGIN ? ['http://localhost:5173', 'http://localhost:5174'] : [])];
+export const frontendOrigins = [
+  env.CLIENT_ORIGIN,
+  env.ADMIN_ORIGIN,
+  ...(env.ENABLE_DEV_LOGIN ? ['http://localhost:5173', 'http://localhost:5174'] : []),
+];
+
+export function isTrustedFrontendOrigin(origin: string) {
+  const clean = origin.replace(/\/$/, '');
+  return (
+    frontendOrigins.some((allowed) => allowed.replace(/\/$/, '') === clean) ||
+    /^https:\/\/gdgoc-task-management-system[a-z0-9-]*\.vercel\.app$/.test(clean)
+  );
+}

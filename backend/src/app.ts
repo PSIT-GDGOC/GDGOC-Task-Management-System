@@ -5,7 +5,7 @@ import session from 'express-session';
 import { sessionStore } from './lib/session-store';
 import { apiLimit } from './security/rateLimits';
 import { csrfProtection } from './security/csrf';
-import { env, frontendOrigins } from './config/env';
+import { env, isTrustedFrontendOrigin } from './config/env';
 import { errorHandler } from './middleware/errorHandler';
 
 // Route imports
@@ -21,7 +21,7 @@ import userRoutes from './routes/user.routes';
 import teamRoutes from './routes/team.routes';
 
 const app = express();
-if (env.NODE_ENV === 'production') app.set('trust proxy', 1);
+if (env.NODE_ENV === 'production' || process.env.RENDER === 'true') app.set('trust proxy', 1);
 
 // Security Headers
 app.use(
@@ -33,7 +33,10 @@ app.use(
 // CORS
 app.use(
   cors({
-    origin: frontendOrigins,
+    origin: (requestOrigin, callback) => {
+      if (!requestOrigin) return callback(null, true);
+      callback(null, isTrustedFrontendOrigin(requestOrigin));
+    },
     credentials: true,
   }),
 );
@@ -58,7 +61,10 @@ app.use(
     name: 'gdgoc.sid',
     cookie: {
       httpOnly: true,
-      secure: env.NODE_ENV === 'production',
+      secure:
+        env.NODE_ENV === 'production' ||
+        process.env.RENDER === 'true' ||
+        env.COOKIE_SAME_SITE === 'none',
       sameSite: env.COOKIE_SAME_SITE,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },
