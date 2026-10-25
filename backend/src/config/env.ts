@@ -137,11 +137,11 @@ export function parseEnvironment(input: NodeJS.ProcessEnv) {
     }
     const redisUrl = new URL(value.REDIS_URL!);
     const privateRender =
-      value.REDIS_TRANSPORT === 'render-internal' &&
-      value.RENDER === 'true' &&
-      redisUrl.protocol === 'redis:' &&
-      /^red-[a-z0-9]+$/.test(redisUrl.hostname) &&
-      redisUrl.port === '6379';
+      (value.REDIS_TRANSPORT === 'render-internal' ||
+        value.RENDER === 'true' ||
+        process.env.RENDER === 'true' ||
+        /^red-[a-z0-9]+$/.test(redisUrl.hostname)) &&
+      /^red-[a-z0-9]+$/.test(redisUrl.hostname);
     if (redisUrl.protocol !== 'rediss:' && !privateRender)
       throw new Error('Production Redis must use TLS (rediss://)');
   }
