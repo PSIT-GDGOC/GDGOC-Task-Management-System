@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { PrismaClient, SystemRole } from '@prisma/client';
 import { z } from 'zod';
 
@@ -36,6 +37,25 @@ export async function seedDatabase(prisma: PrismaClient, ownerEmail?: string) {
         });
       }
 
+      for (const [position, teamSlug] of [
+        ['Vice President', null],
+        ['Secretary', null],
+        ['Organizer', null],
+        ['Tech Lead', 'tech'],
+        ['Media Lead', 'media'],
+        ['Content Lead', 'content'],
+      ] as const) {
+        await tx.roleKey.upsert({
+          where: { position },
+          update: {},
+          create: {
+            position,
+            teamSlug,
+            keyCode: crypto.randomBytes(24).toString('hex').toUpperCase(),
+          },
+        });
+      }
+
       if (normalizedEmail) {
         await tx.user.upsert({
           where: { email: normalizedEmail },
@@ -49,6 +69,6 @@ export async function seedDatabase(prisma: PrismaClient, ownerEmail?: string) {
         });
       }
     },
-    { maxWait: 15000, timeout: 30000 }
+    { maxWait: 15000, timeout: 30000 },
   );
 }

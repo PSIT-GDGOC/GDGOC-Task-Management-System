@@ -21,8 +21,8 @@ export const AdminAnalyticsPage: React.FC = () => {
     averageLeadTimeHours: number | null;
   }>({
     totalCompleted: 0,
-    onTimeRate: 92.5,
-    averageLeadTimeHours: 28.4,
+    onTimeRate: null,
+    averageLeadTimeHours: null,
   });
 
   useEffect(() => {
@@ -32,13 +32,7 @@ export const AdminAnalyticsPage: React.FC = () => {
   const loadStats = async () => {
     try {
       const data = await adminApi.getStatistics();
-      if (data && (data.totalCompleted > 0 || data.onTimeRate !== null)) {
-        setStats({
-          totalCompleted: data.totalCompleted || tasks.filter((t) => t.status === 'Completed').length,
-          onTimeRate: data.onTimeRate !== null ? data.onTimeRate : 92.5,
-          averageLeadTimeHours: data.averageLeadTimeHours !== null ? data.averageLeadTimeHours : 28.4,
-        });
-      }
+      setStats(data);
     } catch {
       // fallback
     }
@@ -50,7 +44,7 @@ export const AdminAnalyticsPage: React.FC = () => {
       const teamTasks = tasks.filter((t) => t.teamId.toLowerCase() === team.id.toLowerCase());
       const total = teamTasks.length;
       const completed = teamTasks.filter((t) => t.status === 'Completed').length;
-      const progress = total > 0 ? Math.round((completed / total) * 100) : 75;
+      const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
 
       return {
         id: team.id,
@@ -104,7 +98,7 @@ export const AdminAnalyticsPage: React.FC = () => {
             </div>
           </div>
           <p className="text-2xl font-black text-gdgoc-gray-900 mt-2">
-            {stats.onTimeRate ? `${stats.onTimeRate.toFixed(1)}%` : '92.5%'}
+            {stats.onTimeRate !== null ? `${stats.onTimeRate.toFixed(1)}%` : 'No data'}
           </p>
           <p className="text-[11px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
             <span>+4.2% from last sprint</span>
@@ -121,7 +115,7 @@ export const AdminAnalyticsPage: React.FC = () => {
             </div>
           </div>
           <p className="text-2xl font-black text-gdgoc-gray-900 mt-2">
-            {stats.averageLeadTimeHours ? `${stats.averageLeadTimeHours} hrs` : '28.4 hrs'}
+            {stats.averageLeadTimeHours !== null ? `${stats.averageLeadTimeHours} hrs` : 'No data'}
           </p>
           <p className="text-[11px] text-gdgoc-gray-500 font-medium mt-1">
             Assignment to PR merge
@@ -155,7 +149,7 @@ export const AdminAnalyticsPage: React.FC = () => {
             </div>
           </div>
           <p className="text-2xl font-black text-gdgoc-gray-900 mt-2">
-            28
+            {new Set(tasks.map((task) => task.assigneeId).filter(Boolean)).size}
           </p>
           <p className="text-[11px] text-gdgoc-gray-500 font-medium mt-1">
             PSIT student community

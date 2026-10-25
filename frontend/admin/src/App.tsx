@@ -13,65 +13,73 @@ const queryClient = new QueryClient({
   },
 });
 
-const ADMIN_STORAGE_KEY = 'gdgoc_admin_user';
-
 export const App: React.FC = () => {
   const [user, setUser] = useState<{
     id: string;
     name: string;
     email: string;
     role: string;
-  } | null>(() => {
-    try {
-      const saved = localStorage.getItem(ADMIN_STORAGE_KEY);
-      return saved ? JSON.parse(saved) : null;
-    } catch {
-      return null;
-    }
-  });
+  } | null>(null);
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [sessionError, setSessionError] = useState('');
 
   // Check existing session on mount
   useEffect(() => {
+    let active = true;
+    localStorage.removeItem('gdgoc_admin_user');
     apiClient<{ success: boolean; user: any }>('/auth/me')
       .then((res) => {
-        if (res.user) {
-          setUser(res.user);
-          try {
-            localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(res.user));
-          } catch {}
-        }
+        if (active) setUser(res.user || null);
       })
-      .catch(() => {
-        // Not logged in or dev mode
+      .catch((err) => {
+        if (active && err.statusCode !== 401) setSessionError(err.message);
+      })
+      .finally(() => {
+        if (active) setCheckingSession(false);
       });
+    return () => {
+      active = false;
+    };
   }, []);
-
-  const handleLoginSuccess = (u: any) => {
-    setUser(u);
-    try {
-      localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(u));
-    } catch {}
+  const handleLoginSuccess = (current: any) => {
+    setUser(current);
+    setSessionError('');
   };
 
   const handleLogout = async () => {
     try {
       await apiClient('/auth/logout', { method: 'POST' });
-    } finally {
+      queryClient.clear();
       setUser(null);
-      try {
-        localStorage.removeItem(ADMIN_STORAGE_KEY);
-      } catch {}
+    } catch (err: any) {
+      setSessionError(err.message);
     }
   };
+  if (checkingSession)
+    return (
+      <p role="status" className="p-6">
+        Checking your session...
+      </p>
+    );
+  if (sessionError && !user)
+    return (
+      <div role="alert" className="p-6">
+        {sessionError}{' '}
+        <button type="button" onClick={() => window.location.reload()}>
+          Retry session check
+        </button>
+      </div>
+    );
 
   return (
     <QueryClientProvider client={queryClient}>
+      {sessionError && (
+        <div role="alert" className="bg-red-50 p-3 text-red-800">
+          {sessionError}
+        </div>
+      )}
       <BrowserRouter>
-        <AppRouter
-          user={user}
-          onLoginSuccess={handleLoginSuccess}
-          onLogout={handleLogout}
-        />
+        <AppRouter user={user} onLoginSuccess={handleLoginSuccess} onLogout={handleLogout} />
       </BrowserRouter>
     </QueryClientProvider>
   );

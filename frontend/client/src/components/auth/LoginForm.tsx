@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/authContext';
-import { DevAccount } from '../../auth/mockAuthService';
-import { DevAccountSelector } from './DevAccountSelector';
+import { authApi } from '../../services/api';
 import { MembershipStatus } from '../../types/auth';
 import {
   Eye,
@@ -66,6 +65,18 @@ export const LoginForm: React.FC = () => {
     return true;
   };
 
+  const selectTier = (next: ClubTier) => {
+    if (next === tier) return;
+    setTier(next);
+    setEmail('');
+    setPassword('');
+    setShowPassword(false);
+    setEmailError(null);
+    setPasswordError(null);
+    setFormError(null);
+    setForgotPasswordNotice(false);
+  };
+
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmail(e.target.value);
     if (emailError) validateEmail(e.target.value);
@@ -78,22 +89,14 @@ export const LoginForm: React.FC = () => {
     if (formError) setFormError(null);
   };
 
-  const handleSelectDevAccount = (account: DevAccount) => {
-    setEmail(account.user.email);
-    setPassword(account.password);
-    if (account.user.role === 'ADMIN') {
-      setTier('PRESIDENT');
-    } else if (account.user.role === 'TEAM_LEADER') {
-      setTier('LEAD');
-      setLeadPosition('Tech Lead');
-    } else {
-      setTier('CREW');
-      setSelectedTeam('tech');
-    }
-    setEmailError(null);
-    setPasswordError(null);
+  const handleGoogleSignIn = async () => {
+    setIsSubmitting(true);
     setFormError(null);
-    setForgotPasswordNotice(false);
+    try { window.location.assign(await authApi.getGoogleUrl()); }
+    catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Google sign-in is unavailable.');
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -196,8 +199,9 @@ export const LoginForm: React.FC = () => {
         >
           <Info className="w-4 h-4 text-gdgoc-blue flex-shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold">Password Notice:</span> Default password for preset accounts is{' '}
-            <span className="font-mono font-bold text-blue-700 bg-blue-100/80 px-1 py-0.5 rounded">Password@123</span>. For newly registered accounts, enter the password you chose during sign up.
+            Use the password you chose during sign up, or continue with Google.
+            If you cannot access your account, contact your chapter administrator.
+
           </div>
         </div>
       )}
@@ -224,7 +228,7 @@ export const LoginForm: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                setTier('CREW');
+                selectTier('CREW');
               }}
               className={`px-2.5 py-2 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1 ${
                 tier === 'CREW'
@@ -242,7 +246,7 @@ export const LoginForm: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                setTier('LEAD');
+                selectTier('LEAD');
               }}
               className={`px-2.5 py-2 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1 ${
                 tier === 'LEAD'
@@ -260,7 +264,7 @@ export const LoginForm: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                setTier('PRESIDENT');
+                selectTier('PRESIDENT');
                 setEmail('adityarajput.86046@gmail.com');
               }}
               className={`px-2.5 py-2 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1 ${
@@ -314,7 +318,7 @@ export const LoginForm: React.FC = () => {
               <select
                 id="lead-position-select"
                 value={leadPosition}
-                onChange={(e) => setLeadPosition(e.target.value)}
+                onChange={(e) => { setLeadPosition(e.target.value); setEmail(''); setPassword(''); setFormError(null); }}
                 className="w-full px-3 py-2 text-xs bg-white border border-blue-200 rounded-lg text-gdgoc-gray-900 focus:outline-none focus:ring-2 focus:ring-gdgoc-blue"
               >
                 <option value="Tech Lead">💻 Tech Lead (Creates & Assigns Tech Tasks)</option>
@@ -467,8 +471,10 @@ export const LoginForm: React.FC = () => {
         </button>
       </form>
 
-      {/* Discreet Development Testing Profiles */}
-      <DevAccountSelector onSelectAccount={handleSelectDevAccount} selectedEmail={email} />
+      <button type="button" disabled={isSubmitting} onClick={handleGoogleSignIn}
+        className="mt-4 w-full rounded-xl border border-gray-300 bg-white py-2.5 text-sm font-semibold disabled:opacity-70">
+        Continue with Google
+      </button>
 
       {/* Clean Brand Footnote */}
       <div className="mt-6 pt-3 border-t border-gdgoc-gray-100 text-center text-xs text-gdgoc-gray-400">

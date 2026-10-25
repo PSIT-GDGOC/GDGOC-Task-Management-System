@@ -7,6 +7,7 @@ import { TaskProvider } from './context/TaskContext';
 import { TourProvider } from './context/TourContext';
 import { TourManager } from './components/tour/TourManager';
 import { FullNameModal } from './components/common/FullNameModal';
+import { SessionRecovery } from './auth/SessionRecovery';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { AdminLayout } from './layouts/AdminLayout';
@@ -30,7 +31,9 @@ import { MyWorkHistory } from './pages/MyWorkHistory';
  * Resolves root URL '/' to user's assigned role dashboard or to '/login'
  */
 const RootRedirector: React.FC = () => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, sessionError } = useAuth();
+
+  if (sessionError) return <SessionRecovery />;
 
   if (isLoading) {
     return (
@@ -62,71 +65,78 @@ export const App: React.FC = () => {
       <BrowserRouter>
         <AuthProvider>
           <TourProvider>
-          <TaskProvider>
-            <TourManager />
-            <FullNameModal />
-            <Routes>
-              {/* Root */}
-              <Route path="/" element={<RootRedirector />} />
+            <TaskProvider>
+              <TourManager />
+              <FullNameModal />
+              <Routes>
+                {/* Root */}
+                <Route path="/" element={<RootRedirector />} />
 
-              {/* Public Login Route */}
-              <Route path="/login" element={<LoginPage />} />
+                {/* Public Login Route */}
+                <Route path="/login" element={<LoginPage />} />
 
-              {/* Admin Routes (Protected: Full Club Governance) */}
-              <Route
-                path="/admin"
-                element={
-                  <ProtectedRoute allowedRoles={['ADMIN']}>
-                    <AdminLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<Navigate to="/admin/tasks" replace />} />
-                <Route path="tasks" element={<AdminTasksPage />} />
-                <Route path="assign-work" element={<AssignWorkPage />} />
-                <Route path="teams" element={<AdminMembersTeamsPage />} />
-                <Route path="invitations" element={<AdminInvitationsPage />} />
-                <Route path="analytics" element={<AdminAnalyticsPage />} />
-              </Route>
+                {/* Admin Routes (Protected: Full Club Governance) */}
+                <Route
+                  path="/admin"
+                  element={
+                    <ProtectedRoute allowedRoles={['ADMIN']}>
+                      <AdminLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="/admin/tasks" replace />} />
+                  <Route path="tasks" element={<AdminTasksPage />} />
+                  <Route path="assign-work" element={<AssignWorkPage />} />
+                  <Route path="teams" element={<AdminMembersTeamsPage />} />
+                  <Route path="invitations" element={<AdminInvitationsPage />} />
+                  <Route path="analytics" element={<AdminAnalyticsPage />} />
+                </Route>
 
-              {/* Team Leader Routes (Protected: Leaders and Super Admins/President) */}
-              <Route
-                path="/leader"
-                element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER']}>
-                    <LeaderLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<Navigate to="/leader/overview" replace />} />
-                <Route path="overview" element={<LeaderOverview />} />
-                <Route path="teams/:teamId" element={<TeamDetailPage />} />
-                <Route path="assign-work" element={<AssignWorkPage />} />
-                <Route path="view-work" element={<LeaderWorkOverview />} />
-              </Route>
+                {/* Team Leader Routes (Protected: Leaders and Super Admins/President) */}
+                <Route
+                  path="/leader"
+                  element={
+                    <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER']}>
+                      <LeaderLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<Navigate to="/leader/overview" replace />} />
+                  <Route path="overview" element={<LeaderOverview />} />
+                  <Route path="teams/:teamId" element={<TeamDetailPage />} />
+                  <Route path="assign-work" element={<AssignWorkPage />} />
+                  <Route path="view-work" element={<LeaderWorkOverview />} />
+                </Route>
 
-              {/* Member Routes (Protected: All Roles can view personal work) */}
-              <Route
-                path="/member"
-                element={
-                  <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER', 'MEMBER']}>
-                    <MemberLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route index element={<MemberMyWork />} />
-              </Route>
+                {/* Member Routes (Protected: All Roles can view personal work) */}
+                <Route
+                  path="/member"
+                  element={
+                    <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER', 'MEMBER']}>
+                      <MemberLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<MemberMyWork />} />
+                </Route>
 
-              <Route path="/history" element={<ProtectedRoute allowedRoles={['MEMBER']}><MemberLayout /></ProtectedRoute>}>
-                <Route index element={<MyWorkHistory />} />
-              </Route>
+                <Route
+                  path="/history"
+                  element={
+                    <ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER', 'MEMBER']}>
+                      <MemberLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<MyWorkHistory />} />
+                </Route>
 
-              {/* Error & Fallback Routes */}
-              <Route path="/unauthorized" element={<UnauthorizedPage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
-          </TaskProvider>
-        </TourProvider>
+                {/* Error & Fallback Routes */}
+                <Route path="/unauthorized" element={<UnauthorizedPage />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </TaskProvider>
+          </TourProvider>
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>

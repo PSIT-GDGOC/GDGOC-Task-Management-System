@@ -1,7 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import { ApiFixture, createApiFixture, loginWithCsrf } from './helpers/api-fixture';
+import {
+  ApiFixture,
+  createApiFixture,
+  loginWithCsrf,
+  fixturePassword,
+  fixturePasswordHash,
+} from './helpers/api-fixture';
 
 let fixture: ApiFixture;
 let db: ApiFixture['db'];
@@ -21,7 +27,11 @@ afterAll(async () => {
 
 async function newUser(name: string) {
   return db.user.create({
-    data: { email: `${name.toLowerCase().replaceAll(' ', '-')}-${randomUUID()}@example.com`, name },
+    data: {
+      email: `${name.toLowerCase().replaceAll(' ', '-')}-${randomUUID()}@example.com`,
+      name,
+      passwordHash: fixturePasswordHash(),
+    },
   });
 }
 async function task(teamId: string | null, status: 'FREE' | 'IN_REVIEW' = 'FREE') {
@@ -369,7 +379,7 @@ describe('Users and team permissions through the HTTP API', () => {
     const first = await loginWithCsrf(agent, 'membera@example.com');
     const second = await agent
       .post('/api/v1/auth/dev-login')
-      .send({ email: 'membera@example.com' });
+      .send({ email: 'membera@example.com', password: fixturePassword });
     expect(second.headers['set-cookie'][0]).not.toBe(first.headers['set-cookie'][0]);
   });
 

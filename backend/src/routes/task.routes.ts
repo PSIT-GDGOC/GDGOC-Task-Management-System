@@ -1,8 +1,9 @@
+import { isClubManager } from '../utils/permissions';
 import { TaskScope } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { DeadlineReminderService } from '../services/deadline-reminder.service';
 import { Router } from 'express';
-import { requireAuth } from '../middleware/auth';
+import { requireAuth, requireRole } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { TaskService } from '../services/task.service';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -32,6 +33,7 @@ router.get(
 );
 router.post(
   '/reminders/trigger',
+  requireRole(['SYSTEM_OWNER', 'PRESIDENT']),
   asyncHandler(async (_req, res) => {
     const result = await DeadlineReminderService.scanAndSendReminders();
     res.json({ success: true, data: result });
@@ -42,22 +44,23 @@ router.get(
   '/activity/feed',
   asyncHandler(async (req, res) => {
     const user = req.user!;
-    const isManager = ['SYSTEM_OWNER', 'PRESIDENT', 'ADMIN'].includes(user.role);
+    const isManager = isClubManager(user);
     const userTeamIds = user.teamMemberships.map((m) => m.teamId);
 
-    const where = isManager
-      ? {}
-      : {
-          task: {
-            is: {
-              OR: [
-                { scope: TaskScope.WHOLE_CLUB },
-                { teamId: { in: userTeamIds } },
-                { assigneeId: user.id },
-              ],
-            },
-          },
-        };
+    const where = {
+      task: {
+        is: {
+          isDeleted: false,
+          ...(!isManager && {
+            OR: [
+              { scope: TaskScope.WHOLE_CLUB },
+              { teamId: { in: userTeamIds } },
+              { assigneeId: user.id },
+            ],
+          }),
+        },
+      },
+    };
 
     const activities = await prisma.taskActivity.findMany({
       where,

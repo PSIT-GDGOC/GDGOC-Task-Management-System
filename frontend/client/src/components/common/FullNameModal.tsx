@@ -21,7 +21,8 @@ export const FullNameModal: React.FC = () => {
     const isConfirmed = localStorage.getItem(confirmedKey) === 'true';
     const isDismissed = sessionStorage.getItem(dismissedKey) === 'true';
 
-    if (isConfirmed || isDismissed) {
+    const legacyHandle = user.name.toLowerCase() === user.email.split('@')[0].toLowerCase() && /[\d._-]/.test(user.name);
+    if ((isConfirmed || isDismissed) && !legacyHandle) {
       setIsOpen(false);
       return;
     }
@@ -35,7 +36,7 @@ export const FullNameModal: React.FC = () => {
       !currentName ||
       currentNameLower === emailPrefix ||
       currentName.includes('@') ||
-      /^[a-z0-9._-]+$/i.test(currentName);
+      (/\d/.test(currentName) && currentNameLower === emailPrefix);
 
     if (isPrefixOrHandle) {
       // Suggest clean candidate from prefix if possible
