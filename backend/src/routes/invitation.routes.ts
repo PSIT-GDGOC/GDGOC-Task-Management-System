@@ -20,10 +20,7 @@ router.use(requireAuth);
 router.get(
   '/role-keys',
   asyncHandler(async (req, res) => {
-    const isPresident =
-      req.user?.role === 'SYSTEM_OWNER' ||
-      req.user?.position === 'President' ||
-      req.user?.email === 'adityarajput.86046@gmail.com';
+    const isPresident = req.user?.role === 'SYSTEM_OWNER' || req.user?.role === 'PRESIDENT';
 
     if (!isPresident) {
       throw new AppError('Only the President can view constant leadership keys', 403);
@@ -38,10 +35,7 @@ router.get(
 router.patch(
   '/role-keys/:id',
   asyncHandler(async (req, res) => {
-    const isPresident =
-      req.user?.role === 'SYSTEM_OWNER' ||
-      req.user?.position === 'President' ||
-      req.user?.email === 'adityarajput.86046@gmail.com';
+    const isPresident = req.user?.role === 'SYSTEM_OWNER' || req.user?.role === 'PRESIDENT';
 
     if (!isPresident) {
       throw new AppError('Only the President can update leadership keys', 403);
@@ -53,10 +47,7 @@ router.patch(
 
     const target = await prisma.roleKey.findFirst({
       where: {
-        OR: [
-          { id: req.params.id },
-          { position: { equals: req.params.id, mode: 'insensitive' } },
-        ],
+        OR: [{ id: req.params.id }, { position: { equals: req.params.id, mode: 'insensitive' } }],
       },
     });
 

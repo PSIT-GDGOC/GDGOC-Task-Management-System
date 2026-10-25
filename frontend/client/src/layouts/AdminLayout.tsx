@@ -6,6 +6,7 @@ import { AdminSidebar } from '../components/admin/AdminSidebar';
 import { ProfilePanel } from '../components/common/ProfilePanel';
 import { Menu, Shield } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
+import { ThemeToggle } from '../theme/ThemeToggle';
 import { NotificationBell } from '../components/common/NotificationBell';
 
 export const AdminLayout: React.FC = () => {
@@ -50,7 +51,7 @@ export const AdminLayout: React.FC = () => {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="lg:hidden">
+            <div className="hidden min-[420px]:block lg:hidden">
               <Logo size="sm" showSubtitle={false} />
             </div>
             <div className="hidden lg:flex items-center gap-2 text-xs text-gdgoc-gray-500 font-medium">
@@ -61,6 +62,7 @@ export const AdminLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <NotificationBell />
             <button
               type="button"
@@ -69,7 +71,7 @@ export const AdminLayout: React.FC = () => {
               title="Click to view President Profile"
             >
               <Shield className="w-3 h-3 text-gdgoc-red" />
-              <span>{user?.position || 'Executive Core'}</span>
+              <span className="sr-only sm:not-sr-only">{user?.position || 'Executive Core'}</span>
             </button>
           </div>
         </header>

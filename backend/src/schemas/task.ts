@@ -7,8 +7,16 @@ const tagsSchema = z
   .max(10)
   .transform((tags) => [...new Set(tags.map((tag) => tag.toLowerCase()))]);
 const metadataFields = {
-  title: z.string().trim().min(3).max(150),
-  description: z.string().trim().min(10).max(10000),
+  title: z
+    .string()
+    .trim()
+    .min(3, 'Task title must be at least 3 characters.')
+    .max(150, 'Task title must be 150 characters or fewer.'),
+  description: z
+    .string()
+    .trim()
+    .min(10, 'Task description must be at least 10 characters.')
+    .max(10000, 'Task description must be 10,000 characters or fewer.'),
   priority: z.nativeEnum(TaskPriority).optional(),
   deadline: z.string().datetime({ offset: true }).nullable().optional(),
   tags: tagsSchema.optional(),

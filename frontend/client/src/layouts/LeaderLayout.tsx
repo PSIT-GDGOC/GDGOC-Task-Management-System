@@ -3,6 +3,7 @@ import { Outlet } from 'react-router-dom';
 import { LeaderSidebar } from '../components/leader/LeaderSidebar';
 import { Menu, Users } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
+import { ThemeToggle } from '../theme/ThemeToggle';
 import { NotificationBell } from '../components/common/NotificationBell';
 
 export const LeaderLayout: React.FC = () => {
@@ -44,7 +45,7 @@ export const LeaderLayout: React.FC = () => {
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="lg:hidden">
+            <div className="hidden min-[420px]:block lg:hidden">
               <Logo size="sm" showSubtitle={false} />
             </div>
             <div className="hidden lg:flex items-center gap-2 text-xs text-gdgoc-gray-500 font-medium">
@@ -55,10 +56,11 @@ export const LeaderLayout: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <NotificationBell />
             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-gdgoc-blue bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-full shadow-2xs">
               <Users className="w-3 h-3 text-gdgoc-blue" />
-              <span>Squad Lead</span>
+              <span className="sr-only sm:not-sr-only">Squad Lead</span>
             </span>
           </div>
         </header>
