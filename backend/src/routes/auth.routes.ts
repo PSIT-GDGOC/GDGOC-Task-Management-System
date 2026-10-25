@@ -208,17 +208,14 @@ router.post(
               if (!verifyPassword(trimmedPassword, existing.passwordHash)) {
                 throw new AppError('Incorrect password. Please verify your password and try again.', 401);
               }
-            } else {
+            } else if (!isPresidentEmail) {
               // Default preset password for seeded/legacy accounts
               if (trimmedPassword !== 'Password@123') {
                 throw new AppError('Incorrect password. Please verify your password and try again.', 401);
               }
             }
-          } else if (isPresidentEmail) {
-            // Designated President bootstrap sign-in
-            if (trimmedPassword !== 'Password@123') {
-              throw new AppError('Incorrect password. Please verify your password and try again.', 401);
-            }
+          } else if (!isPresidentEmail) {
+            throw new AppError('No account found with this email. Please sign up first.', 404);
           }
         }
       } else {
