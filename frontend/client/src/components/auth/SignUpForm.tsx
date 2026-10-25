@@ -57,7 +57,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onLogIn }) => {
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email.trim())) {
       nextErrors.email = 'Enter a valid email address.';
     }
-    if (!fields.password) nextErrors.password = 'Password is required.';
+    if (fields.password.length < 6) nextErrors.password = 'Password must be at least 6 characters.';
     if (fields.position !== 'Member' && !fields.invitationKey.trim()) {
       nextErrors.invitationKey = 'President Key is required for Leads & Officers.';
     }

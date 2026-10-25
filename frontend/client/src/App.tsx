@@ -117,7 +117,7 @@ export const App: React.FC = () => {
                 <Route index element={<MemberMyWork />} />
               </Route>
 
-              <Route path="/history" element={<ProtectedRoute allowedRoles={['MEMBER']}><MemberLayout /></ProtectedRoute>}>
+              <Route path="/history" element={<ProtectedRoute allowedRoles={['ADMIN', 'TEAM_LEADER', 'MEMBER']}><MemberLayout /></ProtectedRoute>}>
                 <Route index element={<MyWorkHistory />} />
               </Route>
 

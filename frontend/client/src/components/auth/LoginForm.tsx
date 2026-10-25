@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/authContext';
-import { DevAccount } from '../../auth/mockAuthService';
-import { DevAccountSelector } from './DevAccountSelector';
+import { authApi } from '../../services/api';
 import { MembershipStatus } from '../../types/auth';
 import {
   Eye,
@@ -78,22 +77,14 @@ export const LoginForm: React.FC = () => {
     if (formError) setFormError(null);
   };
 
-  const handleSelectDevAccount = (account: DevAccount) => {
-    setEmail(account.user.email);
-    setPassword(account.password);
-    if (account.user.role === 'ADMIN') {
-      setTier('PRESIDENT');
-    } else if (account.user.role === 'TEAM_LEADER') {
-      setTier('LEAD');
-      setLeadPosition('Tech Lead');
-    } else {
-      setTier('CREW');
-      setSelectedTeam('tech');
-    }
-    setEmailError(null);
-    setPasswordError(null);
+  const handleGoogleSignIn = async () => {
+    setIsSubmitting(true);
     setFormError(null);
-    setForgotPasswordNotice(false);
+    try { window.location.assign(await authApi.getGoogleUrl()); }
+    catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Google sign-in is unavailable.');
+      setIsSubmitting(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -467,8 +458,10 @@ export const LoginForm: React.FC = () => {
         </button>
       </form>
 
-      {/* Discreet Development Testing Profiles */}
-      <DevAccountSelector onSelectAccount={handleSelectDevAccount} selectedEmail={email} />
+      <button type="button" disabled={isSubmitting} onClick={handleGoogleSignIn}
+        className="mt-4 w-full rounded-xl border border-gray-300 bg-white py-2.5 text-sm font-semibold disabled:opacity-70">
+        Continue with Google
+      </button>
 
       {/* Clean Brand Footnote */}
       <div className="mt-6 pt-3 border-t border-gdgoc-gray-100 text-center text-xs text-gdgoc-gray-400">

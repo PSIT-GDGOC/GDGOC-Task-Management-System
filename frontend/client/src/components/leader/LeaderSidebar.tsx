@@ -32,9 +32,11 @@ export const LeaderSidebar: React.FC<LeaderSidebarProps> = ({ onCloseMobile }) =
   const isTeamActive = location.pathname.startsWith('/leader/teams');
   const [isTeamExpanded, setIsTeamExpanded] = useState<boolean>(true);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login', { replace: true });
+    } catch { /* AuthProvider displays the server error. */ }
   };
 
   const navItemClasses = ({ isActive }: { isActive: boolean }) =>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/authContext';
 import { Logo } from '../components/common/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
@@ -10,7 +10,8 @@ import { TypewriterTagline } from '../components/auth/TypewriterTagline';
 import { MarqueeStrip } from '../components/auth/MarqueeStrip';
 
 export const LoginPage: React.FC = () => {
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [isSignUp, setIsSignUp] = useState(searchParams.get('mode') === 'signup');
   const { user, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 

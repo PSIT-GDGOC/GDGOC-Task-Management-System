@@ -81,21 +81,23 @@ export const MemberMyWork: React.FC = () => {
     });
   }, [memberTasks, statusFilter, searchQuery]);
 
-  const handleAcceptTask = (task: Task) => {
-    acceptTask(task.id);
-    setActionMessage(`Task "${task.title}" accepted! Moved to In Progress. 🚀`);
-    setTimeout(() => setActionMessage(null), 5000);
-    if (selectedTask?.id === task.id) {
-      setSelectedTask({ ...task, status: 'In Progress' });
+  const handleAcceptTask = async (task: Task) => {
+    try {
+      const updated = await acceptTask(task.id);
+      setActionMessage(`Task "${task.title}" accepted! Moved to In Progress.`);
+      if (selectedTask?.id === task.id) setSelectedTask(updated);
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : 'Unable to start task.');
     }
   };
 
-  const handleSubmitDone = (task: Task) => {
-    submitTask(task.id, { note: 'Deliverables completed, ready for lead verification.' });
-    setActionMessage(`Task "${task.title}" marked as Done! The Super Admin (President) & Lead have been notified to review. ⏳`);
-    setTimeout(() => setActionMessage(null), 6000);
-    if (selectedTask?.id === task.id) {
-      setSelectedTask({ ...task, status: 'Pending Review' });
+  const handleSubmitDone = async (task: Task) => {
+    try {
+      const updated = await submitTask(task.id, { note: 'Deliverables completed, ready for lead verification.' });
+      setActionMessage(`Task "${task.title}" submitted for review.`);
+      if (selectedTask?.id === task.id) setSelectedTask(updated);
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : 'Unable to submit task.');
     }
   };
 

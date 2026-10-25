@@ -19,59 +19,8 @@ import {
   Lock
 } from 'lucide-react';
 
-const DEFAULT_ROLE_KEYS: LeadershipRoleKey[] = [
-  {
-    id: 'rk_vice_president',
-    role: 'ADMIN',
-    position: 'Vice President',
-    keyCode: 'GDGOC-VP-KEY',
-    label: 'Vice President (Executive Co-Lead)',
-    teamSlug: null,
-  },
-  {
-    id: 'rk_secretary',
-    role: 'ADMIN',
-    position: 'Secretary',
-    keyCode: 'GDGOC-SEC-KEY',
-    label: 'Secretary (Documentation & Records)',
-    teamSlug: null,
-  },
-  {
-    id: 'rk_organizer',
-    role: 'ADMIN',
-    position: 'Organizer',
-    keyCode: 'GDGOC-ORG-KEY',
-    label: 'Organizer (Logistics & Events)',
-    teamSlug: null,
-  },
-  {
-    id: 'rk_tech_lead',
-    role: 'ADMIN',
-    position: 'Tech Lead',
-    keyCode: 'GDGOC-TECH-KEY',
-    label: 'Tech Team Lead',
-    teamSlug: 'tech',
-  },
-  {
-    id: 'rk_media_lead',
-    role: 'ADMIN',
-    position: 'Media Lead',
-    keyCode: 'GDGOC-MEDIA-KEY',
-    label: 'Media Team Lead',
-    teamSlug: 'media',
-  },
-  {
-    id: 'rk_content_lead',
-    role: 'ADMIN',
-    position: 'Content Lead',
-    keyCode: 'GDGOC-CONTENT-KEY',
-    label: 'Content Team Lead',
-    teamSlug: 'content',
-  },
-];
-
 export const AdminInvitationsPage: React.FC = () => {
-  const [roleKeys, setRoleKeys] = useState<LeadershipRoleKey[]>(DEFAULT_ROLE_KEYS);
+  const [roleKeys, setRoleKeys] = useState<LeadershipRoleKey[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
@@ -93,10 +42,11 @@ export const AdminInvitationsPage: React.FC = () => {
       if (liveKeys && liveKeys.length > 0) {
         setRoleKeys(liveKeys);
       } else {
-        setRoleKeys(DEFAULT_ROLE_KEYS);
+        setRoleKeys([]);
       }
-    } catch {
-      setRoleKeys(DEFAULT_ROLE_KEYS);
+    } catch (err) {
+      setRoleKeys([]);
+      setFeedbackMsg({ type: 'error', text: err instanceof Error ? err.message : 'Unable to load leadership keys.' });
     } finally {
       setIsLoading(false);
     }
@@ -113,7 +63,7 @@ export const AdminInvitationsPage: React.FC = () => {
       `🌟 GDG on Campus — Leadership Authorization\n\n` +
       `You have been designated as the ${key.position} for GDGOC PSIT!\n\n` +
       `🔑 Constant President Key: ${key.keyCode}\n` +
-      `🔗 Sign Up Portal: ${window.location.origin}/signup\n\n` +
+      `🔗 Sign Up Portal: ${window.location.origin}/login?mode=signup\n\n` +
       `Instructions: On the sign-up page, choose Position "${key.position}" and enter your President Key "${key.keyCode}". ` +
       `Once registered, your leadership privileges are permanently active on TaskHub!`;
 
@@ -143,36 +93,13 @@ export const AdminInvitationsPage: React.FC = () => {
         prev.map((k) => (k.id === editingKey.id ? { ...k, keyCode: trimmed } : k))
       );
 
-      try {
-        const stored = localStorage.getItem('gdgoc_vault_custom_role_keys');
-        const customMap = stored ? JSON.parse(stored) : {};
-        customMap[editingKey.position] = trimmed;
-        localStorage.setItem('gdgoc_vault_custom_role_keys', JSON.stringify(customMap));
-      } catch {}
-
       setFeedbackMsg({
         type: 'success',
         text: `Successfully updated constant key for ${editingKey.position} to "${trimmed}" in database.`,
       });
       setEditingKey(null);
-    } catch (err: any) {
-      // Local fallback
-      setRoleKeys((prev) =>
-        prev.map((k) => (k.id === editingKey.id ? { ...k, keyCode: trimmed } : k))
-      );
-
-      try {
-        const stored = localStorage.getItem('gdgoc_vault_custom_role_keys');
-        const customMap = stored ? JSON.parse(stored) : {};
-        customMap[editingKey.position] = trimmed;
-        localStorage.setItem('gdgoc_vault_custom_role_keys', JSON.stringify(customMap));
-      } catch {}
-
-      setFeedbackMsg({
-        type: 'success',
-        text: `Key updated for ${editingKey.position} in current workspace session.`,
-      });
-      setEditingKey(null);
+    } catch (err: unknown) {
+      setFeedbackMsg({ type: 'error', text: err instanceof Error ? err.message : 'Unable to save leadership key.' });
     } finally {
       setIsSaving(false);
       setTimeout(() => setFeedbackMsg(null), 4000);

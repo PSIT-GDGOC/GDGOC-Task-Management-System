@@ -1,9 +1,14 @@
-import { Task, TaskStatus, Priority, TeamId, AttachedFile } from '../types/task';
+import { Task, TaskStatus, Priority, TeamId } from '../types/task';
 import { User, Role } from '../types/auth';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+const API_BASE = (import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1').replace(
+  /\/+$/,
+  '',
+);
+const REQUEST_TIMEOUT = 60_000;
 
 let cachedCsrfToken: string | null = null;
+let csrfRequest: Promise<string> | null = null;
 
 /**
  * Fetch and cache CSRF token from backend
@@ -11,26 +16,27 @@ let cachedCsrfToken: string | null = null;
 export async function getCsrfToken(): Promise<string> {
   if (cachedCsrfToken) return cachedCsrfToken;
 
-  try {
+  if (csrfRequest) return csrfRequest;
+  csrfRequest = (async () => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(`${API_BASE}/auth/csrf`, {
-      method: 'GET',
-      credentials: 'include',
-      signal: controller.signal,
-    }).finally(() => clearTimeout(timeoutId));
-
-    if (res.ok) {
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    try {
+      const res = await fetch(`${API_BASE}/auth/csrf`, {
+        credentials: 'include',
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error('Unable to initialize a secure session. Please try again.');
       const data = await res.json();
-      if (data.csrfToken) {
-        cachedCsrfToken = data.csrfToken;
-        return data.csrfToken;
-      }
+      if (!data.csrfToken) throw new Error('The server did not return a CSRF token.');
+      cachedCsrfToken = data.csrfToken;
+      return data.csrfToken as string;
+    } finally {
+      clearTimeout(timeoutId);
     }
-  } catch (err) {
-    console.warn('[API] Could not retrieve CSRF token from server:', err);
-  }
-  return '';
+  })().finally(() => {
+    csrfRequest = null;
+  });
+  return csrfRequest;
 }
 
 /**
@@ -39,7 +45,8 @@ export async function getCsrfToken(): Promise<string> {
 export async function apiRequest<T>(
   endpoint: string,
   method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE' = 'GET',
-  body?: unknown
+  body?: unknown,
+  retryCsrf = true,
 ): Promise<T> {
   const url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
   const headers: Record<string, string> = {};
@@ -57,7 +64,7 @@ export async function apiRequest<T>(
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
   let response: Response;
   try {
@@ -70,19 +77,21 @@ export async function apiRequest<T>(
     });
   } catch (err: any) {
     if (err.name === 'AbortError') {
-      throw new Error(`Request to ${endpoint} timed out after 8s. Backend may be offline or starting up.`);
+      throw new Error(
+        `Request to ${endpoint} timed out after 60s. Backend may be offline or starting up.`,
+      );
     }
     throw err;
   } finally {
     clearTimeout(timeoutId);
   }
 
-  // Handle CSRF rotation or session expiration
-  if (response.status === 403) {
-    cachedCsrfToken = null;
-  }
-
   const data = await response.json().catch(() => ({}));
+  const csrfRejected =
+    response.status === 403 && data?.error?.message === 'A valid X-CSRF-Token header is required';
+  if (response.status === 401 || csrfRejected) cachedCsrfToken = null;
+  // This exact error is returned before the route executes, so one retry is safe.
+  if (csrfRejected && retryCsrf) return apiRequest<T>(endpoint, method, body, false);
 
   if (!response.ok) {
     const errorMsg = data?.error?.message || data?.message || `Request failed (${response.status})`;
@@ -146,7 +155,9 @@ export function backendPriorityToFrontend(priority?: string): Priority {
   }
 }
 
-export function frontendPriorityToBackend(priority?: Priority): 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' {
+export function frontendPriorityToBackend(
+  priority?: Priority,
+): 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' {
   switch (priority) {
     case 'High':
       return 'HIGH';
@@ -185,37 +196,21 @@ export function formatBackendTask(backendTask: any): Task {
         .toUpperCase()
     : 'GD';
 
-  // Parse simulated attachments if in tags or mock
-  const attachments: AttachedFile[] = [];
-  if (backendTask.tags && Array.isArray(backendTask.tags)) {
-    backendTask.tags.forEach((tag: string, index: number) => {
-      if (tag.includes('.')) {
-        attachments.push({
-          id: `att-${index}`,
-          name: tag,
-          size: 1024 * 128,
-          type: tag.split('.').pop() || 'doc',
-          formattedSize: '128 KB',
-        });
-      }
-    });
-  }
-
   return {
     id: backendTask.id || `TSK-${Math.floor(100 + Math.random() * 900)}`,
     title: backendTask.title,
     description: backendTask.description,
-    teamId: (backendTask.team?.slug || backendTask.teamId || 'tech') as TeamId,
-    teamName: backendTask.team?.name || 'Tech Team',
+    teamId: (backendTask.team?.slug || backendTask.teamId || 'core') as TeamId,
+    teamName: backendTask.team?.name || 'Whole Club',
     assigneeId: assignee?.id || backendTask.assigneeId || '',
     assigneeName: assignee?.name || 'Unassigned',
-    assigneeEmail: assignee?.email || 'member@psit.gdgoc.dev',
+    assigneeEmail: assignee?.email || '',
     assigneeInitials: initials,
     priority: backendPriorityToFrontend(backendTask.priority),
     status: backendStatusToFrontend(backendTask.status),
     deadline: deadlineStr,
     createdAt: createdAtStr,
-    attachments,
+    attachments: [],
   };
 }
 
@@ -224,6 +219,10 @@ export function formatBackendTask(backendTask: any): Task {
 // ============================================================================
 
 export const authApi = {
+  async getGoogleUrl(): Promise<string> {
+    const res = await apiRequest<{ url: string }>('/auth/google/url?portal=member');
+    return res.url;
+  },
   async loginDev(
     email: string,
     name?: string,
@@ -236,17 +235,21 @@ export const authApi = {
     password?: string,
   ): Promise<User> {
     const backendRole = role === 'ADMIN' ? 'ADMIN' : 'USER';
-    const res = await apiRequest<{ success: boolean; user: any; csrfToken?: string }>('/auth/dev-login', 'POST', {
-      email,
-      name,
-      password,
-      role: backendRole,
-      position,
-      teamSlug,
-      isTeamHead,
-      invitationKey,
-      isSignUp,
-    });
+    const res = await apiRequest<{ success: boolean; user: any; csrfToken?: string }>(
+      '/auth/dev-login',
+      'POST',
+      {
+        email,
+        name,
+        password,
+        role: backendRole,
+        position,
+        teamSlug,
+        isTeamHead,
+        invitationKey,
+        isSignUp,
+      },
+    );
 
     // Invalidate stale CSRF token and sync the freshly issued token from login session
     if (res.csrfToken) {
@@ -257,24 +260,33 @@ export const authApi = {
     }
 
     let resolvedRole: Role = 'MEMBER';
-    const isHead = Boolean(isTeamHead) || res.user.teamMemberships?.some((m: any) => m.isTeamHead);
-    if (res.user.role === 'ADMIN' || res.user.role === 'PRESIDENT' || res.user.role === 'SYSTEM_OWNER') {
+    const isHead = res.user.teamMemberships?.some((m: any) => m.isTeamHead);
+    if (
+      res.user.role === 'ADMIN' ||
+      res.user.role === 'PRESIDENT' ||
+      res.user.role === 'SYSTEM_OWNER'
+    ) {
       resolvedRole = 'ADMIN';
     } else if (isHead || res.user.position?.toLowerCase().includes('lead')) {
       resolvedRole = 'TEAM_LEADER';
     }
 
-    const teamName = res.user.teamMemberships?.[0]?.team?.name || (teamSlug ? teamSlug.toUpperCase() + ' Team' : 'Tech Team');
+    const teamName =
+      res.user.teamMemberships?.[0]?.team?.name ||
+      (teamSlug ? teamSlug.toUpperCase() + ' Team' : 'Tech Team');
 
     return {
       id: res.user.id,
       name: res.user.name,
       email: res.user.email,
       role: resolvedRole,
-      position: res.user.position || position,
+      position: res.user.position,
       team: teamName,
       isTeamHead: isHead,
-      membershipStatus: resolvedRole === 'TEAM_LEADER' || resolvedRole === 'ADMIN' ? 'CORE_MEMBER' : 'REGULAR_MEMBER',
+      membershipStatus:
+        resolvedRole === 'TEAM_LEADER' || resolvedRole === 'ADMIN'
+          ? 'CORE_MEMBER'
+          : 'REGULAR_MEMBER',
       avatarUrl: res.user.avatarUrl,
     };
   },
@@ -285,7 +297,11 @@ export const authApi = {
       if (res.user) {
         let role: Role = 'MEMBER';
         const isHead = res.user.teamMemberships?.some((m: any) => m.isTeamHead);
-        if (res.user.role === 'ADMIN' || res.user.role === 'PRESIDENT' || res.user.role === 'SYSTEM_OWNER') {
+        if (
+          res.user.role === 'ADMIN' ||
+          res.user.role === 'PRESIDENT' ||
+          res.user.role === 'SYSTEM_OWNER'
+        ) {
           role = 'ADMIN';
         } else if (isHead || res.user.position?.toLowerCase().includes('lead')) {
           role = 'TEAM_LEADER';
@@ -301,7 +317,8 @@ export const authApi = {
           position: res.user.position,
           team: teamName,
           isTeamHead: isHead,
-          membershipStatus: role === 'ADMIN' || role === 'TEAM_LEADER' ? 'CORE_MEMBER' : 'REGULAR_MEMBER',
+          membershipStatus:
+            role === 'ADMIN' || role === 'TEAM_LEADER' ? 'CORE_MEMBER' : 'REGULAR_MEMBER',
           avatarUrl: res.user.avatarUrl,
         };
       }
@@ -320,17 +337,7 @@ export const authApi = {
   },
 
   async updateName(name: string): Promise<{ success: boolean; user: any }> {
-    try {
-      return await apiRequest<{ success: boolean; user: any }>('/auth/name', 'PATCH', { name });
-    } catch (err: any) {
-      // If rejected due to rotated CSRF token or session refresh, obtain fresh token and retry once
-      if (err?.status === 403 || err?.message?.includes('CSRF')) {
-        cachedCsrfToken = null;
-        await getCsrfToken();
-        return await apiRequest<{ success: boolean; user: any }>('/auth/name', 'PATCH', { name });
-      }
-      throw err;
-    }
+    return apiRequest<{ success: boolean; user: any }>('/auth/name', 'PATCH', { name });
   },
 };
 
@@ -339,15 +346,29 @@ export const authApi = {
 // ============================================================================
 
 export const taskApi = {
-  async fetchTasks(params: { teamId?: string; status?: string; assigneeId?: string } = {}): Promise<Task[]> {
+  async fetchTasks(
+    params: { teamId?: string; status?: string; assigneeId?: string } = {},
+  ): Promise<Task[]> {
     const query = new URLSearchParams();
     if (params.teamId && params.teamId !== 'ALL') query.append('teamId', params.teamId);
-    if (params.status && params.status !== 'ALL') query.append('status', frontendStatusToBackend(params.status as TaskStatus));
+    if (params.status && params.status !== 'ALL')
+      query.append('status', frontendStatusToBackend(params.status as TaskStatus));
     if (params.assigneeId) query.append('assigneeId', params.assigneeId);
     query.append('limit', '100');
 
-    const res = await apiRequest<{ success: boolean; data: any[] }>(`/tasks?${query.toString()}`);
-    return (res.data || []).map(formatBackendTask);
+    const tasks: Task[] = [];
+    let page = 1;
+    let totalPages = 1;
+    do {
+      query.set('page', String(page));
+      const res = await apiRequest<{ data: any[]; pagination?: { totalPages: number } }>(
+        `/tasks?${query}`,
+      );
+      tasks.push(...(res.data || []).map(formatBackendTask));
+      totalPages = res.pagination?.totalPages ?? 1;
+      page += 1;
+    } while (page <= totalPages);
+    return tasks;
   },
 
   async createTask(input: {
@@ -365,11 +386,12 @@ export const taskApi = {
       teamId: input.teamId,
       assigneeId: input.assigneeId || undefined,
       priority: frontendPriorityToBackend(input.priority),
-      deadline: input.deadline ? new Date(input.deadline).toISOString() : undefined,
+      deadline: input.deadline
+        ? new Date(`${input.deadline}T23:59:59.999`).toISOString()
+        : undefined,
     });
     return formatBackendTask(res.data);
   },
-
 
   async startTask(taskId: string): Promise<Task> {
     const res = await apiRequest<{ success: boolean; data: any }>(`/tasks/${taskId}/start`, 'POST');
@@ -377,31 +399,44 @@ export const taskApi = {
   },
 
   async submitTask(taskId: string, payload: { note?: string; prUrl?: string } = {}): Promise<Task> {
-    const res = await apiRequest<{ success: boolean; data: any }>(`/tasks/${taskId}/submit`, 'POST', {
-      note: payload.note || 'Milestone deliverables ready for lead verification.',
-      prUrl: payload.prUrl,
-    });
+    const res = await apiRequest<{ success: boolean; data: any }>(
+      `/tasks/${taskId}/submit`,
+      'POST',
+      {
+        note: payload.note || 'Milestone deliverables ready for lead verification.',
+        prUrl: payload.prUrl,
+      },
+    );
     return formatBackendTask(res.data);
   },
 
-  async reviewTask(taskId: string, outcome: 'APPROVED' | 'SENT_BACK', comment?: string): Promise<Task> {
-    const res = await apiRequest<{ success: boolean; data: any }>(`/tasks/${taskId}/review`, 'POST', {
-      outcome,
-      reviewComment: comment,
-    });
+  async reviewTask(
+    taskId: string,
+    outcome: 'APPROVED' | 'SENT_BACK',
+    comment?: string,
+  ): Promise<Task> {
+    const res = await apiRequest<{ success: boolean; data: any }>(
+      `/tasks/${taskId}/review`,
+      'POST',
+      {
+        outcome,
+        reviewComment: comment,
+      },
+    );
     return formatBackendTask(res.data);
   },
 
   async getActivityFeed(): Promise<TaskActivityItem[]> {
     try {
-      const res = await apiRequest<{ success: boolean; data: TaskActivityItem[] }>('/tasks/activity/feed');
+      const res = await apiRequest<{ success: boolean; data: TaskActivityItem[] }>(
+        '/tasks/activity/feed',
+      );
       return res.data || [];
     } catch {
       return [];
     }
   },
 };
-
 
 // ============================================================================
 // Admin Services
@@ -446,12 +481,18 @@ export interface LeadershipRoleKey {
 
 export const adminApi = {
   async getRoleKeys(): Promise<LeadershipRoleKey[]> {
-    const res = await apiRequest<{ success: boolean; data: LeadershipRoleKey[] }>('/invitations/role-keys');
+    const res = await apiRequest<{ success: boolean; data: LeadershipRoleKey[] }>(
+      '/invitations/role-keys',
+    );
     return res.data || [];
   },
 
   async updateRoleKey(id: string, keyCode: string): Promise<LeadershipRoleKey> {
-    const res = await apiRequest<{ success: boolean; data: LeadershipRoleKey }>(`/invitations/role-keys/${id}`, 'PATCH', { keyCode });
+    const res = await apiRequest<{ success: boolean; data: LeadershipRoleKey }>(
+      `/invitations/role-keys/${id}`,
+      'PATCH',
+      { keyCode },
+    );
     return res.data;
   },
 
@@ -483,7 +524,9 @@ export const adminApi = {
     await apiRequest(`/invitations/${id}`, 'DELETE');
   },
 
-  async getUsers(params: { search?: string; role?: string; isActive?: boolean } = {}): Promise<AdminUser[]> {
+  async getUsers(
+    params: { search?: string; role?: string; isActive?: boolean } = {},
+  ): Promise<AdminUser[]> {
     const query = new URLSearchParams();
     if (params.search) query.append('search', params.search);
     if (params.role) query.append('role', params.role);
@@ -498,7 +541,15 @@ export const adminApi = {
     await apiRequest(`/users/${userId}/status`, 'PATCH', { isActive });
   },
 
-  async getTeams(): Promise<{ id: string; name: string; slug: string; description?: string; _count?: { members: number; tasks: number } }[]> {
+  async getTeams(): Promise<
+    {
+      id: string;
+      name: string;
+      slug: string;
+      description?: string;
+      _count?: { memberships: number; tasks: number };
+    }[]
+  > {
     const res = await apiRequest<{ success: boolean; data: any[] }>('/teams');
     return res.data || [];
   },
@@ -508,13 +559,19 @@ export const adminApi = {
     return res.data;
   },
 
-  async getStatistics(): Promise<{ totalCompleted: number; onTimeRate: number | null; averageLeadTimeHours: number | null }> {
-    try {
-      const res = await apiRequest<{ success: boolean; data: any }>('/history/statistics');
-      return res.data || { totalCompleted: 0, onTimeRate: null, averageLeadTimeHours: null };
-    } catch {
-      return { totalCompleted: 0, onTimeRate: null, averageLeadTimeHours: null };
-    }
+  async getStatistics(): Promise<{
+    totalCompleted: number;
+    onTimeRate: number | null;
+    averageLeadTimeHours: number | null;
+  }> {
+    const res = await apiRequest<{
+      data: {
+        totalCompleted: number;
+        onTimeRate: number | null;
+        averageLeadTimeHours: number | null;
+      };
+    }>('/history/statistics');
+    return res.data;
   },
 };
 
@@ -546,7 +603,13 @@ export interface AppNotification {
   id: string;
   userId: string;
   taskId: string;
-  kind: 'TASK_ASSIGNED' | 'TASK_SUBMITTED' | 'TASK_APPROVED' | 'CHANGES_REQUESTED' | 'TASK_OVERDUE' | string;
+  kind:
+    | 'TASK_ASSIGNED'
+    | 'TASK_SUBMITTED'
+    | 'TASK_APPROVED'
+    | 'CHANGES_REQUESTED'
+    | 'TASK_OVERDUE'
+    | string;
   readAt: string | null;
   createdAt: string;
   task?: {
@@ -558,11 +621,15 @@ export interface AppNotification {
 }
 
 export const notificationApi = {
-  async getNotifications(unreadOnly = false): Promise<{ notifications: AppNotification[]; unreadCount: number }> {
+  async getNotifications(
+    unreadOnly = false,
+  ): Promise<{ notifications: AppNotification[]; unreadCount: number }> {
     try {
-      const res = await apiRequest<{ success: boolean; data: AppNotification[]; unreadCount: number }>(
-        `/notifications?limit=25&unreadOnly=${unreadOnly}`
-      );
+      const res = await apiRequest<{
+        success: boolean;
+        data: AppNotification[];
+        unreadCount: number;
+      }>(`/notifications?limit=25&unreadOnly=${unreadOnly}`);
       return { notifications: res.data || [], unreadCount: res.unreadCount || 0 };
     } catch {
       return { notifications: [], unreadCount: 0 };

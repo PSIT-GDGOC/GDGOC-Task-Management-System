@@ -1,7 +1,15 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  ReactNode,
+} from 'react';
 import { Task, AttachedFile, TeamId } from '../types/task';
-import { TEAMS } from '../data/mockData';
 import { taskApi } from '../services/api';
+import { useAuth } from '../auth/authContext';
 
 export interface NewTaskInput {
   title: string;
@@ -11,203 +19,111 @@ export interface NewTaskInput {
   deadline: string;
   attachments?: AttachedFile[];
 }
-
 interface TaskContextType {
   tasks: Task[];
-  assignTask: (input: NewTaskInput) => Task;
+  assignTask: (input: NewTaskInput) => Promise<Task>;
   getTaskById: (id: string) => Task | undefined;
-  acceptTask: (taskId: string) => Task | null;
-  submitTask: (taskId: string, payload?: { note?: string; prUrl?: string }) => Task | null;
-  approveTask: (taskId: string, comment?: string) => Task | null;
+  acceptTask: (taskId: string) => Promise<Task>;
+  submitTask: (taskId: string, payload?: { note?: string; prUrl?: string }) => Promise<Task>;
+  approveTask: (taskId: string, comment?: string) => Promise<Task>;
   refreshTasks: () => Promise<void>;
   isLoading: boolean;
 }
-
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
-
 export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  const userId = user?.id;
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const generation = useRef(0);
+  const pending = useRef(new Map<string, Promise<Task>>());
 
-  // Sync tasks from live backend / database on mount
-  const refreshTasks = async () => {
+  const refreshTasks = useCallback(async () => {
+    if (!userId) return;
+    const current = generation.current;
     setIsLoading(true);
     try {
-      const liveTasks = await taskApi.fetchTasks();
-      setTasks(liveTasks || []);
-    } catch {
-      setTasks([]);
+      const data = await taskApi.fetchTasks();
+      if (current === generation.current) {
+        setTasks(data);
+        setError(null);
+      }
+    } catch (err) {
+      if (current === generation.current)
+        setError(err instanceof Error ? err.message : 'Unable to load tasks.');
     } finally {
-      setIsLoading(false);
+      if (current === generation.current) setIsLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
-    refreshTasks();
-  }, []);
-
-  const assignTask = (input: NewTaskInput): Task => {
-    const selectedTeam = TEAMS.find((t) => t.id === input.teamId);
-    const selectedMember = selectedTeam?.members.find((m) => m.id === input.assigneeId);
-
-    // Format display deadline (e.g. "November 14, 2026")
-    let formattedDeadline = input.deadline;
-    if (input.deadline && !input.deadline.toLowerCase().includes('not specified')) {
-      try {
-        const parts = input.deadline.split('-');
-        if (parts.length === 3) {
-          const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
-          if (!isNaN(d.getTime())) {
-            formattedDeadline = d.toLocaleDateString('en-US', {
-              month: 'long',
-              day: 'numeric',
-              year: 'numeric',
-            });
-          }
-        }
-      } catch {
-        formattedDeadline = input.deadline;
-      }
-    }
-
-    const newTask: Task = {
-      id: `TSK-${Math.floor(100 + Math.random() * 900)}`,
-      title: input.title.trim(),
-      description: input.description.trim(),
-      teamId: input.teamId,
-      teamName: selectedTeam?.name || 'Tech Team',
-      assigneeId: input.assigneeId,
-      assigneeName: selectedMember?.name || 'Assigned Member',
-      assigneeEmail: selectedMember?.email || 'member@psit.gdgoc.dev',
-      assigneeInitials: selectedMember?.initials || 'GD',
-      status: 'Assigned',
-      deadline: formattedDeadline || 'Not specified',
-      createdAt: new Date().toLocaleDateString('en-US', {
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric',
-      }),
-      attachments: input.attachments || [],
+    generation.current += 1;
+    setTasks([]);
+    setError(null);
+    setIsLoading(false);
+    pending.current.clear();
+    void refreshTasks();
+    return () => {
+      generation.current += 1;
     };
+  }, [refreshTasks]);
 
-    // Optimistically update UI
-    setTasks((prev) => [newTask, ...prev]);
-
-    // Persist to live Supabase backend asynchronously
-    taskApi
-      .createTask({
-        title: input.title,
-        description: input.description,
-        teamId: input.teamId,
-        assigneeId: input.assigneeId,
-        deadline: input.deadline,
+  const save = (key: string, operation: () => Promise<Task>): Promise<Task> => {
+    const active = pending.current.get(key);
+    if (active) return active;
+    const current = generation.current;
+    const request = operation()
+      .then((saved) => {
+        if (current === generation.current) {
+          setTasks((previous) =>
+            previous.some((task) => task.id === saved.id)
+              ? previous.map((task) => (task.id === saved.id ? saved : task))
+              : [saved, ...previous],
+          );
+          setError(null);
+        }
+        return saved;
       })
-      .then((serverTask) => {
-        // Swap temp id with real server generated id if available
-        setTasks((prev) => prev.map((t) => (t.id === newTask.id ? serverTask : t)));
+      .catch((err: unknown) => {
+        if (current === generation.current)
+          setError(err instanceof Error ? err.message : 'Unable to save task.');
+        throw err;
       })
-      .catch((err) => {
-        console.warn('[TaskSync] Saved locally (server sync skipped):', err);
+      .finally(() => {
+        if (pending.current.get(key) === request) pending.current.delete(key);
       });
-
-    return newTask;
-  };
-
-
-  const acceptTask = (taskId: string): Task | null => {
-    let updatedTask: Task | null = null;
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          updatedTask = {
-            ...t,
-            status: 'In Progress',
-          };
-          return updatedTask;
-        }
-        return t;
-      })
-    );
-
-    taskApi.startTask(taskId).catch((err) => {
-      console.warn('[TaskSync] Started locally (server sync skipped):', err);
-    });
-
-    return updatedTask;
-  };
-
-  const submitTask = (taskId: string, payload: { note?: string; prUrl?: string } = {}): Task | null => {
-    let updatedTask: Task | null = null;
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          updatedTask = {
-            ...t,
-            status: 'Pending Review',
-          };
-          return updatedTask;
-        }
-        return t;
-      })
-    );
-
-    // Call live server
-    taskApi.submitTask(taskId, payload).catch((err) => {
-      console.warn('[TaskSync] Submitted locally (server sync skipped):', err);
-    });
-
-    return updatedTask;
-  };
-
-  const approveTask = (taskId: string): Task | null => {
-    let updatedTask: Task | null = null;
-    setTasks((prev) =>
-      prev.map((t) => {
-        if (t.id === taskId) {
-          updatedTask = {
-            ...t,
-            status: 'Completed',
-          };
-          return updatedTask;
-        }
-        return t;
-      })
-    );
-
-    // Call live server
-    taskApi.reviewTask(taskId, 'APPROVED').catch((err) => {
-      console.warn('[TaskSync] Approved locally (server sync skipped):', err);
-    });
-
-    return updatedTask;
-  };
-
-  const getTaskById = (id: string): Task | undefined => {
-    return tasks.find((t) => t.id === id);
+    pending.current.set(key, request);
+    return request;
   };
 
   return (
     <TaskContext.Provider
       value={{
         tasks,
-        assignTask,
-        getTaskById,
-        acceptTask,
-        submitTask,
-        approveTask,
-        refreshTasks,
         isLoading,
+        refreshTasks,
+        assignTask: (input) => save('create', () => taskApi.createTask(input)),
+        getTaskById: (id) => tasks.find((task) => task.id === id),
+        acceptTask: (id) => save(id, () => taskApi.startTask(id)),
+        submitTask: (id, payload) => save(id, () => taskApi.submitTask(id, payload)),
+        approveTask: (id, comment) => save(id, () => taskApi.reviewTask(id, 'APPROVED', comment)),
       }}
     >
+      {error && (
+        <div role="alert" className="relative z-[100] bg-red-50 p-3 text-sm text-red-800">
+          {error}{' '}
+          <button type="button" className="ml-3 underline" onClick={() => void refreshTasks()}>
+            Retry loading tasks
+          </button>
+        </div>
+      )}
       {children}
     </TaskContext.Provider>
   );
 };
-
 export const useTasks = (): TaskContextType => {
   const context = useContext(TaskContext);
-  if (!context) {
-    throw new Error('useTasks must be used within a TaskProvider');
-  }
+  if (!context) throw new Error('useTasks must be used within a TaskProvider');
   return context;
 };

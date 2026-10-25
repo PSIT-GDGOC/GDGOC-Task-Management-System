@@ -27,9 +27,11 @@ export const UnauthorizedPage: React.FC = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login', { replace: true });
+    } catch { /* AuthProvider displays the server error. */ }
   };
 
   return (
