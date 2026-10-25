@@ -5,30 +5,89 @@ import { mockAuthService, isValidPresidentKey } from './mockAuthService';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const AUTH_STORAGE_KEYS = ['gdgoc_current_user', 'gdgoc_taskflow_session_user'];
+
+function getPersistedUser(): User | null {
+  try {
+    if (typeof localStorage === 'undefined') return null;
+    for (const key of AUTH_STORAGE_KEYS) {
+      const raw = localStorage.getItem(key);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.id && parsed.email && parsed.role) {
+          return parsed as User;
+        }
+      }
+    }
+  } catch {
+    // ignore parsing errors
+  }
+  return null;
+}
+
+function setPersistedUser(user: User) {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const serialized = JSON.stringify(user);
+    for (const key of AUTH_STORAGE_KEYS) {
+      localStorage.setItem(key, serialized);
+    }
+  } catch {
+    // ignore
+  }
+}
+
+function clearPersistedUser() {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    for (const key of AUTH_STORAGE_KEYS) {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    // ignore
+  }
+}
+
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
+  // Eagerly restore session from localStorage so reload never flashes blank or kicks to /login
+  const [user, setUser] = useState<User | null>(() => getPersistedUser());
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  // Restore authenticated session on mount from server or local storage
+  // Restore and verify authenticated session on mount from server or local storage
   useEffect(() => {
     let isMounted = true;
     async function initAuth() {
+      const cached = getPersistedUser();
+      if (cached && isMounted) {
+        setUser(cached);
+      }
+
       try {
         // 1. Try server session first
         const serverUser = await authApi.getCurrentUser();
         if (serverUser && isMounted) {
           setUser(serverUser);
+          setPersistedUser(serverUser);
           setIsLoading(false);
           return;
         }
 
-        // 2. Fallback to local stored dev user
-        const stored = mockAuthService.getStoredUser();
+        // 2. Fallback to local stored user
+        const stored = cached || mockAuthService.getStoredUser();
         if (stored && isMounted) {
           setUser(stored);
+          setPersistedUser(stored);
+        } else if (isMounted) {
+          setUser(null);
         }
       } catch {
-        if (isMounted) setUser(null);
+        const fallback = cached || mockAuthService.getStoredUser();
+        if (fallback && isMounted) {
+          setUser(fallback);
+          setPersistedUser(fallback);
+        } else if (isMounted) {
+          setUser(null);
+        }
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -90,7 +149,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           credentials.password,
         );
         setUser(liveUser);
-        localStorage.setItem('gdgoc_current_user', JSON.stringify(liveUser));
+        setPersistedUser(liveUser);
         if (credentials.name?.trim()) {
           localStorage.setItem(`gdgoc_name_confirmed_${liveUser.id}`, 'true');
         }
@@ -125,6 +184,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         console.warn('[Auth] Live server dev-login unavailable; falling back to local preview session:', err);
         const fallbackUser = await mockAuthService.login(credentials);
         setUser(fallbackUser);
+        setPersistedUser(fallbackUser);
         if (credentials.name?.trim()) {
           localStorage.setItem(`gdgoc_name_confirmed_${fallbackUser.id}`, 'true');
         }
@@ -142,6 +202,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // ignore
     }
     mockAuthService.logout();
+    clearPersistedUser();
     setUser(null);
   };
 
@@ -158,8 +219,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser((prev) => {
       if (!prev) return null;
       const updated = { ...prev, name: trimmed };
+      setPersistedUser(updated);
       try {
-        localStorage.setItem('gdgoc_current_user', JSON.stringify(updated));
         localStorage.setItem(`gdgoc_name_confirmed_${updated.id}`, 'true');
       } catch {
         // ignore

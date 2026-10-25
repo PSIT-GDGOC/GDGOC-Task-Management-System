@@ -13,30 +13,54 @@ const queryClient = new QueryClient({
   },
 });
 
+const ADMIN_STORAGE_KEY = 'gdgoc_admin_user';
+
 export const App: React.FC = () => {
   const [user, setUser] = useState<{
     id: string;
     name: string;
     email: string;
     role: string;
-  } | null>(null);
+  } | null>(() => {
+    try {
+      const saved = localStorage.getItem(ADMIN_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
   // Check existing session on mount
   useEffect(() => {
     apiClient<{ success: boolean; user: any }>('/auth/me')
       .then((res) => {
-        if (res.user) setUser(res.user);
+        if (res.user) {
+          setUser(res.user);
+          try {
+            localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(res.user));
+          } catch {}
+        }
       })
       .catch(() => {
         // Not logged in or dev mode
       });
   }, []);
 
+  const handleLoginSuccess = (u: any) => {
+    setUser(u);
+    try {
+      localStorage.setItem(ADMIN_STORAGE_KEY, JSON.stringify(u));
+    } catch {}
+  };
+
   const handleLogout = async () => {
     try {
       await apiClient('/auth/logout', { method: 'POST' });
     } finally {
       setUser(null);
+      try {
+        localStorage.removeItem(ADMIN_STORAGE_KEY);
+      } catch {}
     }
   };
 
@@ -45,7 +69,7 @@ export const App: React.FC = () => {
       <BrowserRouter>
         <AppRouter
           user={user}
-          onLoginSuccess={(u) => setUser(u)}
+          onLoginSuccess={handleLoginSuccess}
           onLogout={handleLogout}
         />
       </BrowserRouter>

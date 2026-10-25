@@ -21,7 +21,7 @@ import userRoutes from './routes/user.routes';
 import teamRoutes from './routes/team.routes';
 
 const app = express();
-if (env.NODE_ENV === 'production') app.set('trust proxy', 1);
+if (env.NODE_ENV === 'production' || process.env.RENDER === 'true') app.set('trust proxy', 1);
 
 // Security Headers
 app.use(
@@ -33,7 +33,19 @@ app.use(
 // CORS
 app.use(
   cors({
-    origin: frontendOrigins,
+    origin: (requestOrigin, callback) => {
+      if (!requestOrigin) return callback(null, true);
+      const cleanOrigin = requestOrigin.replace(/\/$/, '');
+      const isAllowed =
+        frontendOrigins.some((o) => o.replace(/\/$/, '') === cleanOrigin) ||
+        /^https:\/\/gdgoc-task-management-system[a-z0-9-]*\.vercel\.app$/.test(cleanOrigin);
+
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(null, frontendOrigins.includes(cleanOrigin));
+      }
+    },
     credentials: true,
   }),
 );
@@ -58,7 +70,7 @@ app.use(
     name: 'gdgoc.sid',
     cookie: {
       httpOnly: true,
-      secure: env.NODE_ENV === 'production',
+      secure: env.NODE_ENV === 'production' || process.env.RENDER === 'true' || env.COOKIE_SAME_SITE === 'none',
       sameSite: env.COOKIE_SAME_SITE,
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     },

@@ -29,7 +29,13 @@ const schema = z.object({
     .refine((value) => /^postgres(ql)?:\/\//.test(value))
     .default('postgresql://postgres:postgres@localhost:5432/gdgoc_tasks?schema=public'),
   SESSION_SECRET: z.string().min(16).default('development_insecure_session_secret_12345'),
-  COOKIE_SAME_SITE: z.enum(['lax', 'none']).default('lax'),
+  COOKIE_SAME_SITE: z
+    .enum(['lax', 'none'])
+    .default(
+      process.env.NODE_ENV === 'production' || process.env.RENDER === 'true'
+        ? 'none'
+        : 'lax',
+    ),
   SYSTEM_OWNER_EMAIL: z.string().trim().toLowerCase().email().optional(),
   ENABLE_DEV_LOGIN: z
     .enum(['true', 'false'])

@@ -385,7 +385,7 @@ export const mockAuthService = {
   getStoredUser(): User | null {
     try {
       if (typeof localStorage === 'undefined') return null;
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+      const stored = localStorage.getItem(AUTH_STORAGE_KEY) || localStorage.getItem('gdgoc_current_user');
       if (!stored) return null;
 
       const parsed: User = JSON.parse(stored);
@@ -397,12 +397,14 @@ export const mockAuthService = {
         (parsed.email?.toLowerCase() === 'adityarajput.86046@gmail.com' && parsed.role !== 'ADMIN')
       ) {
         localStorage.removeItem(AUTH_STORAGE_KEY);
+        localStorage.removeItem('gdgoc_current_user');
         return null;
       }
       return parsed;
     } catch {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem(AUTH_STORAGE_KEY);
+        localStorage.removeItem('gdgoc_current_user');
       }
       return null;
     }
@@ -418,6 +420,7 @@ export const mockAuthService = {
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+        localStorage.setItem('gdgoc_current_user', JSON.stringify(updated));
 
         // Persist updated name into mock registered directory
         if (updated.email) {
@@ -454,6 +457,7 @@ export const mockAuthService = {
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem(AUTH_STORAGE_KEY);
+        localStorage.removeItem('gdgoc_current_user');
       }
     } catch {
       // ignore storage access errors
