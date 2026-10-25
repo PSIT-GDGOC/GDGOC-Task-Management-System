@@ -2,6 +2,11 @@
    GDGoC TaskHub - Typewriter Animation Styles
    ========================================================================= */
 
+.login-brand-title {
+  color: #000000;
+  font-family: "Arial Black", Gadget, sans-serif !important;
+}
+
 @keyframes typewriter-cursor-blink {
   0%, 45% {
     opacity: 1;

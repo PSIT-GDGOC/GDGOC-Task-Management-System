@@ -144,13 +144,13 @@ export const AdminTasksPage: React.FC = () => {
         <div className="flex items-center gap-2.5">
           <button
             onClick={() => refreshTasks()}
-            className="px-3 py-2 text-xs font-medium text-gdgoc-gray-700 bg-white border border-gdgoc-gray-200 rounded-lg hover:bg-gdgoc-gray-50 transition-colors shadow-2xs"
+            className="px-3 py-2 text-xs font-medium text-gdgoc-gray-700 bg-white rounded-lg hover:bg-gdgoc-gray-50 transition-colors card-bb-sm"
           >
             Refresh
           </button>
           <button
             onClick={() => navigate('/admin/assign-work')}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-gdgoc-blue hover:bg-blue-600 rounded-lg shadow-sm transition-colors"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-gdgoc-blue hover:bg-blue-600 rounded-lg transition-colors card-bb"
           >
             <PlusCircle className="w-4 h-4" />
             <span>Create Deliverable</span>
@@ -160,7 +160,7 @@ export const AdminTasksPage: React.FC = () => {
 
       {/* Metric KPI Overview */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs flex items-center gap-3">
+        <div className="bg-white rounded-xl p-4 flex items-center gap-3 card-bb">
           <div className="w-10 h-10 rounded-lg bg-blue-50 text-gdgoc-blue flex items-center justify-center flex-shrink-0">
             <FolderKanban className="w-5 h-5" />
           </div>
@@ -170,7 +170,7 @@ export const AdminTasksPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs flex items-center gap-3">
+        <div className="bg-white rounded-xl p-4 flex items-center gap-3 card-bb">
           <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
             <Clock className="w-5 h-5" />
           </div>
@@ -180,7 +180,7 @@ export const AdminTasksPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs flex items-center gap-3">
+        <div className="bg-white rounded-xl p-4 flex items-center gap-3 card-bb">
           <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
             <AlertCircle className="w-5 h-5" />
           </div>
@@ -190,7 +190,7 @@ export const AdminTasksPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs flex items-center gap-3">
+        <div className="bg-white rounded-xl p-4 flex items-center gap-3 card-bb">
           <div className="w-10 h-10 rounded-lg bg-emerald-50 text-gdgoc-green flex items-center justify-center flex-shrink-0">
             <CheckCircle2 className="w-5 h-5" />
           </div>
@@ -202,7 +202,7 @@ export const AdminTasksPage: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-3">
+      <div className="bg-white rounded-xl p-4 space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-3 card-bb">
         {/* Search */}
         <div className="relative flex-1 min-w-[220px]">
           <Search className="w-4 h-4 text-gdgoc-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -265,7 +265,7 @@ export const AdminTasksPage: React.FC = () => {
       </div>
 
       {/* Deliverables Table */}
-      <div className="bg-white rounded-xl border border-gdgoc-gray-200 overflow-hidden shadow-2xs">
+      <div className="bg-white rounded-xl overflow-hidden card-bb">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-gdgoc-gray-700">
             <thead className="bg-gdgoc-gray-50 border-b border-gdgoc-gray-200 text-gdgoc-gray-500 font-semibold uppercase tracking-wider text-[10px]">
@@ -362,7 +362,7 @@ export const AdminTasksPage: React.FC = () => {
                           {!isCompleted && (
                             <button
                               onClick={(e) => handleApproveTask(task, e)}
-                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all shadow-2xs ${
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all card-bb-sm ${
                                 isUnderReview
                                   ? 'bg-gdgoc-green text-white hover:bg-emerald-600 animate-pulse'
                                   : 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
@@ -377,7 +377,7 @@ export const AdminTasksPage: React.FC = () => {
                           {/* View Details */}
                           <button
                             onClick={() => handleOpenTaskDetails(task)}
-                            className="p-1.5 text-gdgoc-gray-400 hover:text-gdgoc-gray-700 hover:bg-gdgoc-gray-100 rounded-md transition-colors"
+                            className="p-1.5 text-gdgoc-gray-400 hover:text-gdgoc-gray-700 hover:bg-gdgoc-gray-100 rounded-md transition-colors card-bb-sm"
                             title="Inspect Details"
                           >
                             <Eye className="w-4 h-4" />

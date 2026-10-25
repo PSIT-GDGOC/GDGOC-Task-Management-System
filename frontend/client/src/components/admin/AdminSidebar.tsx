@@ -31,9 +31,9 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => 
   };
 
   const navItemClasses = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+    `relative flex items-center gap-2.5 px-3 py-2.5 text-xs sm:text-sm font-medium transition-all before:absolute before:left-1 before:top-2 before:bottom-2 before:w-px before:bg-[#111111] ${
       isActive
-        ? 'bg-red-50 text-gdgoc-red font-semibold shadow-2xs'
+        ? 'rounded-md bg-red-50 text-gdgoc-red font-semibold'
         : 'text-gdgoc-gray-700 hover:bg-gdgoc-gray-100 hover:text-gdgoc-gray-900'
     }`;
 
@@ -48,10 +48,10 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => 
 
   return (
     <>
-    <aside className="w-64 h-full bg-white border-r border-gdgoc-gray-200 flex flex-col justify-between select-none">
+    <aside className="w-64 h-full bg-[#E9EDF2] border-r border-gdgoc-gray-200 flex flex-col justify-between select-none">
       {/* Top Branding Section */}
       <div>
-        <div className="p-4 sm:p-5 border-b border-gdgoc-gray-100 flex items-center justify-between">
+        <div className="p-4 sm:p-5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Logo size="sm" showSubtitle={true} />
           </div>
@@ -65,6 +65,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => 
             </button>
           )}
         </div>
+        <div className="mx-4 sm:mx-5 border-b border-black/50" aria-hidden="true" />
 
         {/* Admin / Executive Badge */}
         <div className="px-5 pt-3 pb-1">
@@ -138,12 +139,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => 
       </div>
 
       {/* Bottom Profile & Logout Footer */}
-      <div className="p-3 border-t border-gdgoc-gray-100 bg-white space-y-2">
+      <div className="p-3 border-t border-gdgoc-gray-100 bg-[#E9EDF2] space-y-2">
         <button
           type="button"
           aria-haspopup="dialog"
           onClick={() => setProfileOpen(true)}
-          className="w-full flex items-center gap-3 p-2 rounded-lg bg-gdgoc-gray-50 border border-gdgoc-gray-200 text-left hover:bg-gdgoc-gray-100 hover:border-gdgoc-gray-300 transition-all cursor-pointer group"
+          className="w-full flex items-center gap-3 p-2 rounded-lg bg-gdgoc-gray-50 text-left hover:bg-gdgoc-gray-100 transition-all cursor-pointer group card-bb-sm"
           title="Click to view President Profile"
         >
           <div className="w-8 h-8 rounded-full bg-red-100 border border-red-200 text-gdgoc-red flex items-center justify-center font-bold text-xs flex-shrink-0 group-hover:scale-105 transition-transform">
@@ -162,7 +163,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => 
         <button
           type="button"
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-white hover:bg-red-50 hover:text-gdgoc-red text-xs font-semibold text-gdgoc-gray-700 border border-gdgoc-gray-200 transition-colors shadow-2xs"
+          className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-white hover:bg-red-50 hover:text-gdgoc-red text-xs font-semibold text-gdgoc-gray-700 transition-colors card-bb-sm"
           title="Sign out"
           aria-label="Sign out"
         >
