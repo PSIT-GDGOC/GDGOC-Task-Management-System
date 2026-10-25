@@ -55,9 +55,41 @@ export class EmailService {
   }
 
   static async sendMail(payload: EmailPayload): Promise<{ success: boolean; messageId?: string; simulated?: boolean; error?: string }> {
+    // 1. Primary & Ultra-Reliable: Brevo HTTPS REST API (Bypasses all cloud host SMTP port blocks!)
+    const brevoApiKey = process.env.BREVO_API_KEY;
+    if (brevoApiKey) {
+      try {
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          headers: {
+            'accept': 'application/json',
+            'api-key': brevoApiKey,
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            sender: { name: 'GDGOC PSIT', email: 'gdgoc.psit@gmail.com' },
+            to: [{ email: payload.to, name: payload.to.split('@')[0] }],
+            subject: payload.subject,
+            htmlContent: payload.html,
+            textContent: payload.text || payload.subject,
+          }),
+        });
+
+        const data = (await response.json()) as { messageId?: string; message?: string };
+        if (response.ok && data.messageId) {
+          console.log(`[EmailService:BrevoREST] Live email dispatched via HTTPS to ${payload.to} [ID: ${data.messageId}]`);
+          return { success: true, messageId: data.messageId };
+        } else {
+          console.error(`[EmailService:BrevoREST] API Error to ${payload.to}:`, data.message || data);
+        }
+      } catch (err: any) {
+        console.error(`[EmailService:BrevoREST] HTTPS dispatch error to ${payload.to}:`, err.message || err);
+      }
+    }
+
+    // 2. Secondary: SMTP Transporter (for local dev or unblocked SMTP hosts)
     const transporter = this.getTransporter();
     const from = process.env.SMTP_FROM || 'GDGOC PSIT <gdgoc.psit@gmail.com>';
-
     if (transporter) {
       try {
         const info = await transporter.sendMail({
@@ -71,41 +103,10 @@ export class EmailService {
         return { success: true, messageId: info.messageId };
       } catch (err: any) {
         console.error(`[EmailService] SMTP send error to ${payload.to}:`, err.message || err);
-
-        // Fallback retry with port 465 SSL if port 587 was blocked by host
-        const host = process.env.SMTP_HOST;
-        const user = process.env.SMTP_USER;
-        const pass = process.env.SMTP_PASS;
-        if (host && user && pass) {
-          try {
-            console.log(`[EmailService] Retrying send to ${payload.to} via Port 465 (SSL)...`);
-            const sslTransporter = nodemailer.createTransport({
-              host,
-              port: 465,
-              secure: true,
-              auth: { user, pass },
-              connectionTimeout: 8000,
-              greetingTimeout: 8000,
-              socketTimeout: 12000,
-            });
-            const sslInfo = await sslTransporter.sendMail({
-              from,
-              to: payload.to,
-              subject: payload.subject,
-              text: payload.text || payload.subject,
-              html: payload.html,
-            });
-            console.log(`[EmailService] Live email dispatched to ${payload.to} via Port 465 [ID: ${sslInfo.messageId}]`);
-            this.transporter = sslTransporter;
-            return { success: true, messageId: sslInfo.messageId };
-          } catch (sslErr: any) {
-            console.error(`[EmailService] Port 465 SSL fallback also failed:`, sslErr.message || sslErr);
-          }
-        }
       }
     }
 
-    // Fallback simulation mode (no SMTP configured or local dev)
+    // 3. Fallback: Simulation outbox
     this.mockOutbox.push(payload);
     console.log(`[EmailService:Simulated] Email sent to: ${payload.to} | Subject: "${payload.subject}"`);
     return { success: true, simulated: true };

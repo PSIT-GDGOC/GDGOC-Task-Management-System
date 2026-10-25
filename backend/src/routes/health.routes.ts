@@ -40,16 +40,15 @@ router.get(
 );
 
 router.get('/email-check', (_req: Request, res: Response) => {
+  const hasBrevoKey = Boolean(process.env.BREVO_API_KEY);
   const host = process.env.SMTP_HOST;
   const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  const isConfigured = Boolean(host && user && pass);
   res.json({
-    isConfigured,
-    host: host || 'MISSING',
-    user: user || 'MISSING',
-    hasPass: Boolean(pass),
-    from: process.env.SMTP_FROM || 'MISSING',
+    status: 'configured',
+    deliveryMethod: hasBrevoKey ? 'BREVO_HTTPS_API (Port 443)' : 'SMTP',
+    hasBrevoKey,
+    smtpConfigured: Boolean(host && user && process.env.SMTP_PASS),
+    sender: process.env.SMTP_FROM || 'GDGOC PSIT <gdgoc.psit@gmail.com>',
   });
 });
 
@@ -60,7 +59,7 @@ router.get(
     const result = await EmailService.sendMail({
       to,
       subject: '🧪 Render Live Email Diagnostic Test',
-      html: '<h3>Testing email delivery from Render!</h3><p>If you see this, your production SMTP is working 100%.</p>',
+      html: '<h3>Testing email delivery from Render!</h3><p>Your production email system is working 100%.</p>',
       text: 'Testing email delivery from Render!',
     });
     res.json({
