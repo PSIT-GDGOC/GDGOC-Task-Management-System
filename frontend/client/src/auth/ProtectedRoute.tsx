@@ -1,6 +1,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './authContext';
+import { SessionRecovery } from './SessionRecovery';
 import { Role } from '../types/auth';
 
 interface ProtectedRouteProps {
@@ -9,8 +10,10 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, children }) => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, sessionError } = useAuth();
   const location = useLocation();
+
+  if (sessionError) return <SessionRecovery />;
 
   if (isLoading) {
     return (

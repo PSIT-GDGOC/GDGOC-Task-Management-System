@@ -119,7 +119,12 @@ describe('PostgreSQL database foundation', () => {
       where: { slug: 'tech' },
       data: { description: 'Customized description' },
     });
+    const keysBefore = await prisma.roleKey.findMany({ orderBy: { position: 'asc' } });
+    expect(keysBefore).toHaveLength(6);
+    expect(new Set(keysBefore.map((key) => key.keyCode)).size).toBe(6);
+    expect(keysBefore.every((key) => /^[A-F0-9]{48}$/.test(key.keyCode))).toBe(true);
     await seedDatabase(prisma, 'owner@example.com');
+    expect(await prisma.roleKey.findMany({ orderBy: { position: 'asc' } })).toEqual(keysBefore);
     expect(await prisma.user.count({ where: { email: 'owner@example.com' } })).toBe(1);
     expect(await prisma.user.findUnique({ where: { email: 'owner@example.com' } })).toMatchObject({
       name: 'Club Owner',

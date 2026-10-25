@@ -306,7 +306,7 @@ export const LeaderWorkOverview: React.FC = () => {
         task={selectedTask}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        onApprove={(t) => approveTask(t.id)}
+        onApprove={(t) => { void approveTask(t.id).then(setSelectedTask).catch(() => {}); }}
         userRole="TEAM_LEADER"
       />
       </div>

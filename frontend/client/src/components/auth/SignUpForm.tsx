@@ -51,13 +51,13 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onLogIn }) => {
 
     const nextErrors: Partial<Record<SignUpField, string>> = {};
 
-    if (!fields.name.trim()) nextErrors.name = 'Name is required.';
+    if (fields.name.trim().length < 2 || fields.name.trim().length > 100 || fields.name.includes('@')) nextErrors.name = 'Enter your name (2–100 characters), rather than an email address.';
     if (!fields.email.trim()) {
       nextErrors.email = 'Email is required.';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(fields.email.trim())) {
       nextErrors.email = 'Enter a valid email address.';
     }
-    if (!fields.password) nextErrors.password = 'Password is required.';
+    if (fields.password.length < 6) nextErrors.password = 'Password must be at least 6 characters.';
     if (fields.position !== 'Member' && !fields.invitationKey.trim()) {
       nextErrors.invitationKey = 'President Key is required for Leads & Officers.';
     }
@@ -148,6 +148,8 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onLogIn }) => {
             type="text"
             autoComplete="name"
             required
+            minLength={2}
+            maxLength={100}
             value={fields.name}
             onChange={(event) => updateField('name', event.target.value)}
             placeholder="e.g. Aman Verma"
