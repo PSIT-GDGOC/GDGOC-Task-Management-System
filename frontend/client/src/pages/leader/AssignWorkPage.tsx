@@ -3,21 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/authContext';
 import { useTasks } from '../../context/TaskContext';
 import { adminApi } from '../../services/api';
-import { TeamId, AttachedFile } from '../../types/task';
-import { TEAMS } from '../../data/mockData';
+import { TeamId } from '../../types/task';
 import { HelpButton } from '../../components/tour/HelpButton';
 import { 
+  X,
+  FileText,
   ArrowLeft, 
   PlusCircle, 
-  Upload, 
-  X, 
-  FileText, 
   CheckCircle2, 
   AlertCircle, 
   Users, 
-  Paperclip,
-  Image as ImageIcon,
-  FileArchive,
   Layers
 } from 'lucide-react';
 
@@ -35,7 +30,6 @@ export const AssignWorkPage: React.FC = () => {
   const [taskTitle, setTaskTitle] = useState<string>('');
   const [taskDescription, setTaskDescription] = useState<string>('');
   const [deadline, setDeadline] = useState<string>('');
-  const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 
   // Live database teams and members
@@ -62,7 +56,7 @@ export const AssignWorkPage: React.FC = () => {
           adminApi.getTeams(),
           adminApi.getUsers({ isActive: true }),
         ]);
-        const resolvedTeams = teamsData && teamsData.length > 0 ? teamsData : TEAMS;
+        const resolvedTeams = teamsData;
         setLiveTeams(resolvedTeams);
 
         if (usersData && usersData.length > 0) {
@@ -244,7 +238,7 @@ export const AssignWorkPage: React.FC = () => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const selected = new Date(dateStr);
+    const selected = new Date(`${dateStr}T00:00:00`);
     if (isNaN(selected.getTime())) {
       setErrors((prev) => ({ ...prev, deadline: 'Please enter a valid date.' }));
       return false;
@@ -262,62 +256,8 @@ export const AssignWorkPage: React.FC = () => {
     return true;
   };
 
-  // Format file size
-  const formatBytes = (bytes: number): string => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / 1048576).toFixed(1)} MB`;
-  };
-
-  // Allowed file extensions
-  const allowedExtensions = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg', 'zip'];
-  const maxFileSize = 15 * 1024 * 1024; // 15MB limit
-
-  // Handle file uploads (Frontend state only - storage integration in backend phase)
-  const handleFileUpload = (files: FileList | null) => {
-    if (!files || files.length === 0) return;
-    setErrors((prev) => ({ ...prev, fileError: undefined }));
-
-    const newAttachments: AttachedFile[] = [];
-
-    for (let i = 0; i < files.length; i++) {
-      const file = files[i];
-      const ext = file.name.split('.').pop()?.toLowerCase() || '';
-
-      if (!allowedExtensions.includes(ext)) {
-        setErrors((prev) => ({
-          ...prev,
-          fileError: `Unsupported file format for "${file.name}". Supported: PDF, DOC, DOCX, PNG, JPG, ZIP.`,
-        }));
-        continue;
-      }
-
-      if (file.size > maxFileSize) {
-        setErrors((prev) => ({
-          ...prev,
-          fileError: `File "${file.name}" exceeds the 15 MB maximum size limit.`,
-        }));
-        continue;
-      }
-
-      newAttachments.push({
-        id: `att-${Date.now()}-${i}`,
-        name: file.name,
-        size: file.size,
-        type: file.type || ext,
-        formattedSize: formatBytes(file.size),
-      });
-    }
-
-    setAttachedFiles((prev) => [...prev, ...newAttachments]);
-  };
-
-  const removeFile = (id: string) => {
-    setAttachedFiles((prev) => prev.filter((f) => f.id !== id));
-  };
-
   // Form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSuccessMessage(null);
 
@@ -353,13 +293,12 @@ export const AssignWorkPage: React.FC = () => {
 
     try {
       // Create new task in frontend shared task state
-      assignTask({
+      await assignTask({
         title: taskTitle.trim(),
         description: taskDescription.trim(),
         teamId: selectedTeamId as TeamId,
         assigneeId: selectedMemberId,
         deadline: deadline,
-        attachments: attachedFiles,
       });
 
       // Clear form inputs
@@ -368,30 +307,33 @@ export const AssignWorkPage: React.FC = () => {
       setTaskTitle('');
       setTaskDescription('');
       setDeadline('');
-      setAttachedFiles([]);
       setErrors({});
 
       setSuccessMessage('Task assigned successfully! It is now active in View Work and the member workspace.');
-    } catch {
-      setErrors((prev) => ({ ...prev, title: 'Failed to assign task. Please try again.' }));
+    } catch (err) {
+      setErrors((prev) => ({ ...prev, title: err instanceof Error ? err.message : 'Failed to assign task. Please try again.' }));
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const getFileIcon = (fileName: string) => {
-    const ext = fileName.split('.').pop()?.toLowerCase();
-    if (ext === 'pdf' || ext === 'doc' || ext === 'docx') return <FileText className="w-4 h-4 text-red-500" />;
-    if (ext === 'png' || ext === 'jpg' || ext === 'jpeg') return <ImageIcon className="w-4 h-4 text-blue-500" />;
-    if (ext === 'zip') return <FileArchive className="w-4 h-4 text-amber-500" />;
-    return <Paperclip className="w-4 h-4 text-gdgoc-gray-500" />;
-  };
-
   // Get today's date formatted as YYYY-MM-DD for min date picker attribute
-  const todayStr = new Date().toISOString().split('T')[0];
+  const now = new Date();
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 
   return (
-    <div className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full flex-1">
+    <div
+      className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full flex-1"
+      style={{
+        backgroundImage: 'url(/dashboard-bg.jpg)',
+        backgroundSize: 'contain',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+        backgroundColor: 'var(--app-background)',
+      }}
+    >
+      {/* Subtle white overlay */}
+      <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: 'var(--app-background)' }} aria-hidden="true" />
       <div className="relative z-10 p-4 sm:p-6 lg:p-8">
         <div className="max-w-4xl mx-auto space-y-6 text-left">
           {/* ---------------------------------------------------------------------
@@ -696,93 +638,9 @@ export const AssignWorkPage: React.FC = () => {
           </div>
         </div>
 
-        {/* SECTION 3: FILE ATTACHMENTS (OPTIONAL) */}
-        <div className="space-y-3 pt-2">
-          <div className="flex items-center gap-2 pb-2 border-b border-gdgoc-gray-100">
-            <Paperclip className="w-4 h-4 text-gdgoc-blue" />
-            <h2 className="text-xs font-bold uppercase tracking-wider text-gdgoc-gray-700">
-              3. Attach Documents & Files <span className="text-gdgoc-gray-400 font-normal lowercase">(optional)</span>
-            </h2>
-          </div>
-
-          {/* File Dropzone */}
-          <div 
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              handleFileUpload(e.dataTransfer.files);
-            }}
-            className="border-2 border-dashed border-[#111111] hover:border-gdgoc-blue rounded-xl p-6 text-center transition-colors bg-gdgoc-gray-50/50 hover:bg-blue-50/30 cursor-pointer shadow-[3px_3px_0_#111111]"
-            onClick={() => document.getElementById('assign-file-input')?.click()}
-          >
-            <input
-              id="assign-file-input"
-              type="file"
-              multiple
-              accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.zip"
-              className="hidden"
-              onChange={(e) => handleFileUpload(e.target.files)}
-            />
-            <div className="flex flex-col items-center justify-center gap-2">
-              <div className="w-10 h-10 rounded-full bg-white border border-gdgoc-gray-200 shadow-2xs flex items-center justify-center text-gdgoc-blue">
-                <Upload className="w-5 h-5" />
-              </div>
-              <p className="text-xs sm:text-sm font-semibold text-gdgoc-gray-800">
-                Click to browse files or drag and drop
-              </p>
-              <p className="text-[11px] text-gdgoc-gray-500">
-                Supports PDF, DOC, DOCX, PNG, JPG, ZIP (up to 15 MB each)
-              </p>
-            </div>
-          </div>
-
-          {/* File Validation Error */}
-          {errors.fileError && (
-            <p className="text-xs text-gdgoc-red flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5" />
-              {errors.fileError}
-            </p>
-          )}
-
-          {/* Selected File List */}
-          {attachedFiles.length > 0 && (
-            <div className="space-y-2 pt-1">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-gdgoc-gray-500">
-                Selected Attachments ({attachedFiles.length})
-              </span>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {attachedFiles.map((file) => (
-                  <div
-                    key={file.id}
-                    className="p-2.5 rounded-xl bg-white flex items-center justify-between gap-2 card-bb-sm"
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="p-1.5 rounded-lg bg-gdgoc-gray-50 border border-gdgoc-gray-200 flex-shrink-0">
-                        {getFileIcon(file.name)}
-                      </div>
-                      <div className="min-w-0 text-left">
-                        <p className="text-xs font-semibold text-gdgoc-gray-900 truncate" title={file.name}>
-                          {file.name}
-                        </p>
-                        <p className="text-[10px] text-gdgoc-gray-500">
-                          {file.formattedSize}
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => removeFile(file.id)}
-                      className="p-1 rounded-md text-gdgoc-gray-400 hover:text-gdgoc-red hover:bg-red-50 transition-colors flex-shrink-0"
-                      title="Remove file"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+        <p className="text-xs text-gdgoc-gray-500">
+          To share supporting files, include a link in the task description. File uploads are not available yet.
+        </p>
 
         {/* SUBMIT BUTTON */}
         <div className="pt-4 border-t border-gdgoc-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">

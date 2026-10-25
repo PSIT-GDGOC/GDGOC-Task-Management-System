@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../auth/authContext';
+import { ThemeToggle } from '../theme/ThemeToggle';
 import { Logo } from '../components/common/Logo';
 import { LoginForm } from '../components/auth/LoginForm';
 import { SignUpForm } from '../components/auth/SignUpForm';
@@ -10,7 +11,8 @@ import { TypewriterTagline } from '../components/auth/TypewriterTagline';
 import { MarqueeStrip } from '../components/auth/MarqueeStrip';
 
 export const LoginPage: React.FC = () => {
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [searchParams] = useSearchParams();
+  const [isSignUp, setIsSignUp] = useState(searchParams.get('mode') === 'signup');
   const { user, isAuthenticated, isLoading } = useAuth();
   const navigate = useNavigate();
 
@@ -33,13 +35,12 @@ export const LoginPage: React.FC = () => {
 
   return (
     <div className="relative min-h-screen w-full flex flex-col justify-between bg-[#FAFAFC] text-gdgoc-gray-900 overflow-x-hidden selection:bg-blue-100 selection:text-gdgoc-blue">
-      
       {/* =========================================================================
           BACKGROUND DECORATIVE LAYER (Full-Page Faded Doodle Image + Ambient Glows)
           ========================================================================= */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
         {/* Full-Page Background Doodle Image - Soft, Faded & Subtle */}
-        <div 
+        <div
           className="absolute inset-0 bg-repeat bg-[length:650px_auto] sm:bg-[length:800px_auto] opacity-[0.14] mix-blend-multiply"
           style={{ backgroundImage: 'url(/login-bg.jpg)' }}
         />
@@ -57,11 +58,12 @@ export const LoginPage: React.FC = () => {
       {/* =========================================================================
           TOP NAVIGATION HEADER
           ========================================================================= */}
-      <header className="relative z-10 w-full max-w-7xl mx-auto px-6 sm:px-8 py-5 flex items-center justify-between">
+      <header className="relative z-10 w-full max-w-7xl mx-auto px-4 sm:px-8 py-3 flex items-center justify-between">
         <Logo size="sm" showSubtitle={false} />
-        
+
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-medium text-gdgoc-gray-600 bg-white/90 border border-gdgoc-gray-200 px-3 py-1 rounded-full shadow-2xs backdrop-blur-xs flex items-center gap-1.5">
+          <ThemeToggle />
+          <span className="hidden sm:flex text-[11px] font-medium text-gdgoc-gray-600 bg-white/90 border border-gdgoc-gray-200 px-3 py-1 rounded-full shadow-2xs backdrop-blur-xs flex items-center gap-1.5">
             <span>PSIT Chapter</span>
             <span className="text-gdgoc-gray-400 text-[10px]">▾</span>
           </span>
@@ -71,14 +73,12 @@ export const LoginPage: React.FC = () => {
       {/* =========================================================================
           MAIN TWO-COLUMN WORKSPACE
           ========================================================================= */}
-      <main className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-6 sm:px-8 py-4 sm:py-8 flex items-center justify-center">
+      <main className="relative z-10 flex-1 w-full max-w-7xl mx-auto px-4 sm:px-8 py-3 sm:py-5 flex items-start lg:items-center justify-center">
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-14 items-center">
-          
           {/* -------------------------------------------------------------------
               LEFT COLUMN: BRANDING AND VISUAL IDENTITY
               ------------------------------------------------------------------- */}
           <section className="flex flex-col justify-center text-left space-y-6 sm:space-y-7 max-w-lg mx-auto lg:mx-0 order-2 lg:order-1">
-            
             {/* Typewriter Branding: GDGoC TASKHUB / GDGoC PSIT */}
             <div className="pt-1 pb-1">
               <TypewriterBranding className="max-w-[480px] w-full" />
@@ -88,7 +88,8 @@ export const LoginPage: React.FC = () => {
             <div className="space-y-2">
               <TypewriterTagline />
               <p className="text-sm sm:text-base text-gdgoc-gray-600 leading-relaxed font-normal pt-1">
-                One workspace to assign tasks, track progress, and keep every GDGoC team moving forward.
+                One workspace to assign tasks, track progress, and keep every GDGoC team moving
+                forward.
               </p>
             </div>
 
@@ -99,7 +100,6 @@ export const LoginPage: React.FC = () => {
             <div className="pt-1 pb-1">
               <MarqueeStrip />
             </div>
-
           </section>
 
           {/* -------------------------------------------------------------------
@@ -113,6 +113,27 @@ export const LoginPage: React.FC = () => {
               <div className="google-border-beam-glow" aria-hidden="true" />
               {/* Card surface containing the login form */}
               <div className="google-border-beam-content p-6 sm:p-9 shadow-sm">
+                <nav
+                  aria-label="Account access"
+                  className="auth-tabs mb-5 grid grid-cols-2 rounded-xl border border-gdgoc-gray-200 bg-gdgoc-gray-50 p-1"
+                >
+                  <button
+                    type="button"
+                    aria-current={!isSignUp ? 'page' : undefined}
+                    onClick={() => setIsSignUp(false)}
+                    className={`rounded-lg px-3 py-2.5 text-sm font-semibold ${!isSignUp ? 'bg-white text-gdgoc-blue shadow-sm' : 'text-gdgoc-gray-700'}`}
+                  >
+                    Sign in
+                  </button>
+                  <button
+                    type="button"
+                    aria-current={isSignUp ? 'page' : undefined}
+                    onClick={() => setIsSignUp(true)}
+                    className={`rounded-lg px-3 py-2.5 text-sm font-semibold ${isSignUp ? 'bg-white text-gdgoc-blue shadow-sm' : 'text-gdgoc-gray-700'}`}
+                  >
+                    Sign up
+                  </button>
+                </nav>
                 {isSignUp ? (
                   <SignUpForm onLogIn={() => setIsSignUp(false)} />
                 ) : (
@@ -133,7 +154,6 @@ export const LoginPage: React.FC = () => {
               </div>
             </div>
           </section>
-
         </div>
       </main>
 
@@ -146,7 +166,6 @@ export const LoginPage: React.FC = () => {
           <span className="text-[11px] text-gdgoc-gray-400">TaskHub Workspace</span>
         </div>
       </footer>
-
     </div>
   );
 };

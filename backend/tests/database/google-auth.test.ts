@@ -2,7 +2,7 @@ import { generateKeyPairSync, sign } from 'node:crypto';
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ipKeyGenerator } from 'express-rate-limit';
 import request from 'supertest';
-import { ApiFixture, createApiFixture } from './helpers/api-fixture';
+import { ApiFixture, createApiFixture, fixturePassword } from './helpers/api-fixture';
 import type { googleClient as GoogleClientType } from '../../src/services/google-auth.service';
 
 let fixture: ApiFixture;
@@ -160,7 +160,9 @@ describe('Google OAuth and browser security', () => {
 
   it('requires CSRF tokens on cookie-authenticated writes and rejects foreign origins', async () => {
     const agent = request.agent(fixture.app);
-    await agent.post('/api/v1/auth/dev-login').send({ email: 'membera@example.com' });
+    await agent
+      .post('/api/v1/auth/dev-login')
+      .send({ email: 'membera@example.com', password: fixturePassword });
     expect((await agent.patch('/api/v1/users/me').send({ position: 'Forged change' })).status).toBe(
       403,
     );

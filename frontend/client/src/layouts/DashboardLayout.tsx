@@ -13,9 +13,11 @@ export const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) =>
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login', { replace: true });
+    } catch { /* AuthProvider displays the server error. */ }
   };
 
   const getRoleBadge = (role?: Role) => {

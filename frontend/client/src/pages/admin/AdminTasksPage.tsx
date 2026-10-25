@@ -52,8 +52,9 @@ export const AdminTasksPage: React.FC = () => {
   };
 
   // Handle Approve Deliverable with Celebratory Burst
-  const handleApproveTask = (task: Task, e?: React.MouseEvent) => {
-    const updated = approveTask(task.id);
+  const handleApproveTask = async (task: Task, e?: React.MouseEvent) => {
+    let updated: Task;
+    try { updated = await approveTask(task.id); } catch { return; }
     if (updated) {
       if (e) {
         triggerCelebrationBurst({

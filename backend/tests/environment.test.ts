@@ -14,6 +14,13 @@ const production = {
 };
 
 describe('Production configuration boundaries', () => {
+  it('derives cookie defaults from the supplied deployment configuration', () => {
+    expect(parseEnvironment(production).COOKIE_SAME_SITE).toBe('none');
+    expect(parseEnvironment({ ...production, COOKIE_SAME_SITE: 'lax' }).COOKIE_SAME_SITE).toBe(
+      'lax',
+    );
+    expect(parseEnvironment({ NODE_ENV: 'development' }).COOKIE_SAME_SITE).toBe('lax');
+  });
   it('supports a deployment with Google explicitly disabled and registration closed', () => {
     expect(parseEnvironment(production)).toMatchObject({
       GOOGLE_AUTH_ENABLED: false,

@@ -143,8 +143,9 @@ export const AdminInvitationsPage: React.FC = () => {
       } else {
         setRoleKeys(DEFAULT_ROLE_KEYS);
       }
-    } catch {
+    } catch (err) {
       setRoleKeys(DEFAULT_ROLE_KEYS);
+      setErrorMsg(err instanceof Error ? err.message : 'Unable to load leadership keys.');
     }
   };
 

@@ -25,9 +25,11 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => 
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login', { replace: true });
+    } catch { /* AuthProvider displays the server error. */ }
   };
 
   const navItemClasses = ({ isActive }: { isActive: boolean }) =>
