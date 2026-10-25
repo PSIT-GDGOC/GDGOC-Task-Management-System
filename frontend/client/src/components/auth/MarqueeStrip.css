@@ -4,10 +4,11 @@
 
 .marquee-strip-container {
   width: 100%;
-  max-width: 24rem; /* matches max-w-sm / collaboration visual */
+  max-width: none;
+  box-sizing: border-box;
   background-color: #202124;
   border-radius: 9999px;
-  padding: 0.55rem 0.75rem;
+  padding: 0.62rem 1rem;
   overflow: hidden;
   position: relative;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -42,16 +43,29 @@
   display: flex;
   width: max-content;
   /* Animate strictly from LEFT TO RIGHT: -50% to 0% */
-  animation: marquee-left-to-right 14s linear infinite;
+  animation: marquee-left-to-right 16s linear infinite;
   will-change: transform;
 }
 
 .marquee-track-content {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding-right: 0.6rem;
+  flex: 0 0 auto;
+  color: #ffffff;
+  font-size: 0.84rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  line-height: 1;
   white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .marquee-strip-container {
+    padding: 0.58rem 0.75rem;
+  }
+
+  .marquee-track-content {
+    font-size: 0.76rem;
+    letter-spacing: 0.055em;
+  }
 }
 
 /* Keyframes: Continuous seamless loop strictly from LEFT to RIGHT */

@@ -116,22 +116,22 @@ export const LoginPage: React.FC = () => {
                 {isSignUp ? (
                   <SignUpForm onLogIn={() => setIsSignUp(false)} />
                 ) : (
-                  <LoginForm />
+                  <>
+                    <LoginForm />
+                    <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gdgoc-gray-700">
+                      <span>New member here?</span>
+                      <button
+                        type="button"
+                        onClick={() => setIsSignUp(true)}
+                        className="rounded-lg px-2 py-1 font-semibold text-gdgoc-blue transition-colors hover:bg-blue-50 hover:text-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gdgoc-blue"
+                      >
+                        Sign Up
+                      </button>
+                    </div>
+                  </>
                 )}
               </div>
             </div>
-            {!isSignUp && (
-              <div className="mt-4 flex items-center justify-center gap-2 text-sm text-gdgoc-gray-700">
-                <span>New member here?</span>
-                <button
-                  type="button"
-                  onClick={() => setIsSignUp(true)}
-                  className="rounded-lg px-2 py-1 font-semibold text-gdgoc-blue transition-colors hover:bg-blue-50 hover:text-blue-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gdgoc-blue"
-                >
-                  Sign Up
-                </button>
-              </div>
-            )}
           </section>
 
         </div>

@@ -391,19 +391,7 @@ export const AssignWorkPage: React.FC = () => {
   const todayStr = new Date().toISOString().split('T')[0];
 
   return (
-    <div
-      className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full flex-1"
-      style={{
-        backgroundImage: 'url(/dashboard-bg.jpg)',
-        backgroundSize: 'contain',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundColor: '#F1F9FB',
-      }}
-    >
-      {/* Subtle white overlay */}
-      <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: 'rgba(255, 255, 255, 0.35)' }} aria-hidden="true" />
-
+    <div className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full flex-1">
       <div className="relative z-10 p-4 sm:p-6 lg:p-8">
         <div className="max-w-4xl mx-auto space-y-6 text-left">
           {/* ---------------------------------------------------------------------
