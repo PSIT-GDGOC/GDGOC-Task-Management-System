@@ -16,8 +16,9 @@ interface TaskContextType {
   tasks: Task[];
   assignTask: (input: NewTaskInput) => Task;
   getTaskById: (id: string) => Task | undefined;
-  submitTask: (taskId: string) => Task | null;
-  approveTask: (taskId: string) => Task | null;
+  acceptTask: (taskId: string) => Task | null;
+  submitTask: (taskId: string, payload?: { note?: string; prUrl?: string }) => Task | null;
+  approveTask: (taskId: string, comment?: string) => Task | null;
   refreshTasks: () => Promise<void>;
   isLoading: boolean;
 }
@@ -113,7 +114,29 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
 
-  const submitTask = (taskId: string): Task | null => {
+  const acceptTask = (taskId: string): Task | null => {
+    let updatedTask: Task | null = null;
+    setTasks((prev) =>
+      prev.map((t) => {
+        if (t.id === taskId) {
+          updatedTask = {
+            ...t,
+            status: 'In Progress',
+          };
+          return updatedTask;
+        }
+        return t;
+      })
+    );
+
+    taskApi.startTask(taskId).catch((err) => {
+      console.warn('[TaskSync] Started locally (server sync skipped):', err);
+    });
+
+    return updatedTask;
+  };
+
+  const submitTask = (taskId: string, payload: { note?: string; prUrl?: string } = {}): Task | null => {
     let updatedTask: Task | null = null;
     setTasks((prev) =>
       prev.map((t) => {
@@ -129,7 +152,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     // Call live server
-    taskApi.submitTask(taskId).catch((err) => {
+    taskApi.submitTask(taskId, payload).catch((err) => {
       console.warn('[TaskSync] Submitted locally (server sync skipped):', err);
     });
 
@@ -169,6 +192,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         tasks,
         assignTask,
         getTaskById,
+        acceptTask,
         submitTask,
         approveTask,
         refreshTasks,

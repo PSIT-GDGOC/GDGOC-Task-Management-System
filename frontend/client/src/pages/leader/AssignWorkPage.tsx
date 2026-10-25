@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/authContext';
 import { useTasks } from '../../context/TaskContext';
 import { adminApi } from '../../services/api';
 import { TeamId, AttachedFile } from '../../types/task';
+import { TEAMS } from '../../data/mockData';
 import { HelpButton } from '../../components/tour/HelpButton';
 import { 
   ArrowLeft, 
@@ -39,7 +40,20 @@ export const AssignWorkPage: React.FC = () => {
 
   // Live database teams and members
   const [liveTeams, setLiveTeams] = useState<Array<{ id: string; name: string; slug: string }>>([]);
-  const [liveUsers, setLiveUsers] = useState<Array<{ id: string; name: string; email: string; role: string; teamIds: string[] }>>([]);
+  interface SquadUserOption {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+    position?: string | null;
+    memberships: Array<{
+      teamId: string;
+      teamSlug: string;
+      teamName: string;
+      isTeamHead: boolean;
+    }>;
+  }
+  const [liveUsers, setLiveUsers] = useState<SquadUserOption[]>([]);
 
   useEffect(() => {
     async function loadFormOptions() {
@@ -48,17 +62,39 @@ export const AssignWorkPage: React.FC = () => {
           adminApi.getTeams(),
           adminApi.getUsers({ isActive: true }),
         ]);
-        if (teamsData && teamsData.length > 0) setLiveTeams(teamsData);
+        const resolvedTeams = teamsData && teamsData.length > 0 ? teamsData : TEAMS;
+        setLiveTeams(resolvedTeams);
+
         if (usersData && usersData.length > 0) {
-          setLiveUsers(
-            usersData.map((u) => ({
+          const parsedUsers: SquadUserOption[] = usersData.map((u: any) => {
+            const rawMemberships = u.teamMemberships || u.memberships || [];
+            const memberships = rawMemberships.map((m: any) => ({
+              teamId: m.teamId || m.team?.id || '',
+              teamSlug: (m.team?.slug || m.teamId || '').toLowerCase(),
+              teamName: m.team?.name || '',
+              isTeamHead: Boolean(m.isTeamHead),
+            }));
+
+            // Fallback for mock preview account structure
+            if (memberships.length === 0 && typeof u.team === 'string' && u.team.trim()) {
+              memberships.push({
+                teamId: u.team.toLowerCase(),
+                teamSlug: u.team.toLowerCase(),
+                teamName: u.team,
+                isTeamHead: u.role === 'TEAM_LEADER' || (u.position && u.position.toLowerCase().includes('lead')),
+              });
+            }
+
+            return {
               id: u.id,
-              name: u.name,
+              name: u.name || u.email.split('@')[0],
               email: u.email,
-              role: u.position || u.role,
-              teamIds: (u.memberships || []).map((m: any) => m.teamId),
-            }))
-          );
+              role: u.role,
+              position: u.position || null,
+              memberships,
+            };
+          });
+          setLiveUsers(parsedUsers);
         }
       } catch (err) {
         console.error('[AssignWorkPage] Failed to fetch live teams or users:', err);
@@ -66,6 +102,41 @@ export const AssignWorkPage: React.FC = () => {
     }
     loadFormOptions();
   }, []);
+
+  // Filter selectable teams based on user role (President sees all squads; Team Lead sees assigned squads)
+  const availableTeams = useMemo(() => {
+    const isPresident =
+      user?.role === 'ADMIN' ||
+      user?.position?.toLowerCase().includes('president') ||
+      user?.email?.toLowerCase().includes('admin');
+
+    if (isPresident) return liveTeams;
+
+    const filtered = liveTeams.filter((t) => {
+      const userTeamMemberships = (user as any)?.teamMemberships || [];
+      return (
+        userTeamMemberships.some(
+          (m: any) =>
+            m.teamId === t.id ||
+            m.team?.id === t.id ||
+            m.team?.slug === t.slug ||
+            m.team?.name?.toLowerCase() === t.name?.toLowerCase()
+        ) ||
+        (user?.team &&
+          (user.team.toLowerCase() === t.name.toLowerCase() ||
+            user.team.toLowerCase() === t.slug.toLowerCase()))
+      );
+    });
+
+    return filtered.length > 0 ? filtered : liveTeams;
+  }, [liveTeams, user]);
+
+  // Auto-select squad if only one squad is available to the user
+  useEffect(() => {
+    if (availableTeams.length === 1 && !selectedTeamId) {
+      setSelectedTeamId(availableTeams[0].id as TeamId);
+    }
+  }, [availableTeams, selectedTeamId]);
 
   // Field-specific validation errors
   const [errors, setErrors] = useState<{
@@ -80,16 +151,73 @@ export const AssignWorkPage: React.FC = () => {
   // Success Notification Banner
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Get active verified members from database based on selected team
+  // Strict Squad Member Filtering & Perspective Sorting:
+  // - Show ONLY members belonging to the selected team
+  // - In President perspective: Team Lead is placed at the TOP of the list
+  // - In Team Lead perspective: Lead themselves is excluded; shows the rest of the squad members
   const teamMembers = useMemo(() => {
     if (!selectedTeamId) return [];
-    const filtered = liveUsers.filter((u) => u.teamIds.includes(selectedTeamId));
-    // If user is Super Admin/President and squad has no assigned members yet, allow selecting any real user in DB
-    if (filtered.length === 0 && user?.role === 'ADMIN') {
-      return liveUsers;
+
+    const selectedTeam = liveTeams.find(
+      (t) => t.id === selectedTeamId || t.slug?.toLowerCase() === selectedTeamId.toLowerCase()
+    );
+
+    const targetTeamId = selectedTeam?.id || selectedTeamId;
+    const targetTeamSlug = (selectedTeam?.slug || selectedTeamId).toLowerCase();
+    const targetTeamName = (selectedTeam?.name || '').toLowerCase();
+
+    // 1. Filter ONLY users that have an active membership in this team
+    const inTeam = liveUsers.filter((u) => {
+      return u.memberships.some((m) => {
+        return (
+          (m.teamId && m.teamId === targetTeamId) ||
+          (m.teamSlug && m.teamSlug === targetTeamSlug) ||
+          (m.teamSlug && targetTeamSlug && (m.teamSlug.includes(targetTeamSlug) || targetTeamSlug.includes(m.teamSlug))) ||
+          (targetTeamName && m.teamName && m.teamName.toLowerCase() === targetTeamName)
+        );
+      });
+    });
+
+    const isPresident =
+      user?.role === 'ADMIN' ||
+      user?.position?.toLowerCase().includes('president') ||
+      user?.email?.toLowerCase().includes('admin');
+
+    if (isPresident) {
+      // President's perspective:
+      // Show ONLY members of this team.
+      // THE LEAD OF THAT TEAM MUST BE ON THE TOP!
+      return [...inTeam].sort((a, b) => {
+        const aIsLead =
+          a.memberships.some(
+            (m) =>
+              ((m.teamId && m.teamId === targetTeamId) ||
+                (m.teamSlug && m.teamSlug === targetTeamSlug)) &&
+              m.isTeamHead
+          ) || (a.position?.toLowerCase().includes('lead') ?? false);
+
+        const bIsLead =
+          b.memberships.some(
+            (m) =>
+              ((m.teamId && m.teamId === targetTeamId) ||
+                (m.teamSlug && m.teamSlug === targetTeamSlug)) &&
+              m.isTeamHead
+          ) || (b.position?.toLowerCase().includes('lead') ?? false);
+
+        if (aIsLead && !bIsLead) return -1;
+        if (!aIsLead && bIsLead) return 1;
+        return a.name.localeCompare(b.name);
+      });
+    } else {
+      // Team Lead's perspective:
+      // Show the REST of the members of that squad (exclude the team lead themselves!)
+      return inTeam.filter(
+        (u) =>
+          u.id !== user?.id &&
+          u.email.toLowerCase() !== user?.email?.toLowerCase()
+      );
     }
-    return filtered;
-  }, [liveUsers, selectedTeamId, user?.role]);
+  }, [liveUsers, liveTeams, selectedTeamId, user]);
 
   // Reset member selection when team changes
   const handleTeamChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -392,7 +520,7 @@ export const AssignWorkPage: React.FC = () => {
                 }`}
               >
                 <option value="">-- Choose a squad / track --</option>
-                {liveTeams.map((team) => (
+                {availableTeams.map((team) => (
                   <option key={team.id} value={team.id}>
                     {team.name}
                   </option>
@@ -428,16 +556,40 @@ export const AssignWorkPage: React.FC = () => {
                 <option value="">
                   {selectedTeamId
                     ? teamMembers.length > 0
-                      ? '-- Select a verified member --'
-                      : '-- No verified members registered in this squad --'
+                      ? '-- Select a verified squad member --'
+                      : `-- No verified members registered in this squad --`
                     : 'First select a squad'}
                 </option>
-                {teamMembers.map((member) => (
-                  <option key={member.id} value={member.id}>
-                    {member.name} ({member.email})
-                  </option>
-                ))}
+                {teamMembers.map((member) => {
+                  const selectedTeam = liveTeams.find(
+                    (t) => t.id === selectedTeamId || t.slug?.toLowerCase() === selectedTeamId.toLowerCase()
+                  );
+                  const targetTeamId = selectedTeam?.id || selectedTeamId;
+                  const targetTeamSlug = (selectedTeam?.slug || selectedTeamId).toLowerCase();
+
+                  const isLead =
+                    member.memberships.some(
+                      (m) =>
+                        ((m.teamId && m.teamId === targetTeamId) ||
+                          (m.teamSlug && m.teamSlug === targetTeamSlug)) &&
+                        m.isTeamHead
+                    ) || (member.position?.toLowerCase().includes('lead') ?? false);
+
+                  const roleTag = isLead ? ' (Team Lead)' : member.position ? ` (${member.position})` : '';
+
+                  return (
+                    <option key={member.id} value={member.id}>
+                      {member.name} ({member.email}){roleTag}
+                    </option>
+                  );
+                })}
               </select>
+              {selectedTeamId && teamMembers.length === 0 && (
+                <p className="mt-1.5 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2 flex items-center gap-1.5">
+                  <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-amber-600" />
+                  <span>This squad currently has no registered members. Only members with an assigned squad membership appear here.</span>
+                </p>
+              )}
               {errors.member && (
                 <p className="mt-1 text-xs text-gdgoc-red flex items-center gap-1">
                   <AlertCircle className="w-3.5 h-3.5" />

@@ -6,6 +6,7 @@ import { AuthProvider, useAuth } from './auth/authContext';
 import { TaskProvider } from './context/TaskContext';
 import { TourProvider } from './context/TourContext';
 import { TourManager } from './components/tour/TourManager';
+import { FullNameModal } from './components/common/FullNameModal';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { AdminLayout } from './layouts/AdminLayout';
@@ -63,6 +64,7 @@ export const App: React.FC = () => {
           <TourProvider>
           <TaskProvider>
             <TourManager />
+            <FullNameModal />
             <Routes>
               {/* Root */}
               <Route path="/" element={<RootRedirector />} />

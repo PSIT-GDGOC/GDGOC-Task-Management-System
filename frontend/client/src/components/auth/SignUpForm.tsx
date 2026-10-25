@@ -70,6 +70,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onLogIn }) => {
     try {
       const isLead = fields.position !== 'Member';
       const user = await login({
+        name: fields.name.trim(),
         email: fields.email.trim(),
         password: fields.password,
         position: fields.position === 'Member' ? 'Team Member' : fields.position,

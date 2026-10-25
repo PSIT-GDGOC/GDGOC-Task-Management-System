@@ -19,7 +19,7 @@ import {
 
 export const LeaderWorkOverview: React.FC = () => {
   const navigate = useNavigate();
-  const { tasks } = useTasks();
+  const { tasks, approveTask } = useTasks();
 
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [teamFilter, setTeamFilter] = useState<string>('ALL');
@@ -306,6 +306,8 @@ export const LeaderWorkOverview: React.FC = () => {
         task={selectedTask}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
+        onApprove={(t) => approveTask(t.id)}
+        userRole="TEAM_LEADER"
       />
       </div>
     </div>

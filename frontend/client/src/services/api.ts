@@ -309,6 +309,10 @@ export const authApi = {
       cachedCsrfToken = null;
     }
   },
+
+  async updateName(name: string): Promise<{ success: boolean; user: any }> {
+    return await apiRequest<{ success: boolean; user: any }>('/auth/name', 'PATCH', { name });
+  },
 };
 
 // ============================================================================
@@ -347,6 +351,11 @@ export const taskApi = {
     return formatBackendTask(res.data);
   },
 
+
+  async startTask(taskId: string): Promise<Task> {
+    const res = await apiRequest<{ success: boolean; data: any }>(`/tasks/${taskId}/start`, 'POST');
+    return formatBackendTask(res.data);
+  },
 
   async submitTask(taskId: string, payload: { note?: string; prUrl?: string } = {}): Promise<Task> {
     const res = await apiRequest<{ success: boolean; data: any }>(`/tasks/${taskId}/submit`, 'POST', {

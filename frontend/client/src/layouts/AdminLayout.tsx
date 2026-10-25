@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
+import { useAuth } from '../auth/authContext';
+import { useTasks } from '../context/TaskContext';
 import { AdminSidebar } from '../components/admin/AdminSidebar';
+import { ProfilePanel } from '../components/common/ProfilePanel';
 import { Menu, Shield } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
 import { NotificationBell } from '../components/common/NotificationBell';
 
 export const AdminLayout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const { user } = useAuth();
+  const { tasks } = useTasks();
 
   return (
     <div className="dashboard-background min-h-screen flex text-gdgoc-gray-900">
@@ -56,10 +62,15 @@ export const AdminLayout: React.FC = () => {
 
           <div className="flex items-center gap-3">
             <NotificationBell />
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-gdgoc-red bg-red-50 border border-red-200 px-2.5 py-1 rounded-full shadow-2xs">
+            <button
+              type="button"
+              onClick={() => setProfileOpen(true)}
+              className="inline-flex items-center gap-1.5 text-[10px] font-bold text-gdgoc-red bg-red-50 hover:bg-red-100 border border-red-200 px-2.5 py-1 rounded-full shadow-2xs transition-colors cursor-pointer"
+              title="Click to view President Profile"
+            >
               <Shield className="w-3 h-3 text-gdgoc-red" />
-              <span>Executive Core</span>
-            </span>
+              <span>{user?.position || 'Executive Core'}</span>
+            </button>
           </div>
         </header>
 
@@ -68,6 +79,8 @@ export const AdminLayout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      {profileOpen && <ProfilePanel user={user} tasks={tasks} onClose={() => setProfileOpen(false)} />}
     </div>
   );
 };

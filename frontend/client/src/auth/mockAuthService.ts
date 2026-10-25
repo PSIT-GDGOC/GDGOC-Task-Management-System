@@ -30,17 +30,33 @@ export interface DevAccount {
 export const DEV_TEST_ACCOUNTS: DevAccount[] = [
   {
     user: {
+      id: 'usr_president_01',
+      name: 'Aditya Rajput',
+      email: 'adityarajput.86046@gmail.com',
+      role: 'ADMIN',
+      position: 'President',
+      membershipStatus: 'CORE_MEMBER',
+      team: 'Executive Core',
+    },
+    aliases: ['admin@psit.gdgoc.dev', 'gdgoc.psit@gmail.com'],
+    password: 'Password@123',
+    label: 'President Console',
+    description: 'Executive Chapter President & Super Admin',
+  },
+  {
+    user: {
       id: 'usr_leader_01',
       name: 'Aman Verma',
       email: 'leader@psit.gdgoc.dev',
       role: 'TEAM_LEADER',
+      position: 'Tech Lead',
       membershipStatus: 'CORE_MEMBER',
-      team: 'Web Development Core',
+      team: 'Tech',
     },
     aliases: ['leader@gmail.com', 'core@psit.gdgoc.dev'],
     password: 'Password@123',
-    label: 'Core Member Preview',
-    description: 'Preview Team Leader & Core Member workspace',
+    label: 'Squad Lead Preview',
+    description: 'Preview Team Leader & Squad Lead workspace',
   },
   {
     user: {
@@ -48,8 +64,9 @@ export const DEV_TEST_ACCOUNTS: DevAccount[] = [
       name: 'Rohan Gupta',
       email: 'member@psit.gdgoc.dev',
       role: 'MEMBER',
+      position: 'Team Member',
       membershipStatus: 'REGULAR_MEMBER',
-      team: 'Web Development Core',
+      team: 'Tech',
     },
     aliases: ['member@gmail.com', 'regular@psit.gdgoc.dev'],
     password: 'Password@123',
@@ -83,9 +100,19 @@ export const mockAuthService = {
       throw new Error('Email address is required.');
     }
 
-    // Determine preview role strictly from the selected membership status
+    // Determine preview role strictly from the selected membership status and email
+    const isPresident =
+      normalizedEmail.toLowerCase() === 'adityarajput.86046@gmail.com' ||
+      normalizedEmail.toLowerCase() === 'gdgoc.psit@gmail.com' ||
+      credentials.position?.toLowerCase().includes('president') ||
+      credentials.email.toLowerCase().includes('admin');
+
     const membershipStatus = credentials.membershipStatus || 'REGULAR_MEMBER';
-    const role: Role = membershipStatus === 'CORE_MEMBER' ? 'TEAM_LEADER' : 'MEMBER';
+    const role: Role = isPresident
+      ? 'ADMIN'
+      : membershipStatus === 'CORE_MEMBER'
+        ? 'TEAM_LEADER'
+        : 'MEMBER';
 
     // Derive display name from email prefix (e.g. "alex.kumar@gmail.com" -> "Alex Kumar")
     const matchedPreset = DEV_TEST_ACCOUNTS.find(
@@ -94,7 +121,7 @@ export const mockAuthService = {
         acc.aliases.some((a) => a.toLowerCase() === normalizedEmail.toLowerCase())
     );
 
-    let displayName = matchedPreset?.user.name;
+    let displayName = credentials.name?.trim() || matchedPreset?.user.name;
     if (!displayName) {
       const emailPrefix = normalizedEmail.split('@')[0] || 'Member';
       displayName = emailPrefix
@@ -102,16 +129,25 @@ export const mockAuthService = {
         .filter(Boolean)
         .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
         .join(' ');
-      if (!displayName) displayName = role === 'TEAM_LEADER' ? 'Core Lead' : 'Regular Member';
+      if (!displayName) displayName = role === 'ADMIN' ? 'President' : role === 'TEAM_LEADER' ? 'Tech Lead' : 'Regular Member';
     }
 
+    const assignedPosition = isPresident
+      ? 'President'
+      : credentials.position || (role === 'TEAM_LEADER' ? 'Tech Lead' : 'Team Member');
+
+    const assignedTeam = isPresident
+      ? 'Executive Core'
+      : credentials.team || (credentials.teamSlug ? credentials.teamSlug.toUpperCase() : 'Tech');
+
     const sessionUser: User = {
-      id: role === 'TEAM_LEADER' ? 'usr_leader_01' : 'usr_member_01',
+      id: isPresident ? 'usr_president_01' : role === 'TEAM_LEADER' ? 'usr_leader_01' : 'usr_member_01',
       name: displayName,
       email: normalizedEmail,
       role: role,
+      position: assignedPosition,
       membershipStatus: membershipStatus,
-      team: 'Web Development Core',
+      team: assignedTeam,
     };
 
     // Store non-sensitive session metadata for refresh persistence
@@ -137,7 +173,12 @@ export const mockAuthService = {
 
       const parsed: User = JSON.parse(stored);
       const validRoles = ['ADMIN', 'TEAM_LEADER', 'MEMBER'];
-      if (!parsed || !validRoles.includes(parsed.role)) {
+      if (
+        !parsed ||
+        !validRoles.includes(parsed.role) ||
+        parsed.team === 'Web Development Core' ||
+        (parsed.email?.toLowerCase() === 'adityarajput.86046@gmail.com' && parsed.role !== 'ADMIN')
+      ) {
         localStorage.removeItem(AUTH_STORAGE_KEY);
         return null;
       }
@@ -153,6 +194,20 @@ export const mockAuthService = {
   /**
    * Terminate current session
    */
+  updateStoredUser(patch: Partial<User>): User | null {
+    const current = this.getStoredUser();
+    if (!current) return null;
+    const updated = { ...current, ...patch };
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+      }
+    } catch {
+      // Storage access may be restricted
+    }
+    return updated;
+  },
+
   logout(): void {
     try {
       if (typeof localStorage !== 'undefined') {

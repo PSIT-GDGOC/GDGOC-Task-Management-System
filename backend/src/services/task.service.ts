@@ -369,6 +369,21 @@ export class TaskService {
         }
       }
 
+      // Notify all Super Admins, Presidents, and Executive Admins
+      const superAdmins = await tx.user.findMany({
+        where: {
+          role: { in: ['SYSTEM_OWNER', 'PRESIDENT', 'ADMIN'] },
+          id: { not: current.id },
+          isActive: true,
+        },
+        select: { id: true, name: true, email: true },
+      });
+      for (const sa of superAdmins) {
+        if (!recipients.some((r) => r.id === sa.id)) {
+          recipients.push(sa);
+        }
+      }
+
       for (const r of recipients) {
         await notifyUser(tx, r.id, id, 'TASK_SUBMITTED');
       }

@@ -16,6 +16,7 @@ export interface User {
 
 export interface LoginCredentials {
   email: string;
+  name?: string;
   password?: string;
   membershipStatus?: MembershipStatus;
   position?: string;
@@ -35,4 +36,5 @@ export interface AuthState {
 export interface AuthContextType extends AuthState {
   login: (credentials: LoginCredentials) => Promise<User>;
   logout: () => void;
+  updateUserName: (name: string) => Promise<void>;
 }

@@ -11,6 +11,7 @@ import { validate } from '../middleware/validate';
 import { AppError } from '../middleware/errorHandler';
 import { env } from '../config/env';
 import { prisma } from '../lib/prisma';
+import { UserRepository } from '../repositories/user.repository';
 
 const router = Router();
 
@@ -34,6 +35,27 @@ router.get('/me', requireAuth, (req: Request, res: Response) => {
     user: req.user,
   });
 });
+
+/**
+ * PATCH /api/v1/auth/name
+ * Updates user's real full name
+ */
+router.patch(
+  '/name',
+  requireAuth,
+  validate({ body: z.object({ name: z.string().trim().min(2).max(100) }).strict() }),
+  asyncHandler(async (req: Request, res: Response) => {
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: { name: req.body.name },
+    });
+    if (req.session?.user) {
+      req.session.user.name = updatedUser.name;
+    }
+    const updated = await UserRepository.findById(req.user!.id);
+    res.json({ success: true, user: updated });
+  }),
+);
 
 /**
  * POST /api/v1/auth/logout
@@ -192,6 +214,49 @@ router.post(
           }
         } else {
           throw new AppError('Invalid or expired president invitation key', 400);
+        }
+      }
+
+      // Enforce singleton leadership: Only 1 President, 1 Vice President, 1 Secretary, 1 Organizer
+      const SINGLETON_POSITIONS = ['President', 'Vice President', 'Secretary', 'Organizer'];
+      const targetPos = assignedPosition ? assignedPosition.trim() : null;
+      if (targetPos && SINGLETON_POSITIONS.some((p) => p.toLowerCase() === targetPos.toLowerCase())) {
+        const canonicalPosition = SINGLETON_POSITIONS.find((p) => p.toLowerCase() === targetPos.toLowerCase())!;
+        const existingLeader = await prisma.user.findFirst({
+          where: {
+            position: { equals: canonicalPosition, mode: 'insensitive' },
+            email: { not: normalizedEmail },
+            isActive: true,
+          },
+        });
+        if (existingLeader) {
+          throw new AppError(
+            `Position '${canonicalPosition}' is already assigned to ${existingLeader.name || existingLeader.email}. Only one ${canonicalPosition} is allowed.`,
+            400,
+          );
+        }
+      }
+
+      // Enforce singleton team heads: Only 1 Team Lead per squad (Tech, Media, Content)
+      if (teamSlug && assignedIsTeamHead) {
+        const targetTeam = await prisma.team.findUnique({
+          where: { slug: teamSlug.toLowerCase().trim() },
+        });
+        if (targetTeam) {
+          const existingHead = await prisma.teamMembership.findFirst({
+            where: {
+              teamId: targetTeam.id,
+              isTeamHead: true,
+              user: { email: { not: normalizedEmail }, isActive: true },
+            },
+            include: { user: true },
+          });
+          if (existingHead) {
+            throw new AppError(
+              `The ${targetTeam.name} squad already has an active Team Lead (${existingHead.user.name || existingHead.user.email}). Only one Team Lead per squad is allowed.`,
+              400,
+            );
+          }
         }
       }
 

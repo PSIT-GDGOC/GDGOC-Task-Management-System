@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/authContext';
+import { useTasks } from '../../context/TaskContext';
 import { Logo } from '../common/Logo';
+import { ProfilePanel } from '../common/ProfilePanel';
 import { 
   FolderKanban, 
   Users, 
@@ -19,7 +21,9 @@ interface AdminSidebarProps {
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => {
   const { user, logout } = useAuth();
+  const { tasks } = useTasks();
   const navigate = useNavigate();
+  const [profileOpen, setProfileOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -43,6 +47,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => 
     : 'AD';
 
   return (
+    <>
     <aside className="w-64 h-full bg-white border-r border-gdgoc-gray-200 flex flex-col justify-between select-none">
       {/* Top Branding Section */}
       <div>
@@ -133,9 +138,15 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => 
       </div>
 
       {/* Bottom Profile & Logout Footer */}
-      <div className="p-3 border-t border-gdgoc-gray-100 bg-white">
-        <div className="flex items-center gap-3 p-2 rounded-lg bg-gdgoc-gray-50 border border-gdgoc-gray-200">
-          <div className="w-8 h-8 rounded-full bg-red-100 border border-red-200 text-gdgoc-red flex items-center justify-center font-bold text-xs flex-shrink-0">
+      <div className="p-3 border-t border-gdgoc-gray-100 bg-white space-y-2">
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          onClick={() => setProfileOpen(true)}
+          className="w-full flex items-center gap-3 p-2 rounded-lg bg-gdgoc-gray-50 border border-gdgoc-gray-200 text-left hover:bg-gdgoc-gray-100 hover:border-gdgoc-gray-300 transition-all cursor-pointer group"
+          title="Click to view President Profile"
+        >
+          <div className="w-8 h-8 rounded-full bg-red-100 border border-red-200 text-gdgoc-red flex items-center justify-center font-bold text-xs flex-shrink-0 group-hover:scale-105 transition-transform">
             {initials}
           </div>
           <div className="flex-1 min-w-0">
@@ -146,16 +157,21 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({ onCloseMobile }) => 
               {user?.position ? `${user.position} • ` : 'Executive • '}{user?.email || 'admin@psit.gdgoc.dev'}
             </p>
           </div>
-          <button
-            onClick={handleLogout}
-            className="p-1.5 text-gdgoc-gray-400 hover:text-gdgoc-red hover:bg-red-50 rounded-md transition-colors"
-            title="Sign out"
-            aria-label="Sign out"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
+        </button>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 px-3 py-1.5 rounded-lg bg-white hover:bg-red-50 hover:text-gdgoc-red text-xs font-semibold text-gdgoc-gray-700 border border-gdgoc-gray-200 transition-colors shadow-2xs"
+          title="Sign out"
+          aria-label="Sign out"
+        >
+          <LogOut className="w-3.5 h-3.5" />
+          <span>Sign Out</span>
+        </button>
       </div>
     </aside>
+    {profileOpen && <ProfilePanel user={user} tasks={tasks} onClose={() => setProfileOpen(false)} />}
+    </>
   );
 };

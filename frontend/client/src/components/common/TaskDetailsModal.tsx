@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { Task } from '../../types/task';
 import { TaskStatusBadge } from './TaskStatusBadge';
 import { PriorityBadge } from './PriorityBadge';
@@ -11,7 +12,13 @@ import {
   Paperclip,
   FileCode,
   Image as ImageIcon,
-  FileArchive
+  FileArchive,
+  Play,
+  CheckSquare,
+  CheckCircle2,
+  Sparkles,
+  History,
+  Check
 } from 'lucide-react';
 
 interface TaskDetailsModalProps {
@@ -19,6 +26,7 @@ interface TaskDetailsModalProps {
   isOpen?: boolean;
   onClose: () => void;
   onApprove?: (task: Task) => void;
+  onAccept?: (task: Task) => void;
   onSubmitForReview?: (task: Task) => void;
   userRole?: string;
 }
@@ -27,9 +35,10 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
   task,
   isOpen = true,
   onClose,
-  onApprove: _onApprove,
-  onSubmitForReview: _onSubmitForReview,
-  userRole: _userRole,
+  onApprove,
+  onAccept,
+  onSubmitForReview,
+  userRole = 'MEMBER',
 }) => {
   // Handle ESC key to close modal
   useEffect(() => {
@@ -69,6 +78,11 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
     return <FileCode className="w-4 h-4 text-gdgoc-gray-500" />;
   };
 
+  const isAssigned = task.status === 'Assigned' || task.status === 'To Do';
+  const isInProgress = task.status === 'In Progress';
+  const isPendingReview = task.status === 'Pending Review';
+  const isCompleted = task.status === 'Completed';
+
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/40 backdrop-blur-2xs animate-in fade-in duration-150"
@@ -103,7 +117,7 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gdgoc-gray-400 hover:text-gdgoc-gray-700 hover:bg-gdgoc-gray-100 transition-colors flex-shrink-0"
+            className="p-1.5 rounded-lg text-gdgoc-gray-400 hover:text-gdgoc-gray-700 hover:bg-gdgoc-gray-100 transition-colors flex-shrink-0 cursor-pointer"
             aria-label="Close modal"
           >
             <X className="w-5 h-5" />
@@ -176,6 +190,73 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
             </div>
           </div>
 
+          {/* Workflow & History Timeline */}
+          <div className="space-y-3 p-4 rounded-xl bg-gdgoc-gray-50 border border-gdgoc-gray-200">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-gdgoc-gray-700 flex items-center gap-1.5">
+                <History className="w-4 h-4 text-gdgoc-blue" />
+                <span>Milestone Lifecycle & History</span>
+              </h3>
+              <Link
+                to="/history"
+                onClick={onClose}
+                className="text-[11px] font-semibold text-gdgoc-blue hover:underline inline-flex items-center gap-1"
+              >
+                <span>View My Work History</span>
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2 text-center text-[11px]">
+              {/* Step 1: Assigned */}
+              <div className={`p-2.5 rounded-lg border flex flex-col items-center gap-1 transition-all ${
+                isAssigned ? 'bg-blue-50 border-blue-300 font-bold text-gdgoc-blue' : 'bg-white border-gdgoc-gray-200 text-gdgoc-gray-600'
+              }`}>
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  !isAssigned ? 'bg-green-100 text-gdgoc-green' : 'bg-blue-100 text-gdgoc-blue'
+                }`}>
+                  {!isAssigned ? <Check className="w-3 h-3" /> : '1'}
+                </div>
+                <span>Assigned</span>
+              </div>
+
+              {/* Step 2: In Progress */}
+              <div className={`p-2.5 rounded-lg border flex flex-col items-center gap-1 transition-all ${
+                isInProgress ? 'bg-amber-50 border-amber-300 font-bold text-amber-800' : isPendingReview || isCompleted ? 'bg-white border-gdgoc-gray-200 text-gdgoc-gray-600' : 'bg-gdgoc-gray-100 border-gdgoc-gray-200 text-gdgoc-gray-400'
+              }`}>
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  isPendingReview || isCompleted ? 'bg-green-100 text-gdgoc-green' : isInProgress ? 'bg-amber-100 text-amber-700' : 'bg-gdgoc-gray-200 text-gdgoc-gray-500'
+                }`}>
+                  {isPendingReview || isCompleted ? <Check className="w-3 h-3" /> : '2'}
+                </div>
+                <span>In Progress</span>
+              </div>
+
+              {/* Step 3: In Review */}
+              <div className={`p-2.5 rounded-lg border flex flex-col items-center gap-1 transition-all ${
+                isPendingReview ? 'bg-purple-50 border-purple-300 font-bold text-purple-800' : isCompleted ? 'bg-white border-gdgoc-gray-200 text-gdgoc-gray-600' : 'bg-gdgoc-gray-100 border-gdgoc-gray-200 text-gdgoc-gray-400'
+              }`}>
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  isCompleted ? 'bg-green-100 text-gdgoc-green' : isPendingReview ? 'bg-purple-100 text-purple-700' : 'bg-gdgoc-gray-200 text-gdgoc-gray-500'
+                }`}>
+                  {isCompleted ? <Check className="w-3 h-3" /> : '3'}
+                </div>
+                <span>In Review</span>
+              </div>
+
+              {/* Step 4: Completed */}
+              <div className={`p-2.5 rounded-lg border flex flex-col items-center gap-1 transition-all ${
+                isCompleted ? 'bg-green-50 border-green-300 font-bold text-gdgoc-green' : 'bg-gdgoc-gray-100 border-gdgoc-gray-200 text-gdgoc-gray-400'
+              }`}>
+                <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                  isCompleted ? 'bg-green-100 text-gdgoc-green' : 'bg-gdgoc-gray-200 text-gdgoc-gray-500'
+                }`}>
+                  {isCompleted ? <Check className="w-3 h-3" /> : '4'}
+                </div>
+                <span>Done</span>
+              </div>
+            </div>
+          </div>
+
           {/* Attached Documents & Files (Only if attachments exist) */}
           {task.attachments && task.attachments.length > 0 && (
             <div className="space-y-2">
@@ -212,18 +293,76 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
           )}
         </div>
 
-        {/* Modal Footer */}
-        <div className="px-6 py-3.5 border-t border-gdgoc-gray-100 bg-gdgoc-gray-50 flex items-center justify-between">
-          <span className="text-[11px] text-gdgoc-gray-500">
-            Press <kbd className="px-1.5 py-0.5 rounded bg-white border border-gdgoc-gray-200 text-[10px] font-mono">ESC</kbd> or click outside to close
-          </span>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-1.5 rounded-lg border border-gdgoc-gray-300 bg-white hover:bg-gdgoc-gray-100 text-xs font-semibold text-gdgoc-gray-700 transition-colors"
-          >
-            Close
-          </button>
+        {/* Modal Footer with Status-Driven Actions */}
+        <div className="px-6 py-4 border-t border-gdgoc-gray-200 bg-gdgoc-gray-50 flex items-center justify-between gap-3 flex-wrap">
+          <div className="text-[11px] text-gdgoc-gray-500">
+            {isAssigned && 'Action required: Click Accept to start working on this milestone.'}
+            {isInProgress && 'In progress: Mark as Done when your deliverable is ready for lead verification.'}
+            {isPendingReview && 'Awaiting review: The Super Admin & Lead have been notified to review.'}
+            {isCompleted && 'Completed: This milestone is affirmed and archived in club records.'}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {/* Crew Member: Accept Button */}
+            {isAssigned && onAccept && (
+              <button
+                type="button"
+                onClick={() => {
+                  onAccept(task);
+                  onClose();
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gdgoc-blue hover:bg-blue-600 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Accept Task</span>
+              </button>
+            )}
+
+            {/* Crew Member: Mark Done Button */}
+            {isInProgress && onSubmitForReview && (
+              <button
+                type="button"
+                onClick={() => {
+                  onSubmitForReview(task);
+                  onClose();
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer animate-pulse"
+              >
+                <CheckSquare className="w-3.5 h-3.5" />
+                <span>Mark as Done (Submit for Review)</span>
+              </button>
+            )}
+
+            {/* Admin / President: Approve Button */}
+            {isPendingReview && onApprove && userRole !== 'MEMBER' && (
+              <button
+                type="button"
+                onClick={() => {
+                  onApprove(task);
+                  onClose();
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gdgoc-green hover:bg-emerald-600 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Approve & Sign Off</span>
+              </button>
+            )}
+
+            {isCompleted && (
+              <span className="inline-flex items-center gap-1 text-xs font-bold text-gdgoc-green bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg">
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Completed</span>
+              </span>
+            )}
+
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 rounded-lg border border-gdgoc-gray-300 bg-white hover:bg-gdgoc-gray-100 text-xs font-semibold text-gdgoc-gray-700 transition-colors cursor-pointer"
+            >
+              Close
+            </button>
+          </div>
         </div>
       </div>
     </div>

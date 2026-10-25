@@ -24,7 +24,7 @@ import {
 export const LeaderOverview: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { tasks } = useTasks();
+  const { tasks, approveTask } = useTasks();
   const stats = getDashboardStats(tasks);
 
   // Selected task for Details Modal
@@ -257,6 +257,8 @@ export const LeaderOverview: React.FC = () => {
           setIsModalOpen(false);
           setSelectedTask(null);
         }}
+        onApprove={(t) => approveTask(t.id)}
+        userRole="TEAM_LEADER"
       />
       </div>
     </div>

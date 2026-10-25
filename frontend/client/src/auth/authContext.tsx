@@ -45,11 +45,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       let role: Role = 'MEMBER';
       const pos = credentials.position?.toLowerCase() || '';
+      const emailLower = credentials.email.toLowerCase().trim();
+      const isPresidentEmail =
+        emailLower === 'adityarajput.86046@gmail.com' ||
+        emailLower === 'gdgoc.psit@gmail.com' ||
+        emailLower.includes('admin');
+
       if (
         pos.includes('president') ||
         pos.includes('secretary') ||
         pos.includes('organizer') ||
-        credentials.email.toLowerCase().includes('admin')
+        isPresidentEmail
       ) {
         role = 'ADMIN';
       } else if (
@@ -60,7 +66,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         role = 'TEAM_LEADER';
       }
 
-      const name = credentials.email.split('@')[0];
+      const assignedPosition = isPresidentEmail && !credentials.position ? 'President' : credentials.position;
+
+      const name = credentials.name?.trim() || credentials.email.split('@')[0];
       const teamSlug =
         credentials.teamSlug ||
         (credentials.team?.toLowerCase().includes('media')
@@ -74,18 +82,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           credentials.email,
           name,
           role,
-          credentials.position,
+          assignedPosition,
           teamSlug,
           credentials.isTeamHead,
           credentials.invitationKey,
         );
         setUser(liveUser);
         localStorage.setItem('gdgoc_current_user', JSON.stringify(liveUser));
+        if (credentials.name?.trim()) {
+          localStorage.setItem(`gdgoc_name_confirmed_${liveUser.id}`, 'true');
+        }
         return liveUser;
       } catch (err) {
         console.warn('[Auth] Live server dev-login unavailable; falling back to local preview session:', err);
         const fallbackUser = await mockAuthService.login(credentials);
         setUser(fallbackUser);
+        if (credentials.name?.trim()) {
+          localStorage.setItem(`gdgoc_name_confirmed_${fallbackUser.id}`, 'true');
+        }
         return fallbackUser;
       }
     } finally {
@@ -103,12 +117,37 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
   };
 
+  const updateUserName = async (newName: string): Promise<void> => {
+    const trimmed = newName.trim();
+    if (!trimmed) throw new Error('Name cannot be empty');
+
+    try {
+      await authApi.updateName(trimmed);
+    } catch (err) {
+      console.warn('[Auth] Live server updateName failed; updating local session:', err);
+    }
+
+    setUser((prev) => {
+      if (!prev) return null;
+      const updated = { ...prev, name: trimmed };
+      try {
+        localStorage.setItem('gdgoc_current_user', JSON.stringify(updated));
+        localStorage.setItem(`gdgoc_name_confirmed_${updated.id}`, 'true');
+      } catch {
+        // ignore
+      }
+      mockAuthService.updateStoredUser({ name: trimmed });
+      return updated;
+    });
+  };
+
   const value: AuthContextType = {
     user,
     isAuthenticated: !!user,
     isLoading,
     login,
     logout,
+    updateUserName,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
