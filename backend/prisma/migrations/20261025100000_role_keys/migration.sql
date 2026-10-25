@@ -1,3 +1,6 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "passwordHash" TEXT;
+
 -- CreateTable
 CREATE TABLE IF NOT EXISTS "RoleKey" (
     "id" TEXT NOT NULL,
