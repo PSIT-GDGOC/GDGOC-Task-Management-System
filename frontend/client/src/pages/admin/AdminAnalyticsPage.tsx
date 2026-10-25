@@ -13,6 +13,9 @@ import {
   ShieldCheck
 } from 'lucide-react';
 
+const metricNumber = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2, notation: 'compact' });
+const validMetric = (value: number | null): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
+
 export const AdminAnalyticsPage: React.FC = () => {
   const { tasks } = useTasks();
   const [stats, setStats] = useState<{
@@ -73,7 +76,7 @@ export const AdminAnalyticsPage: React.FC = () => {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <h1 className="text-2xl sm:text-3xl font-extrabold text-gdgoc-gray-900 tracking-tight">
             Chapter Analytics & Sprint Health
           </h1>
@@ -87,9 +90,9 @@ export const AdminAnalyticsPage: React.FC = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs">
-          <div className="flex items-center justify-between">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div className="min-w-0 bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs">
+          <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold text-gdgoc-gray-500 uppercase tracking-wider">
               On-Time Rate
             </span>
@@ -97,16 +100,16 @@ export const AdminAnalyticsPage: React.FC = () => {
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-gdgoc-gray-900 mt-2">
-            {stats.onTimeRate !== null ? `${stats.onTimeRate.toFixed(1)}%` : 'No data'}
+          <p className="break-words text-xl sm:text-2xl font-black tabular-nums text-gdgoc-gray-900 mt-2">
+            {validMetric(stats.onTimeRate) ? `${stats.onTimeRate.toFixed(1)}%` : 'No data'}
           </p>
           <p className="text-[11px] text-emerald-600 font-medium mt-1 flex items-center gap-1">
-            <span>+4.2% from last sprint</span>
+            <span>Completed tasks with deadlines</span>
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs">
-          <div className="flex items-center justify-between">
+        <div className="min-w-0 bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs">
+          <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold text-gdgoc-gray-500 uppercase tracking-wider">
               Avg Lead Time
             </span>
@@ -114,16 +117,16 @@ export const AdminAnalyticsPage: React.FC = () => {
               <Clock className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-gdgoc-gray-900 mt-2">
-            {stats.averageLeadTimeHours !== null ? `${stats.averageLeadTimeHours} hrs` : 'No data'}
+          <p className="break-words text-xl sm:text-2xl font-black tabular-nums text-gdgoc-gray-900 mt-2">
+            {validMetric(stats.averageLeadTimeHours) ? `${metricNumber.format(stats.averageLeadTimeHours)} hrs` : 'No data'}
           </p>
           <p className="text-[11px] text-gdgoc-gray-500 font-medium mt-1">
-            Assignment to PR merge
+            Task creation to approval
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs">
-          <div className="flex items-center justify-between">
+        <div className="min-w-0 bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs">
+          <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold text-gdgoc-gray-500 uppercase tracking-wider">
               Deliverables Shipped
             </span>
@@ -131,7 +134,7 @@ export const AdminAnalyticsPage: React.FC = () => {
               <CheckCircle2 className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-gdgoc-gray-900 mt-2">
+          <p className="break-words text-xl sm:text-2xl font-black tabular-nums text-gdgoc-gray-900 mt-2">
             {completedCount}
           </p>
           <p className="text-[11px] text-gdgoc-gray-500 font-medium mt-1">
@@ -139,8 +142,8 @@ export const AdminAnalyticsPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs">
-          <div className="flex items-center justify-between">
+        <div className="min-w-0 bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs">
+          <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold text-gdgoc-gray-500 uppercase tracking-wider">
               Active Contributors
             </span>
@@ -148,7 +151,7 @@ export const AdminAnalyticsPage: React.FC = () => {
               <Users className="w-4 h-4" />
             </div>
           </div>
-          <p className="text-2xl font-black text-gdgoc-gray-900 mt-2">
+          <p className="break-words text-xl sm:text-2xl font-black tabular-nums text-gdgoc-gray-900 mt-2">
             {new Set(tasks.map((task) => task.assigneeId).filter(Boolean)).size}
           </p>
           <p className="text-[11px] text-gdgoc-gray-500 font-medium mt-1">
@@ -187,7 +190,7 @@ export const AdminAnalyticsPage: React.FC = () => {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-gdgoc-gray-500 text-[11px]">
-                      {sq.completed}/{sq.total || 4} Done
+                      {sq.completed}/{sq.total} Done
                     </span>
                     <span className="font-bold text-gdgoc-gray-900">{sq.progress}%</span>
                   </div>
@@ -197,7 +200,12 @@ export const AdminAnalyticsPage: React.FC = () => {
                 <div className="w-full h-2.5 bg-gdgoc-gray-100 rounded-full overflow-hidden">
                   <div
                     className={`h-full rounded-full transition-all duration-500 ${sq.color}`}
-                    style={{ width: `${Math.max(sq.progress, 15)}%` }}
+                    style={{ width: `${sq.progress}%` }}
+                    role="progressbar"
+                    aria-label={`${sq.name} completion`}
+                    aria-valuenow={sq.progress}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
                   />
                 </div>
               </div>
