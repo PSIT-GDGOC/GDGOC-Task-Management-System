@@ -34,7 +34,9 @@ export class EmailService {
     const host = process.env.SMTP_HOST;
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
-    const port = Number(process.env.SMTP_PORT) || 587;
+    const configuredPort = Number(process.env.SMTP_PORT);
+    // Port 465 (SSL) avoids cloud host port-587 blocking
+    const port = configuredPort || (process.env.RENDER === 'true' ? 465 : 587);
 
     if (host && user && pass) {
       this.transporter = nodemailer.createTransport({
@@ -42,6 +44,9 @@ export class EmailService {
         port,
         secure: port === 465,
         auth: { user, pass },
+        connectionTimeout: 8000,
+        greetingTimeout: 8000,
+        socketTimeout: 12000,
       });
       return this.transporter;
     }
@@ -49,7 +54,7 @@ export class EmailService {
     return null;
   }
 
-  static async sendMail(payload: EmailPayload): Promise<{ success: boolean; messageId?: string; simulated?: boolean }> {
+  static async sendMail(payload: EmailPayload): Promise<{ success: boolean; messageId?: string; simulated?: boolean; error?: string }> {
     const transporter = this.getTransporter();
     const from = process.env.SMTP_FROM || 'GDGOC PSIT <gdgoc.psit@gmail.com>';
 
@@ -64,9 +69,39 @@ export class EmailService {
         });
         console.log(`[EmailService] Live email dispatched to ${payload.to} [ID: ${info.messageId}]`);
         return { success: true, messageId: info.messageId };
-      } catch (err) {
-        console.error(`[EmailService] SMTP send error to ${payload.to}:`, err);
-        // Fallback to recording mock outbox
+      } catch (err: any) {
+        console.error(`[EmailService] SMTP send error to ${payload.to}:`, err.message || err);
+
+        // Fallback retry with port 465 SSL if port 587 was blocked by host
+        const host = process.env.SMTP_HOST;
+        const user = process.env.SMTP_USER;
+        const pass = process.env.SMTP_PASS;
+        if (host && user && pass) {
+          try {
+            console.log(`[EmailService] Retrying send to ${payload.to} via Port 465 (SSL)...`);
+            const sslTransporter = nodemailer.createTransport({
+              host,
+              port: 465,
+              secure: true,
+              auth: { user, pass },
+              connectionTimeout: 8000,
+              greetingTimeout: 8000,
+              socketTimeout: 12000,
+            });
+            const sslInfo = await sslTransporter.sendMail({
+              from,
+              to: payload.to,
+              subject: payload.subject,
+              text: payload.text || payload.subject,
+              html: payload.html,
+            });
+            console.log(`[EmailService] Live email dispatched to ${payload.to} via Port 465 [ID: ${sslInfo.messageId}]`);
+            this.transporter = sslTransporter;
+            return { success: true, messageId: sslInfo.messageId };
+          } catch (sslErr: any) {
+            console.error(`[EmailService] Port 465 SSL fallback also failed:`, sslErr.message || sslErr);
+          }
+        }
       }
     }
 
