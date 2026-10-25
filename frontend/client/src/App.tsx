@@ -7,6 +7,7 @@ import { TaskProvider } from './context/TaskContext';
 import { TourProvider } from './context/TourContext';
 import { TourManager } from './components/tour/TourManager';
 import { FullNameModal } from './components/common/FullNameModal';
+import { WelcomeAnimation } from './components/common/WelcomeAnimation';
 import { SessionRecovery } from './auth/SessionRecovery';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
@@ -67,6 +68,7 @@ export const App: React.FC = () => {
           <TourProvider>
             <TaskProvider>
               <TourManager />
+              <WelcomeAnimation />
               <FullNameModal />
               <Routes>
                 {/* Root */}
