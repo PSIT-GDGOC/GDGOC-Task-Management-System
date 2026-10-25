@@ -148,8 +148,7 @@ export function parseEnvironment(input: NodeJS.ProcessEnv) {
   return {
     ...value,
     ALLOW_SELF_REGISTRATION:
-      value.ALLOW_SELF_REGISTRATION === 'true' ||
-      (value.ALLOW_SELF_REGISTRATION === undefined && value.NODE_ENV !== 'production'),
+      value.ALLOW_SELF_REGISTRATION !== 'false',
     REDIS_PREFIX: value.REDIS_PREFIX ?? `gdgoc-${value.NODE_ENV}`,
   };
 }

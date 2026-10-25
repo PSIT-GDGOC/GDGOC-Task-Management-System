@@ -77,6 +77,14 @@ router.get(
   authenticationLimit,
   validate({ query: googleQuery }),
   asyncHandler(async (req, res) => {
+    if (!GoogleAuthService.configured()) {
+      res.json({
+        success: true,
+        configured: false,
+        message: 'Google OAuth 2.0 credentials are not yet configured on the server.',
+      });
+      return;
+    }
     res.json({
       success: true,
       configured: true,
@@ -89,7 +97,17 @@ router.get(
   authenticationLimit,
   validate({ query: googleQuery }),
   asyncHandler(async (req, res) => {
-    res.redirect(await GoogleAuthService.begin(req, req.query.portal as 'member' | 'admin'));
+    const portal = (req.query.portal as 'member' | 'admin') || 'member';
+    const targetOrigin = portal === 'admin' ? env.ADMIN_ORIGIN : env.CLIENT_ORIGIN;
+    if (!GoogleAuthService.configured()) {
+      res.redirect(
+        `${targetOrigin}/login?error=${encodeURIComponent(
+          'Google OAuth 2.0 credentials are not yet configured on the server.',
+        )}`,
+      );
+      return;
+    }
+    res.redirect(await GoogleAuthService.begin(req, portal));
   }),
 );
 router.get(
@@ -106,16 +124,24 @@ router.get(
       hd: z.string().optional(),
     }),
   }),
-  asyncHandler(async (req, res) => {
-    res.redirect(
-      await GoogleAuthService.callback(
+  async (req: Request, res: Response) => {
+    try {
+      const redirectUrl = await GoogleAuthService.callback(
         req,
         req.query.state as string,
         req.query.code as string | undefined,
         req.query.error as string | undefined,
-      ),
-    );
-  }),
+      );
+      res.redirect(redirectUrl);
+    } catch (err: any) {
+      const portal = req.session?.oauth?.portal || 'member';
+      const targetOrigin = portal === 'admin' ? env.ADMIN_ORIGIN : env.CLIENT_ORIGIN;
+      const errorMsg = encodeURIComponent(
+        err.message || 'Google sign-in was cancelled or could not be verified',
+      );
+      res.redirect(`${targetOrigin}/login?error=${errorMsg}`);
+    }
+  },
 );
 router.get(
   '/csrf',

@@ -231,6 +231,10 @@ export const authApi = {
     const res = await apiRequest<{ url: string }>('/auth/google/url?portal=member');
     return res.url;
   },
+
+  async getGoogleAuthUrl(portal: 'member' | 'admin' = 'member'): Promise<{ success: boolean; configured: boolean; url?: string; message?: string }> {
+    return apiRequest<{ success: boolean; configured: boolean; url?: string; message?: string }>(`/auth/google/url?portal=${portal}`);
+  },
   async loginDev(
     email: string,
     name?: string,
