@@ -16,6 +16,16 @@ import {
   Layers
 } from 'lucide-react';
 
+type AssignmentErrors = Partial<Record<'team' | 'member' | 'title' | 'description' | 'deadline', string>>;
+const fieldIds: Record<keyof AssignmentErrors, string> = {
+  team: 'assign-team-select', member: 'assign-member-select', title: 'assign-task-title',
+  description: 'assign-task-description', deadline: 'assign-task-deadline',
+};
+const focusError = (errors: AssignmentErrors) => {
+  const field = (Object.keys(errors) as Array<keyof AssignmentErrors>)[0];
+  if (field) document.getElementById(fieldIds[field])?.focus();
+};
+
 export const AssignWorkPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -133,14 +143,8 @@ export const AssignWorkPage: React.FC = () => {
   }, [availableTeams, selectedTeamId]);
 
   // Field-specific validation errors
-  const [errors, setErrors] = useState<{
-    team?: string;
-    member?: string;
-    title?: string;
-    description?: string;
-    deadline?: string;
-    fileError?: string;
-  }>({});
+  const [errors, setErrors] = useState<AssignmentErrors>({});
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Success Notification Banner
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -229,37 +233,23 @@ export const AssignWorkPage: React.FC = () => {
     setSuccessMessage(null);
   };
 
-  // Date validation: must not be in the past
-  const validateDeadline = (dateStr: string): boolean => {
-    if (!dateStr) {
-      setErrors((prev) => ({ ...prev, deadline: 'Deadline is required.' }));
-      return false;
-    }
+  // Validate date-only values in the user's local timezone.
+  const deadlineError = (dateStr: string): string | undefined => {
+    if (!dateStr) return 'Deadline is required.';
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
     const selected = new Date(`${dateStr}T00:00:00`);
-    if (isNaN(selected.getTime())) {
-      setErrors((prev) => ({ ...prev, deadline: 'Please enter a valid date.' }));
-      return false;
-    }
-
-    if (selected < today) {
-      setErrors((prev) => ({
-        ...prev,
-        deadline: 'Deadline cannot be in the past. Please select a current or future date.',
-      }));
-      return false;
-    }
-
-    setErrors((prev) => ({ ...prev, deadline: undefined }));
-    return true;
+    if (isNaN(selected.getTime())) return 'Please enter a valid date.';
+    if (selected < today) return 'Deadline cannot be in the past. Please select a current or future date.';
+    return undefined;
   };
 
   // Form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSuccessMessage(null);
+    setSubmitError(null);
+    if (isSubmitting) return;
 
     const newErrors: typeof errors = {};
 
@@ -271,21 +261,18 @@ export const AssignWorkPage: React.FC = () => {
       newErrors.member = 'Please select a team member.';
     }
 
-    if (!taskTitle.trim()) {
-      newErrors.title = 'Task title is required.';
-    }
+    const title = taskTitle.trim();
+    const description = taskDescription.trim();
+    if (title.length < 3) newErrors.title = 'Task title must be at least 3 characters.';
+    else if (title.length > 150) newErrors.title = 'Task title must be 150 characters or fewer.';
+    if (description.length < 10) newErrors.description = 'Task description must be at least 10 characters.';
+    else if (description.length > 10000) newErrors.description = 'Task description must be 10,000 characters or fewer.';
+    const invalidDeadline = deadlineError(deadline);
+    if (invalidDeadline) newErrors.deadline = invalidDeadline;
 
-    if (!taskDescription.trim()) {
-      newErrors.description = 'Task description is required.';
-    }
-
-    const isDeadlineValid = validateDeadline(deadline);
-    if (!isDeadlineValid) {
-      newErrors.deadline = errors.deadline || 'Please select a valid deadline.';
-    }
-
+    setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
+      focusError(newErrors);
       return;
     }
 
@@ -311,7 +298,24 @@ export const AssignWorkPage: React.FC = () => {
 
       setSuccessMessage('Task assigned successfully! It is now active in View Work and the member workspace.');
     } catch (err) {
-      setErrors((prev) => ({ ...prev, title: err instanceof Error ? err.message : 'Failed to assign task. Please try again.' }));
+      const details = (err as { data?: { error?: { details?: unknown } } })?.data?.error?.details;
+      const serverErrors: AssignmentErrors = {};
+      const fields = { teamId: 'team', assigneeId: 'member', title: 'title', description: 'description', deadline: 'deadline' } as const;
+      if (details && typeof details === 'object' && !Array.isArray(details)) {
+        for (const [apiField, formField] of Object.entries(fields)) {
+          const messages = (details as Record<string, unknown>)[apiField];
+          if (Array.isArray(messages)) {
+            const message = messages.filter((value): value is string => typeof value === 'string').join(' ');
+            if (message) serverErrors[formField] = message;
+          }
+        }
+      }
+      if (Object.keys(serverErrors).length) {
+        setErrors(serverErrors);
+        focusError(serverErrors);
+      } else {
+        setSubmitError(err instanceof Error ? err.message : 'Failed to assign task. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -422,6 +426,8 @@ export const AssignWorkPage: React.FC = () => {
         noValidate 
         className="bg-white rounded-2xl p-6 sm:p-8 card-bb space-y-6"
       >
+        {submitError && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-gdgoc-red">{submitError}</div>}
+
         {/* SECTION 1: TEAM & ASSIGNEE */}
         <div className="space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b border-gdgoc-gray-100">
@@ -441,7 +447,9 @@ export const AssignWorkPage: React.FC = () => {
                 Select Team <span className="text-gdgoc-red">*</span>
               </label>
               <select
-                id="assign-team-select" data-tour="assign-team-select"
+                id="assign-team-select"
+                aria-invalid={!!errors.team}
+                aria-describedby={errors.team ? "assign-team-select-error" : undefined} data-tour="assign-team-select"
                 value={selectedTeamId}
                 onChange={handleTeamChange}
                 className={`w-full px-3 py-2.5 text-xs sm:text-sm bg-white rounded-xl transition-all card-bb-sm focus:outline-none focus:ring-2 ${
@@ -458,7 +466,7 @@ export const AssignWorkPage: React.FC = () => {
                 ))}
               </select>
               {errors.team && (
-                <p className="mt-1 text-xs text-gdgoc-red flex items-center gap-1">
+                <p id="assign-team-select-error" role="alert" className="mt-1 text-xs text-gdgoc-red flex items-center gap-1">
                   <AlertCircle className="w-3.5 h-3.5" />
                   {errors.team}
                 </p>
@@ -475,6 +483,8 @@ export const AssignWorkPage: React.FC = () => {
               </label>
               <select
                 id="assign-member-select"
+                aria-invalid={!!errors.member}
+                aria-describedby={errors.member ? "assign-member-select-error" : undefined}
                 value={selectedMemberId}
                 onChange={handleMemberChange}
                 disabled={!selectedTeamId}
@@ -522,7 +532,7 @@ export const AssignWorkPage: React.FC = () => {
                 </p>
               )}
               {errors.member && (
-                <p className="mt-1 text-xs text-gdgoc-red flex items-center gap-1">
+                <p id="assign-member-select-error" role="alert" className="mt-1 text-xs text-gdgoc-red flex items-center gap-1">
                   <AlertCircle className="w-3.5 h-3.5" />
                   {errors.member}
                 </p>
@@ -549,8 +559,13 @@ export const AssignWorkPage: React.FC = () => {
               Task Title <span className="text-gdgoc-red">*</span>
             </label>
             <input
-              id="assign-task-title" data-tour="assign-title-field"
+              id="assign-task-title"
+                aria-invalid={!!errors.title}
+                aria-describedby={errors.title ? "assign-task-title-error" : undefined} data-tour="assign-title-field"
               type="text"
+              required
+              minLength={3}
+              maxLength={150}
               value={taskTitle}
               onChange={(e) => {
                 setTaskTitle(e.target.value);
@@ -564,7 +579,7 @@ export const AssignWorkPage: React.FC = () => {
               }`}
             />
             {errors.title && (
-              <p className="mt-1 text-xs text-gdgoc-red flex items-center gap-1">
+              <p id="assign-task-title-error" role="alert" className="mt-1 text-xs text-gdgoc-red flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5" />
                 {errors.title}
               </p>
@@ -581,6 +596,11 @@ export const AssignWorkPage: React.FC = () => {
             </label>
             <textarea
               id="assign-task-description"
+                aria-invalid={!!errors.description}
+                aria-describedby={errors.description ? "assign-task-description-error" : "assign-description-help"}
+              required
+              minLength={10}
+              maxLength={10000}
               rows={4}
               value={taskDescription}
               onChange={(e) => {
@@ -594,8 +614,9 @@ export const AssignWorkPage: React.FC = () => {
                   : 'border-gdgoc-gray-300 hover:border-gdgoc-gray-400 focus:border-gdgoc-blue focus:ring-blue-100'
               }`}
             />
+            <p id="assign-description-help" className="mt-1 text-xs text-gdgoc-gray-500">10–10,000 characters. Describe the requirements and expected deliverables.</p>
             {errors.description && (
-              <p className="mt-1 text-xs text-gdgoc-red flex items-center gap-1">
+              <p id="assign-task-description-error" role="alert" className="mt-1 text-xs text-gdgoc-red flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5" />
                 {errors.description}
               </p>
@@ -613,12 +634,14 @@ export const AssignWorkPage: React.FC = () => {
             <div className="relative max-w-xs">
               <input
                 id="assign-task-deadline"
+                aria-invalid={!!errors.deadline}
+                aria-describedby={errors.deadline ? "assign-task-deadline-error" : undefined}
                 type="date"
                 min={todayStr}
                 value={deadline}
                 onChange={(e) => {
                   setDeadline(e.target.value);
-                  validateDeadline(e.target.value);
+                  setErrors((prev) => ({ ...prev, deadline: deadlineError(e.target.value) }));
                 }}
                 className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white rounded-xl transition-all card-bb-sm focus:outline-none focus:ring-2 ${
                   errors.deadline
@@ -628,7 +651,7 @@ export const AssignWorkPage: React.FC = () => {
               />
             </div>
             {errors.deadline && (
-              <p className="mt-1 text-xs text-gdgoc-red flex items-center gap-1">
+              <p id="assign-task-deadline-error" role="alert" className="mt-1 text-xs text-gdgoc-red flex items-center gap-1">
                 <AlertCircle className="w-3.5 h-3.5" />
                 {errors.deadline}
               </p>
