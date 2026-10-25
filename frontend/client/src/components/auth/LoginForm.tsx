@@ -12,7 +12,7 @@ import {
   AlertCircle,
   Loader2,
   Info,
-  Key,
+  ShieldCheck,
   Shield,
   Crown,
   Users,
@@ -30,14 +30,12 @@ export const LoginForm: React.FC = () => {
   const [tier, setTier] = useState<ClubTier>('CREW');
   const [selectedTeam, setSelectedTeam] = useState('tech');
   const [leadPosition, setLeadPosition] = useState('Tech Lead');
-  const [invitationKey, setInvitationKey] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Validation state
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
-  const [keyError, setKeyError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [forgotPasswordNotice, setForgotPasswordNotice] = useState(false);
 
@@ -88,14 +86,12 @@ export const LoginForm: React.FC = () => {
     } else if (account.user.role === 'TEAM_LEADER') {
       setTier('LEAD');
       setLeadPosition('Tech Lead');
-      setInvitationKey('GDGOC-LEAD-KEY');
     } else {
       setTier('CREW');
       setSelectedTeam('tech');
     }
     setEmailError(null);
     setPasswordError(null);
-    setKeyError(null);
     setFormError(null);
     setForgotPasswordNotice(false);
   };
@@ -104,15 +100,9 @@ export const LoginForm: React.FC = () => {
     e.preventDefault();
     setFormError(null);
     setForgotPasswordNotice(false);
-    setKeyError(null);
 
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
-
-    if (tier === 'LEAD' && !invitationKey.trim()) {
-      setKeyError('President invitation key is required for Leads and Officers');
-      return;
-    }
 
     if (!isEmailValid || !isPasswordValid) {
       return;
@@ -142,7 +132,7 @@ export const LoginForm: React.FC = () => {
         position,
         teamSlug,
         isTeamHead,
-        invitationKey: tier === 'LEAD' ? invitationKey.trim() : undefined,
+        isSignUp: false,
       });
 
       // Role-based routing redirect
@@ -206,8 +196,8 @@ export const LoginForm: React.FC = () => {
         >
           <Info className="w-4 h-4 text-gdgoc-blue flex-shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold">Password Assistance:</span> During preview testing, any
-            password with 6+ characters is accepted.
+            <span className="font-semibold">Password Notice:</span> Default password for preset accounts is{' '}
+            <span className="font-mono font-bold text-blue-700 bg-blue-100/80 px-1 py-0.5 rounded">Password@123</span>. For newly registered accounts, enter the password you chose during sign up.
           </div>
         </div>
       )}
@@ -235,7 +225,6 @@ export const LoginForm: React.FC = () => {
               type="button"
               onClick={() => {
                 setTier('CREW');
-                setKeyError(null);
               }}
               className={`px-2.5 py-2 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1 ${
                 tier === 'CREW'
@@ -254,7 +243,6 @@ export const LoginForm: React.FC = () => {
               type="button"
               onClick={() => {
                 setTier('LEAD');
-                setKeyError(null);
               }}
               className={`px-2.5 py-2 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1 ${
                 tier === 'LEAD'
@@ -274,7 +262,6 @@ export const LoginForm: React.FC = () => {
               onClick={() => {
                 setTier('PRESIDENT');
                 setEmail('adityarajput.86046@gmail.com');
-                setKeyError(null);
               }}
               className={`px-2.5 py-2 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1 ${
                 tier === 'PRESIDENT'
@@ -333,42 +320,18 @@ export const LoginForm: React.FC = () => {
                 <option value="Tech Lead">💻 Tech Lead (Creates & Assigns Tech Tasks)</option>
                 <option value="Media Lead">🎨 Media Lead (Oversees Design & Media)</option>
                 <option value="Content Lead">📝 Content Lead (Oversees PR & Writing)</option>
-                <option value="Vice President">🛡️ Vice President (Executive Co-Lead)</option>
                 <option value="Secretary">📋 Secretary (Documentation & Records)</option>
                 <option value="Organizer">🎯 Organizer (Events & Logistics)</option>
+                <option value="Vice President">🛡️ Vice President (Executive Co-Lead)</option>
               </select>
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-1">
-                <label
-                  htmlFor="invitation-key-input"
-                  className="text-xs font-semibold text-gdgoc-gray-800 flex items-center gap-1"
-                >
-                  <Key className="w-3.5 h-3.5 text-gdgoc-blue" />
-                  <span>President Invitation Key *</span>
-                </label>
-                <span className="text-[10px] text-gdgoc-blue font-medium">Issued by President</span>
+            <div className="p-3 bg-blue-50/80 rounded-xl border border-blue-200/90 text-xs text-blue-900 flex items-start gap-2.5 shadow-2xs">
+              <ShieldCheck className="w-4 h-4 text-gdgoc-blue flex-shrink-0 mt-0.5" />
+              <div className="text-[11px] leading-relaxed">
+                <span className="font-semibold text-blue-950">Verified Leadership Access:</span>{' '}
+                Leads and Officers who signed up with their President Key log in directly with their registered email & password.
               </div>
-              <input
-                id="invitation-key-input"
-                type="text"
-                value={invitationKey}
-                onChange={(e) => {
-                  setInvitationKey(e.target.value);
-                  if (keyError) setKeyError(null);
-                }}
-                placeholder="e.g. GDGOC-LEAD-KEY or inv_..."
-                className={`w-full px-3 py-2 text-xs bg-white border rounded-lg focus:outline-none focus:ring-2 ${
-                  keyError
-                    ? 'border-red-300 focus:ring-red-100'
-                    : 'border-blue-200 focus:ring-blue-100'
-                }`}
-              />
-              {keyError && <p className="mt-1 text-[11px] text-gdgoc-red font-medium">{keyError}</p>}
-              <p className="mt-1 text-[10px] text-gray-500">
-                Tip: Enter any President key or use <code>GDGOC-LEAD-KEY</code> for testing.
-              </p>
             </div>
           </div>
         )}

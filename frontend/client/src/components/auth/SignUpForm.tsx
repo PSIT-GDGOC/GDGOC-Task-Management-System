@@ -79,6 +79,7 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onLogIn }) => {
         isTeamHead: isLead && fields.position.toLowerCase().includes('lead'),
         membershipStatus: isLead ? 'CORE_MEMBER' : 'REGULAR_MEMBER',
         invitationKey: isLead ? fields.invitationKey.trim() : undefined,
+        isSignUp: true,
       });
 
       if (user.role === 'ADMIN') {
@@ -244,9 +245,9 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onLogIn }) => {
               <option value="Tech Lead">💻 Tech Lead</option>
               <option value="Media Lead">🎨 Media Lead</option>
               <option value="Content Lead">📝 Content Lead</option>
-              <option value="Vice President">🛡️ Vice President</option>
               <option value="Secretary">📋 Secretary</option>
               <option value="Organizer">🎯 Organizer</option>
+              <option value="Vice President">🛡️ Vice President</option>
             </select>
           </div>
         </div>
@@ -265,12 +266,12 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onLogIn }) => {
               type="text"
               value={fields.invitationKey}
               onChange={(event) => updateField('invitationKey', event.target.value)}
-              placeholder="e.g. GDGOC-LEAD-KEY or inv_..."
+              placeholder={`Enter President Key for ${fields.position}`}
               className={fieldClass('invitationKey')}
             />
             {renderError('invitationKey')}
             <p className="text-[10px] text-gdgoc-gray-500">
-              Leads and Executive Officers require a President Key.
+              Enter the constant key provided by the President for {fields.position}.
             </p>
           </div>
         )}

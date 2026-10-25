@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, LoginCredentials, AuthContextType, Role } from '../types/auth';
 import { authApi } from '../services/api';
-import { mockAuthService } from './mockAuthService';
+import { mockAuthService, isValidPresidentKey } from './mockAuthService';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -86,6 +86,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           teamSlug,
           credentials.isTeamHead,
           credentials.invitationKey,
+          credentials.isSignUp,
+          credentials.password,
         );
         setUser(liveUser);
         localStorage.setItem('gdgoc_current_user', JSON.stringify(liveUser));
@@ -93,7 +95,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           localStorage.setItem(`gdgoc_name_confirmed_${liveUser.id}`, 'true');
         }
         return liveUser;
-      } catch (err) {
+      } catch (err: any) {
+        // If the backend actively rejected the request (e.g. 404 user not found, 409 already exists, 400 validation error),
+        // rethrow immediately so the user sees the error and isn't silently logged in via mock!
+        const msg = err?.message || '';
+        const status = err?.status;
+        if (
+          (status && status >= 400 && status < 500) ||
+          msg.includes('No account found') ||
+          msg.includes('already exists') ||
+          msg.includes('Incorrect password') ||
+          msg.includes('deactivated') ||
+          msg.includes('Only one') ||
+          msg.includes('Invalid or expired')
+        ) {
+          // If the remote server rejected the key but it was generated locally in this browser's President Vault,
+          // allow local preview login so the user is not blocked before remote deployment completes.
+          if (
+            msg.includes('Invalid or expired') &&
+            credentials.invitationKey &&
+            isValidPresidentKey(credentials.invitationKey)
+          ) {
+            console.info('[Auth] President key validated locally from browser registry; using preview session');
+          } else {
+            throw err;
+          }
+        }
+
         console.warn('[Auth] Live server dev-login unavailable; falling back to local preview session:', err);
         const fallbackUser = await mockAuthService.login(credentials);
         setUser(fallbackUser);

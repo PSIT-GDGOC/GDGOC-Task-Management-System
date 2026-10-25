@@ -67,6 +67,7 @@ model User {
   githubUsername String?    @unique
   googleSubject  String?    @unique
   isActive       Boolean    @default(true) // Soft-disable / deactivation
+  passwordHash   String?
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 
@@ -270,4 +271,15 @@ model Notification {
 
   @@unique([userId, taskId, kind])
   @@index([userId, readAt, createdAt])
+}
+
+model RoleKey {
+  id        String   @id @default(cuid())
+  role      String   @default("ADMIN")
+  position  String   @unique
+  keyCode   String
+  label     String?
+  teamSlug  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

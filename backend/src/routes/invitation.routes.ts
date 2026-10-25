@@ -5,6 +5,8 @@ import { validate } from '../middleware/validate';
 import { InvitationService } from '../services/invitation.service';
 import { asyncHandler } from '../utils/asyncHandler';
 import { invitationLimit } from '../security/rateLimits';
+import { prisma } from '../lib/prisma';
+import { AppError } from '../middleware/errorHandler';
 import {
   createInvitationSchema,
   invitationListSchema,
@@ -14,6 +16,61 @@ import {
 } from '../schemas/invitation';
 const router = Router();
 router.use(requireAuth);
+
+router.get(
+  '/role-keys',
+  asyncHandler(async (req, res) => {
+    const isPresident =
+      req.user?.role === 'SYSTEM_OWNER' ||
+      req.user?.position === 'President' ||
+      req.user?.email === 'adityarajput.86046@gmail.com';
+
+    if (!isPresident) {
+      throw new AppError('Only the President can view constant leadership keys', 403);
+    }
+    const keys = await prisma.roleKey.findMany({
+      orderBy: [{ teamSlug: 'asc' }, { position: 'asc' }],
+    });
+    res.json({ success: true, data: keys });
+  }),
+);
+
+router.patch(
+  '/role-keys/:id',
+  asyncHandler(async (req, res) => {
+    const isPresident =
+      req.user?.role === 'SYSTEM_OWNER' ||
+      req.user?.position === 'President' ||
+      req.user?.email === 'adityarajput.86046@gmail.com';
+
+    if (!isPresident) {
+      throw new AppError('Only the President can update leadership keys', 403);
+    }
+    const { keyCode } = req.body;
+    if (!keyCode || typeof keyCode !== 'string' || keyCode.trim().length < 2) {
+      throw new AppError('A valid key code (at least 2 characters) is required', 400);
+    }
+
+    const target = await prisma.roleKey.findFirst({
+      where: {
+        OR: [
+          { id: req.params.id },
+          { position: { equals: req.params.id, mode: 'insensitive' } },
+        ],
+      },
+    });
+
+    if (!target) {
+      throw new AppError('Role key record not found', 404);
+    }
+
+    const updated = await prisma.roleKey.update({
+      where: { id: target.id },
+      data: { keyCode: keyCode.trim().toUpperCase() },
+    });
+    res.json({ success: true, data: updated });
+  }),
+);
 router.get(
   '/',
   validate({ query: invitationListSchema }),

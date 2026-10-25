@@ -7,7 +7,7 @@ export const createInvitationSchema = z
     teamId: idSchema.optional(),
     email: z.string().trim().toLowerCase().email().optional(),
     expiresInHours: z.number().int().min(1).max(168).default(48),
-    customKey: z.string().trim().min(4).max(64).optional(),
+    customKey: z.string().trim().min(2).max(64).optional(),
   })
   .strict();
 export const invitationListSchema = paginationSchema.extend({
@@ -19,7 +19,7 @@ export const redemptionSchema = z
     code: z
       .string()
       .trim()
-      .min(4).max(100),
+      .min(2).max(100),
   })
   .strict();
 export type InvitationInput = z.infer<typeof createInvitationSchema>;
