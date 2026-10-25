@@ -232,20 +232,29 @@ export const authApi = {
     teamSlug?: string,
     isTeamHead?: boolean,
     invitationKey?: string,
+    isSignUp?: boolean,
+    password?: string,
   ): Promise<User> {
     const backendRole = role === 'ADMIN' ? 'ADMIN' : 'USER';
-    const res = await apiRequest<{ success: boolean; user: any }>('/auth/dev-login', 'POST', {
+    const res = await apiRequest<{ success: boolean; user: any; csrfToken?: string }>('/auth/dev-login', 'POST', {
       email,
       name,
+      password,
       role: backendRole,
       position,
       teamSlug,
       isTeamHead,
       invitationKey,
+      isSignUp,
     });
 
-    // Refresh CSRF
-    await getCsrfToken();
+    // Invalidate stale CSRF token and sync the freshly issued token from login session
+    if (res.csrfToken) {
+      cachedCsrfToken = res.csrfToken;
+    } else {
+      cachedCsrfToken = null;
+      await getCsrfToken();
+    }
 
     let resolvedRole: Role = 'MEMBER';
     const isHead = Boolean(isTeamHead) || res.user.teamMemberships?.some((m: any) => m.isTeamHead);
@@ -311,7 +320,17 @@ export const authApi = {
   },
 
   async updateName(name: string): Promise<{ success: boolean; user: any }> {
-    return await apiRequest<{ success: boolean; user: any }>('/auth/name', 'PATCH', { name });
+    try {
+      return await apiRequest<{ success: boolean; user: any }>('/auth/name', 'PATCH', { name });
+    } catch (err: any) {
+      // If rejected due to rotated CSRF token or session refresh, obtain fresh token and retry once
+      if (err?.status === 403 || err?.message?.includes('CSRF')) {
+        cachedCsrfToken = null;
+        await getCsrfToken();
+        return await apiRequest<{ success: boolean; user: any }>('/auth/name', 'PATCH', { name });
+      }
+      throw err;
+    }
   },
 };
 
@@ -414,7 +433,28 @@ export interface AdminUser {
   memberships?: { team: { id: string; name: string; slug: string }; isTeamHead: boolean }[];
 }
 
+export interface LeadershipRoleKey {
+  id: string;
+  role: string;
+  position: string;
+  keyCode: string;
+  label?: string | null;
+  teamSlug?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export const adminApi = {
+  async getRoleKeys(): Promise<LeadershipRoleKey[]> {
+    const res = await apiRequest<{ success: boolean; data: LeadershipRoleKey[] }>('/invitations/role-keys');
+    return res.data || [];
+  },
+
+  async updateRoleKey(id: string, keyCode: string): Promise<LeadershipRoleKey> {
+    const res = await apiRequest<{ success: boolean; data: LeadershipRoleKey }>(`/invitations/role-keys/${id}`, 'PATCH', { keyCode });
+    return res.data;
+  },
+
   async getInvitations(): Promise<AdminInvitation[]> {
     const res = await apiRequest<{ success: boolean; data: any[] }>('/invitations');
     return res.data || [];

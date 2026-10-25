@@ -76,6 +76,96 @@ export const DEV_TEST_ACCOUNTS: DevAccount[] = [
 ];
 
 const AUTH_STORAGE_KEY = 'gdgoc_taskflow_session_user';
+const REGISTERED_USERS_KEY = 'gdgoc_registered_mock_users';
+const VAULT_INVITATIONS_KEY = 'gdgoc_vault_invitations';
+
+const BUILT_IN_LEAD_KEYS = [
+  'GDGOC-TECH-KEY',
+  'GDGOC-MEDIA-KEY',
+  'GDGOC-CONTENT-KEY',
+  'GDGOC-SEC-KEY',
+  'GDGOC-ORG-KEY',
+  'GDGOC-VP-KEY',
+  'GDGOC-LEAD-KEY',
+  'SEC',
+  'VP',
+  'ORG',
+  'TECH',
+  'MEDIA',
+  'CONTENT',
+  'LEAD',
+  'LEKKK',
+];
+
+export function isValidPresidentKey(rawKey: string): boolean {
+  const normalized = (rawKey || '').trim().toUpperCase();
+  if (!normalized) return false;
+  if (BUILT_IN_LEAD_KEYS.some((k) => k.toUpperCase() === normalized)) return true;
+  if (
+    normalized.startsWith('GDGOC-') ||
+    normalized.startsWith('LEAD-') ||
+    normalized.startsWith('INV-')
+  ) {
+    return true;
+  }
+
+  try {
+    if (typeof localStorage === 'undefined') return false;
+
+    // 1. Check custom keys registry
+    const customRaw = localStorage.getItem('gdgoc_vault_custom_keys');
+    if (customRaw) {
+      const customKeys = JSON.parse(customRaw);
+      if (Array.isArray(customKeys) && customKeys.some((k) => String(k).toUpperCase() === normalized)) {
+        return true;
+      }
+    }
+
+    // 2. Check full vault invitations
+    const raw = localStorage.getItem(VAULT_INVITATIONS_KEY);
+    if (raw) {
+      const list = JSON.parse(raw);
+      if (Array.isArray(list)) {
+        return list.some(
+          (inv: any) =>
+            (inv.status === 'ACTIVE' || !inv.status) &&
+            ((inv.rawCode && inv.rawCode.trim().toUpperCase() === normalized) ||
+             (inv.id && inv.id.trim().toUpperCase() === normalized))
+        );
+      }
+    }
+  } catch {
+    return false;
+  }
+  return false;
+}
+
+
+interface RegisteredMockUser extends Partial<User> {
+  password?: string;
+}
+
+function getRegisteredUsers(): Record<string, RegisteredMockUser> {
+  try {
+    if (typeof localStorage === 'undefined') return {};
+    const raw = localStorage.getItem(REGISTERED_USERS_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveRegisteredUser(email: string, data: RegisteredMockUser) {
+  try {
+    if (typeof localStorage === 'undefined') return;
+    const users = getRegisteredUsers();
+    users[email.toLowerCase()] = data;
+    localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(users));
+  } catch {
+    // ignore
+  }
+}
+
 
 export const mockAuthService = {
   /**
@@ -100,26 +190,141 @@ export const mockAuthService = {
       throw new Error('Email address is required.');
     }
 
-    // Determine preview role strictly from the selected membership status and email
-    const isPresident =
+    const isPresidentEmail =
       normalizedEmail.toLowerCase() === 'adityarajput.86046@gmail.com' ||
       normalizedEmail.toLowerCase() === 'gdgoc.psit@gmail.com' ||
-      credentials.position?.toLowerCase().includes('president') ||
-      credentials.email.toLowerCase().includes('admin');
+      normalizedEmail.toLowerCase() === 'admin@psit.gdgoc.dev';
 
-    const membershipStatus = credentials.membershipStatus || 'REGULAR_MEMBER';
-    const role: Role = isPresident
-      ? 'ADMIN'
-      : membershipStatus === 'CORE_MEMBER'
-        ? 'TEAM_LEADER'
-        : 'MEMBER';
-
-    // Derive display name from email prefix (e.g. "alex.kumar@gmail.com" -> "Alex Kumar")
+    // Match preset developer accounts
     const matchedPreset = DEV_TEST_ACCOUNTS.find(
       (acc) =>
         acc.user.email.toLowerCase() === normalizedEmail.toLowerCase() ||
         acc.aliases.some((a) => a.toLowerCase() === normalizedEmail.toLowerCase())
     );
+
+    const registeredUsers = getRegisteredUsers();
+    const existingRegistered = registeredUsers[normalizedEmail.toLowerCase()];
+
+    // A user can only be President if their email matches designated President accounts or they were registered as President
+    const isPresident = isPresidentEmail || existingRegistered?.position?.toLowerCase() === 'president';
+
+    // Account existence check
+    const isKnownAccount = Boolean(matchedPreset || existingRegistered || isPresidentEmail);
+
+    // Reject non-existent accounts on sign-in
+    if (!credentials.isSignUp && !isKnownAccount) {
+      throw new Error('No account found with this email. Please sign up first.');
+    }
+
+    // Reject existing accounts on sign-up
+    if (credentials.isSignUp && isKnownAccount) {
+      throw new Error('An account with this email already exists. Please sign in instead.');
+    }
+
+    // Enforce strict password validation on sign-in across all tiers (NO random passwords allowed)
+    if (!credentials.isSignUp) {
+      const inputPassword = (credentials.password || '').trim();
+      if (!inputPassword) {
+        throw new Error('Password is required.');
+      }
+
+      // Expected password: user chosen password during sign up, preset password, or default Password@123
+      const expectedPassword =
+        existingRegistered?.password?.trim() ||
+        matchedPreset?.password?.trim() ||
+        'Password@123';
+
+      if (inputPassword !== expectedPassword) {
+        throw new Error('Incorrect password. Please verify your password and try again.');
+      }
+    }
+
+    // Enforce President Invitation Key ONLY during initial sign-up for Leads and Officers
+    const isLeadOrOfficer =
+      credentials.isTeamHead ||
+      credentials.membershipStatus === 'CORE_MEMBER' ||
+      (credentials.position &&
+        credentials.position !== 'Team Member' &&
+        credentials.position !== 'Member' &&
+        !isPresident);
+
+    if (credentials.isSignUp && isLeadOrOfficer) {
+      const providedKey = (credentials.invitationKey || '').trim().toUpperCase();
+      if (!providedKey) {
+        throw new Error('President invitation key is required for Leads and Officers during registration.');
+      }
+
+      const CONSTANT_POSITION_KEYS: Record<string, string> = {
+        'GDGOC-VP-KEY': 'Vice President',
+        'VP': 'Vice President',
+        'GDGOC-SEC-KEY': 'Secretary',
+        'SEC': 'Secretary',
+        'GDGOC-ORG-KEY': 'Organizer',
+        'ORG': 'Organizer',
+        'GDGOC-TECH-KEY': 'Tech Lead',
+        'TECH': 'Tech Lead',
+        'GDGOC-MEDIA-KEY': 'Media Lead',
+        'MEDIA': 'Media Lead',
+        'GDGOC-CONTENT-KEY': 'Content Lead',
+        'CONTENT': 'Content Lead',
+        'GDGOC-LEAD-KEY': 'Tech Lead',
+        'LEAD': 'Tech Lead',
+      };
+
+      // Check if President customized any key in the database / local store
+      let customKeyMatchedPos: string | undefined;
+      try {
+        if (typeof localStorage !== 'undefined') {
+          const stored = localStorage.getItem('gdgoc_vault_custom_role_keys');
+          if (stored) {
+            const map = JSON.parse(stored);
+            for (const [pos, code] of Object.entries(map)) {
+              if (String(code).toUpperCase() === providedKey) {
+                customKeyMatchedPos = pos;
+                break;
+              }
+            }
+          }
+        }
+      } catch {}
+
+      const expectedPos = customKeyMatchedPos || CONSTANT_POSITION_KEYS[providedKey];
+      const targetPos = (credentials.position || '').trim();
+
+      if (expectedPos) {
+        if (targetPos && targetPos.toLowerCase() !== expectedPos.toLowerCase()) {
+          throw new Error(`Key "${providedKey}" is designated for "${expectedPos}". It cannot be used to sign up as "${targetPos}".`);
+        }
+      } else if (!isValidPresidentKey(providedKey)) {
+        throw new Error('Invalid President invitation key for this position. Please enter a valid key issued by the President.');
+      }
+    }
+
+    // Role guard on returning login: verify that the account in DB/presets actually has Lead/Officer privileges
+    if (!credentials.isSignUp && isLeadOrOfficer && !isPresident) {
+      const storedRole = existingRegistered?.role || matchedPreset?.user.role;
+      const storedPos = existingRegistered?.position || matchedPreset?.user.position;
+      const isActualAdminOrLead =
+        storedRole === 'ADMIN' ||
+        storedRole === 'TEAM_LEADER' ||
+        (storedPos && storedPos !== 'Team Member' && storedPos !== 'Member');
+
+      if (!isActualAdminOrLead) {
+        throw new Error('Access denied. Your account is registered as a regular crew member. Please sign in under Team Crew.');
+      }
+    }
+
+    const membershipStatus = existingRegistered?.membershipStatus || credentials.membershipStatus || 'REGULAR_MEMBER';
+    const isExecutiveOfficer = (existingRegistered?.position || credentials.position) &&
+      ['Vice President', 'Secretary', 'Organizer'].some(
+        (p) => p.toLowerCase() === (existingRegistered?.position || credentials.position)?.toLowerCase()
+      );
+
+    const role: Role = (isPresident || isExecutiveOfficer || existingRegistered?.role === 'ADMIN')
+      ? 'ADMIN'
+      : (credentials.isTeamHead || membershipStatus === 'CORE_MEMBER' || existingRegistered?.role === 'TEAM_LEADER')
+        ? 'TEAM_LEADER'
+        : (existingRegistered?.role || 'MEMBER');
 
     let displayName = credentials.name?.trim() || matchedPreset?.user.name;
     if (!displayName) {
@@ -149,6 +354,18 @@ export const mockAuthService = {
       membershipStatus: membershipStatus,
       team: assignedTeam,
     };
+
+    // If this was a sign-up, persist in mock registered users
+    if (credentials.isSignUp) {
+      saveRegisteredUser(normalizedEmail, {
+        name: displayName,
+        position: assignedPosition,
+        team: assignedTeam,
+        role: role,
+        membershipStatus: membershipStatus,
+        password: credentials.password,
+      });
+    }
 
     // Store non-sensitive session metadata for refresh persistence
     try {
@@ -201,6 +418,31 @@ export const mockAuthService = {
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+
+        // Persist updated name into mock registered directory
+        if (updated.email) {
+          const registered = getRegisteredUsers();
+          const emailKey = updated.email.toLowerCase();
+          if (registered[emailKey]) {
+            registered[emailKey] = {
+              ...registered[emailKey],
+              ...patch,
+            };
+            localStorage.setItem(REGISTERED_USERS_KEY, JSON.stringify(registered));
+          }
+        }
+      }
+
+      // Also sync active preset in memory
+      if (updated.email && patch.name) {
+        const preset = DEV_TEST_ACCOUNTS.find(
+          (acc) =>
+            acc.user.email.toLowerCase() === updated.email.toLowerCase() ||
+            acc.aliases.some((a) => a.toLowerCase() === updated.email.toLowerCase())
+        );
+        if (preset) {
+          preset.user.name = patch.name;
+        }
       }
     } catch {
       // Storage access may be restricted

@@ -25,6 +25,7 @@ export interface LoginCredentials {
   isTeamHead?: boolean;
   invitationKey?: string;
   rememberMe?: boolean;
+  isSignUp?: boolean;
 }
 
 export interface AuthState {

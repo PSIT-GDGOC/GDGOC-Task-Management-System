@@ -3,19 +3,19 @@ import { z } from 'zod';
 
 const coreTeams = [
   {
-    name: 'Tech',
+    name: 'Tech Team',
     slug: 'tech',
-    description: 'Engineering, software development, cloud, and open source.',
+    description: 'Engineering, software development, cloud infrastructure, and open-source campus projects.',
   },
   {
-    name: 'Media',
+    name: 'Media Team',
     slug: 'media',
-    description: 'Design, video production, photography, and brand assets.',
+    description: 'UI/UX design, visual branding, motion graphics, video editing, and event coverage.',
   },
   {
-    name: 'Content',
+    name: 'Content Team',
     slug: 'content',
-    description: 'Technical writing, blogs, social media content, and documentation.',
+    description: 'Technical writing, editorial, documentation, blogs, and social media storytelling.',
   },
 ];
 
@@ -29,18 +29,22 @@ export async function seedDatabase(prisma: PrismaClient, ownerEmail?: string) {
   return prisma.$transaction(
     async (tx) => {
       for (const team of coreTeams) {
-        await tx.team.upsert({ where: { slug: team.slug }, update: {}, create: team });
+        await tx.team.upsert({
+          where: { slug: team.slug },
+          update: { name: team.name, description: team.description },
+          create: team,
+        });
       }
 
       if (normalizedEmail) {
         await tx.user.upsert({
           where: { email: normalizedEmail },
-          update: { role: SystemRole.SYSTEM_OWNER },
+          update: { role: SystemRole.SYSTEM_OWNER, position: 'President' },
           create: {
             email: normalizedEmail,
-            name: 'Initial System Owner',
+            name: 'President',
             role: SystemRole.SYSTEM_OWNER,
-            position: 'System Administrator',
+            position: 'President',
           },
         });
       }

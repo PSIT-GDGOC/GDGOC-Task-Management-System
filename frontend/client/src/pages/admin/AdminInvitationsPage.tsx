@@ -1,760 +1,448 @@
 import React, { useState, useEffect } from 'react';
-import { adminApi, AdminInvitation } from '../../services/api';
-import { TEAMS } from '../../data/mockData';
+import { adminApi, LeadershipRoleKey } from '../../services/api';
 import { 
-  KeyRound, 
+  Key, 
   Copy, 
   Check, 
-  CheckCircle2, 
-  XCircle, 
-  Trash2, 
-  AlertTriangle,
-  Sparkles,
-  Send,
-  Search,
+  ShieldCheck, 
+  Crown, 
+  Laptop, 
+  Video, 
+  PenTool, 
+  ClipboardList, 
+  Calendar, 
+  Edit3, 
+  Save, 
+  X, 
   RefreshCw,
-  Crown,
-  Laptop,
-  Video,
-  PenTool,
-  Users,
-  Award
+  Share2,
+  Lock
 } from 'lucide-react';
 
-interface TeamOption {
-  id: string;
-  name: string;
-  slug: string;
-}
+const DEFAULT_ROLE_KEYS: LeadershipRoleKey[] = [
+  {
+    id: 'rk_vice_president',
+    role: 'ADMIN',
+    position: 'Vice President',
+    keyCode: 'GDGOC-VP-KEY',
+    label: 'Vice President (Executive Co-Lead)',
+    teamSlug: null,
+  },
+  {
+    id: 'rk_secretary',
+    role: 'ADMIN',
+    position: 'Secretary',
+    keyCode: 'GDGOC-SEC-KEY',
+    label: 'Secretary (Documentation & Records)',
+    teamSlug: null,
+  },
+  {
+    id: 'rk_organizer',
+    role: 'ADMIN',
+    position: 'Organizer',
+    keyCode: 'GDGOC-ORG-KEY',
+    label: 'Organizer (Logistics & Events)',
+    teamSlug: null,
+  },
+  {
+    id: 'rk_tech_lead',
+    role: 'ADMIN',
+    position: 'Tech Lead',
+    keyCode: 'GDGOC-TECH-KEY',
+    label: 'Tech Team Lead',
+    teamSlug: 'tech',
+  },
+  {
+    id: 'rk_media_lead',
+    role: 'ADMIN',
+    position: 'Media Lead',
+    keyCode: 'GDGOC-MEDIA-KEY',
+    label: 'Media Team Lead',
+    teamSlug: 'media',
+  },
+  {
+    id: 'rk_content_lead',
+    role: 'ADMIN',
+    position: 'Content Lead',
+    keyCode: 'GDGOC-CONTENT-KEY',
+    label: 'Content Team Lead',
+    teamSlug: 'content',
+  },
+];
 
 export const AdminInvitationsPage: React.FC = () => {
-  const [invitations, setInvitations] = useState<AdminInvitation[]>([]);
-  const [teams, setTeams] = useState<TeamOption[]>([]);
+  const [roleKeys, setRoleKeys] = useState<LeadershipRoleKey[]>(DEFAULT_ROLE_KEYS);
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [feedbackMsg, setFeedbackMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [copiedKeyId, setCopiedKeyId] = useState<string | null>(null);
+  const [copiedInviteId, setCopiedInviteId] = useState<string | null>(null);
 
-  // Form Inputs
-  const [roleInput, setRoleInput] = useState<'ADMIN' | 'PRESIDENT'>('ADMIN');
-  const [positionInput, setPositionInput] = useState('Technical Lead');
-  const [teamInput, setTeamInput] = useState('');
-  const [customKeyInput, setCustomKeyInput] = useState('');
-  const [emailInput, setEmailInput] = useState('');
-  const [expiresInHours, setExpiresInHours] = useState(48);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // Filter & Search
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'USED' | 'REVOKED'>('ALL');
-
-  // Generated Code Modal / Alert
-  const [newlyCreatedCode, setNewlyCreatedCode] = useState<string | null>(null);
-  const [newlyCreatedRole, setNewlyCreatedRole] = useState<string>('');
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [copiedMessage, setCopiedMessage] = useState(false);
+  // Edit Key Modal
+  const [editingKey, setEditingKey] = useState<LeadershipRoleKey | null>(null);
+  const [editKeyCode, setEditKeyCode] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    loadData();
+    loadKeys();
   }, []);
 
-  const loadData = async () => {
+  const loadKeys = async () => {
     setIsLoading(true);
     try {
-      const [invData, teamData] = await Promise.allSettled([
-        adminApi.getInvitations(),
-        adminApi.getTeams()
-      ]);
-
-      if (invData.status === 'fulfilled' && invData.value && invData.value.length > 0) {
-        setInvitations(invData.value);
+      const liveKeys = await adminApi.getRoleKeys();
+      if (liveKeys && liveKeys.length > 0) {
+        setRoleKeys(liveKeys);
       } else {
-        fallbackMockInvitations();
-      }
-
-      if (teamData.status === 'fulfilled' && teamData.value && teamData.value.length > 0) {
-        setTeams(teamData.value);
-      } else {
-        setTeams(TEAMS.map(t => ({ id: t.id, name: t.name, slug: t.id })));
+        setRoleKeys(DEFAULT_ROLE_KEYS);
       }
     } catch {
-      fallbackMockInvitations();
-      setTeams(TEAMS.map(t => ({ id: t.id, name: t.name, slug: t.id })));
+      setRoleKeys(DEFAULT_ROLE_KEYS);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const fallbackMockInvitations = () => {
-    const mockInvites: AdminInvitation[] = [
-      {
-        id: 'inv_sample_tech',
-        role: 'ADMIN',
-        intendedRole: 'ADMIN',
-        position: 'Technical Lead',
-        intendedPosition: 'Technical Lead',
-        intendedEmail: 'tech.lead@psit.ac.in',
-        status: 'ACTIVE',
-        expiresAt: new Date(Date.now() + 48 * 3600 * 1000).toISOString(),
-        createdAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString(),
-        rawCode: 'GDGOC-TECH-KEY',
-      },
-      {
-        id: 'inv_sample_media',
-        role: 'ADMIN',
-        intendedRole: 'ADMIN',
-        position: 'Media & Motion Lead',
-        intendedPosition: 'Media & Motion Lead',
-        intendedEmail: null,
-        status: 'USED',
-        expiresAt: new Date(Date.now() - 12 * 3600 * 1000).toISOString(),
-        createdAt: new Date(Date.now() - 72 * 3600 * 1000).toISOString(),
-      },
-      {
-        id: 'inv_sample_vp',
-        role: 'ADMIN',
-        intendedRole: 'ADMIN',
-        position: 'Vice President',
-        intendedPosition: 'Vice President',
-        intendedEmail: 'vp@psit.ac.in',
-        status: 'ACTIVE',
-        expiresAt: new Date(Date.now() + 120 * 3600 * 1000).toISOString(),
-        createdAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-        rawCode: 'GDGOC-VP-KEY',
-      },
-    ];
-    setInvitations(mockInvites);
+  const handleCopyKey = (key: LeadershipRoleKey) => {
+    navigator.clipboard.writeText(key.keyCode);
+    setCopiedKeyId(key.id);
+    setTimeout(() => setCopiedKeyId(null), 2500);
   };
 
-  const applyPreset = (preset: { role: 'ADMIN' | 'PRESIDENT'; position: string; teamKeyword?: string; suggestedKey?: string }) => {
-    setRoleInput(preset.role);
-    setPositionInput(preset.position);
-    if (preset.suggestedKey) setCustomKeyInput(preset.suggestedKey);
-    else setCustomKeyInput('');
-    
-    if (preset.teamKeyword && teams.length > 0) {
-      const match = teams.find(t => t.slug.toLowerCase().includes(preset.teamKeyword!) || t.name.toLowerCase().includes(preset.teamKeyword!));
-      if (match) setTeamInput(match.id);
-      else setTeamInput('');
-    } else {
-      setTeamInput('');
-    }
+  const handleCopyInviteMessage = (key: LeadershipRoleKey) => {
+    const inviteText =
+      `🌟 GDG on Campus — Leadership Authorization\n\n` +
+      `You have been designated as the ${key.position} for GDGOC PSIT!\n\n` +
+      `🔑 Constant President Key: ${key.keyCode}\n` +
+      `🔗 Sign Up Portal: ${window.location.origin}/signup\n\n` +
+      `Instructions: On the sign-up page, choose Position "${key.position}" and enter your President Key "${key.keyCode}". ` +
+      `Once registered, your leadership privileges are permanently active on TaskHub!`;
+
+    navigator.clipboard.writeText(inviteText);
+    setCopiedInviteId(key.id);
+    setTimeout(() => setCopiedInviteId(null), 2500);
   };
 
-  const handleGenerate = async (e: React.FormEvent) => {
+  const handleOpenEdit = (key: LeadershipRoleKey) => {
+    setEditingKey(key);
+    setEditKeyCode(key.keyCode);
+  };
+
+  const handleSaveEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMsg(null);
-    setSuccessMsg(null);
-    setIsSubmitting(true);
+    if (!editingKey) return;
+    const trimmed = editKeyCode.trim().toUpperCase();
+    if (trimmed.length < 2) {
+      setFeedbackMsg({ type: 'error', text: 'Key must be at least 2 characters long' });
+      return;
+    }
 
+    setIsSaving(true);
     try {
-      const result = await adminApi.createInvitation({
-        role: roleInput,
-        position: positionInput.trim() || undefined,
-        teamId: teamInput || undefined,
-        email: emailInput.trim() || undefined,
-        expiresInHours: Number(expiresInHours),
-        customKey: customKeyInput.trim() || undefined,
+      await adminApi.updateRoleKey(editingKey.id, trimmed);
+      setRoleKeys((prev) =>
+        prev.map((k) => (k.id === editingKey.id ? { ...k, keyCode: trimmed } : k))
+      );
+
+      try {
+        const stored = localStorage.getItem('gdgoc_vault_custom_role_keys');
+        const customMap = stored ? JSON.parse(stored) : {};
+        customMap[editingKey.position] = trimmed;
+        localStorage.setItem('gdgoc_vault_custom_role_keys', JSON.stringify(customMap));
+      } catch {}
+
+      setFeedbackMsg({
+        type: 'success',
+        text: `Successfully updated constant key for ${editingKey.position} to "${trimmed}" in database.`,
       });
-
-      const raw = result.rawCode || customKeyInput.trim() || `GDGOC-${positionInput.replace(/[^a-zA-Z]/g, '').slice(0, 4).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-      setNewlyCreatedCode(raw);
-      setNewlyCreatedRole(positionInput.trim() || roleInput);
-      
-      const newInv: AdminInvitation = {
-        id: result.id || `inv_${Date.now()}`,
-        role: roleInput,
-        intendedRole: roleInput,
-        position: positionInput || 'Lead Officer',
-        intendedPosition: positionInput || 'Lead Officer',
-        intendedEmail: emailInput || null,
-        intendedTeamId: teamInput || null,
-        status: 'ACTIVE',
-        expiresAt: result.expiresAt || new Date(Date.now() + expiresInHours * 3600 * 1000).toISOString(),
-        createdAt: new Date().toISOString(),
-        rawCode: raw,
-      };
-
-      setInvitations((prev) => [newInv, ...prev]);
-      setSuccessMsg(`President Invitation Key "${raw}" generated and ready to share!`);
-      setCustomKeyInput('');
+      setEditingKey(null);
     } catch (err: any) {
-      // Local fallback token creation
-      const fallbackKey = customKeyInput.trim() || `GDGOC-${positionInput.replace(/[^a-zA-Z]/g, '').slice(0, 4).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-      setNewlyCreatedCode(fallbackKey);
-      setNewlyCreatedRole(positionInput.trim() || roleInput);
-      setInvitations((prev) => [
-        {
-          id: `inv_mock_${Date.now()}`,
-          role: roleInput,
-          intendedRole: roleInput,
-          position: positionInput || 'Administrator',
-          intendedPosition: positionInput || 'Administrator',
-          intendedEmail: emailInput || null,
-          intendedTeamId: teamInput || null,
-          status: 'ACTIVE',
-          expiresAt: new Date(Date.now() + expiresInHours * 3600 * 1000).toISOString(),
-          createdAt: new Date().toISOString(),
-          rawCode: fallbackKey,
-        },
-        ...prev,
-      ]);
-      setSuccessMsg('Invitation created in workspace state (live backend sync will verify).');
-      setCustomKeyInput('');
+      // Local fallback
+      setRoleKeys((prev) =>
+        prev.map((k) => (k.id === editingKey.id ? { ...k, keyCode: trimmed } : k))
+      );
+
+      try {
+        const stored = localStorage.getItem('gdgoc_vault_custom_role_keys');
+        const customMap = stored ? JSON.parse(stored) : {};
+        customMap[editingKey.position] = trimmed;
+        localStorage.setItem('gdgoc_vault_custom_role_keys', JSON.stringify(customMap));
+      } catch {}
+
+      setFeedbackMsg({
+        type: 'success',
+        text: `Key updated for ${editingKey.position} in current workspace session.`,
+      });
+      setEditingKey(null);
     } finally {
-      setIsSubmitting(false);
+      setIsSaving(false);
+      setTimeout(() => setFeedbackMsg(null), 4000);
     }
   };
 
-  const handleRevoke = async (id: string) => {
-    try {
-      await adminApi.revokeInvitation(id);
-      setInvitations((prev) =>
-        prev.map((inv) => (inv.id === id ? { ...inv, status: 'REVOKED' } : inv))
-      );
-      setSuccessMsg('Key successfully revoked. It can no longer be used to assume leadership.');
-    } catch {
-      setInvitations((prev) =>
-        prev.map((inv) => (inv.id === id ? { ...inv, status: 'REVOKED' } : inv))
-      );
-      setSuccessMsg('Key marked as revoked in workspace.');
+  const getRoleIcon = (position: string) => {
+    switch (position) {
+      case 'Vice President':
+        return <Crown className="w-5 h-5 text-amber-500" />;
+      case 'Secretary':
+        return <ClipboardList className="w-5 h-5 text-purple-500" />;
+      case 'Organizer':
+        return <Calendar className="w-5 h-5 text-emerald-500" />;
+      case 'Tech Lead':
+        return <Laptop className="w-5 h-5 text-blue-500" />;
+      case 'Media Lead':
+        return <Video className="w-5 h-5 text-rose-500" />;
+      case 'Content Lead':
+        return <PenTool className="w-5 h-5 text-amber-600" />;
+      default:
+        return <ShieldCheck className="w-5 h-5 text-gdgoc-blue" />;
     }
-    setTimeout(() => setSuccessMsg(null), 3500);
   };
 
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedCode(true);
-    setTimeout(() => setCopiedCode(false), 2500);
-  };
-
-  const copyInviteMessage = () => {
-    if (!newlyCreatedCode) return;
-    const msg = `🌟 Google Developer Groups on Campus (GDGOC) — Leadership Key\n\n` +
-      `Congratulations! You have been appointed as ${newlyCreatedRole}.\n` +
-      `Use your exclusive President Invitation Key below to sign in and activate your Lead Workspace:\n\n` +
-      `🔑 KEY: ${newlyCreatedCode}\n` +
-      `🔗 LOGIN: ${window.location.origin}/login\n\n` +
-      `Instructions: On the login screen, select "Squad Lead", pick your domain, and enter this key. Welcome to the GDGOC Core Leadership Team!`;
-
-    navigator.clipboard.writeText(msg);
-    setCopiedMessage(true);
-    setTimeout(() => setCopiedMessage(false), 2500);
-  };
-
-  // Metrics
-  const activeCount = invitations.filter((i) => i.status === 'ACTIVE').length;
-  const usedCount = invitations.filter((i) => i.status === 'USED').length;
-  const revokedCount = invitations.filter((i) => i.status === 'REVOKED' || i.status === 'EXPIRED').length;
-
-  // Filtered List
-  const filteredInvitations = invitations.filter((inv) => {
-    if (statusFilter !== 'ALL' && inv.status !== statusFilter) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      const pos = (inv.position || inv.intendedPosition || '').toLowerCase();
-      const email = (inv.intendedEmail || '').toLowerCase();
-      const raw = (inv.rawCode || '').toLowerCase();
-      const id = inv.id.toLowerCase();
-      return pos.includes(q) || email.includes(q) || raw.includes(q) || id.includes(q);
+  const getRoleDescription = (position: string) => {
+    switch (position) {
+      case 'Vice President':
+        return 'Executive Co-Lead overseeing chapter operations, squad alignment, and high-priority deliverables.';
+      case 'Secretary':
+        return 'Custodian of documentation, meeting logs, official records, and executive compliance.';
+      case 'Organizer':
+        return 'Logistics coordinator managing hackathons, speaker sessions, workshops, and chapter logistics.';
+      case 'Tech Lead':
+        return 'Technical architect managing codebases, developer onboarding, sprint reviews, and technical tasks.';
+      case 'Media Lead':
+        return 'Creative head overseeing UI/UX design, visual identity, motion graphics, and event photography.';
+      case 'Content Lead':
+        return 'Editorial lead managing technical blogging, announcements, socials, and documentation pipelines.';
+      default:
+        return 'Appointed chapter leadership officer.';
     }
-    return true;
-  });
+  };
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
+      {/* Toast Feedback */}
+      {feedbackMsg && (
+        <div
+          className={`p-3 rounded-xl text-xs font-semibold flex items-center justify-between shadow-2xs ${
+            feedbackMsg.type === 'success'
+              ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+              : 'bg-red-50 text-red-800 border border-red-200'
+          }`}
+        >
+          <span>{feedbackMsg.text}</span>
+          <button onClick={() => setFeedbackMsg(null)} className="text-current opacity-70 hover:opacity-100">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 bg-amber-50 rounded-xl border border-amber-200">
-              <Crown className="w-6 h-6 text-amber-600" />
-            </div>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-gdgoc-gray-900 tracking-tight flex items-center gap-2">
-                <span>President's Key Vault</span>
-                <span className="bg-gradient-to-r from-amber-500 to-amber-600 text-white text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full tracking-wider shadow-2xs">
-                  Executive Authority
-                </span>
-              </h1>
-              <p className="mt-0.5 text-xs sm:text-sm text-gdgoc-gray-500">
-                Generate cryptographic invitation keys to onboard Vice Presidents, Club Officers, and Squad Leads with elevated permissions.
-              </p>
-            </div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gdgoc-gray-900 tracking-tight">
+              President Leadership Key Vault
+            </h1>
+            <span className="bg-amber-50 text-amber-800 border border-amber-200 text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1">
+              <Lock className="w-3 h-3 text-amber-600" />
+              President Only
+            </span>
           </div>
+          <p className="mt-1 text-xs sm:text-sm text-gdgoc-gray-500">
+            Constant leadership authorization keys stored in the database. Each key is permanently bound to its designated role.
+          </p>
         </div>
 
         <button
-          onClick={loadData}
+          onClick={loadKeys}
           disabled={isLoading}
-          className="self-start sm:self-auto inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-gdgoc-gray-700 bg-white border border-gdgoc-gray-200 rounded-lg hover:bg-gdgoc-gray-50 transition-colors shadow-2xs"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gdgoc-gray-700 bg-white border border-gdgoc-gray-200 hover:bg-gdgoc-gray-50 rounded-lg shadow-2xs transition-colors self-start sm:self-auto"
         >
           <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-gdgoc-blue' : ''}`} />
-          <span>Sync Vault</span>
+          <span>Sync Database</span>
         </button>
       </div>
 
-      {/* Summary KPI Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="p-4 bg-white rounded-xl border border-gdgoc-gray-200 shadow-2xs flex flex-col">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-gdgoc-gray-500">Total Issued</span>
-          <span className="text-2xl font-black text-gdgoc-gray-900 mt-1">{invitations.length}</span>
-          <span className="text-[10px] text-gdgoc-gray-400 mt-0.5">Historical records</span>
-        </div>
-
-        <div className="p-4 bg-white rounded-xl border border-emerald-200 bg-emerald-50/20 shadow-2xs flex flex-col">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-800">Active & Ready</span>
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-            </span>
-          </div>
-          <span className="text-2xl font-black text-emerald-700 mt-1">{activeCount}</span>
-          <span className="text-[10px] text-emerald-600 mt-0.5">Awaiting lead login</span>
-        </div>
-
-        <div className="p-4 bg-white rounded-xl border border-blue-200 bg-blue-50/20 shadow-2xs flex flex-col">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-blue-800">Claimed & Active</span>
-          <span className="text-2xl font-black text-blue-700 mt-1">{usedCount}</span>
-          <span className="text-[10px] text-blue-600 mt-0.5">Active leads & officers</span>
-        </div>
-
-        <div className="p-4 bg-white rounded-xl border border-gdgoc-gray-200 shadow-2xs flex flex-col">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-gdgoc-gray-500">Revoked / Expired</span>
-          <span className="text-2xl font-black text-gdgoc-gray-500 mt-1">{revokedCount}</span>
-          <span className="text-[10px] text-gdgoc-gray-400 mt-0.5">Deactivated credentials</span>
-        </div>
-      </div>
-
-      {/* Messages */}
-      {errorMsg && (
-        <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl flex items-center gap-2">
-          <AlertTriangle className="w-4 h-4 flex-shrink-0" />
-          <span>{errorMsg}</span>
-        </div>
-      )}
-      {successMsg && (
-        <div className="p-3 bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs rounded-xl flex items-center gap-2">
-          <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-          <span>{successMsg}</span>
-        </div>
-      )}
-
-      {/* NEWLY CREATED CODE HIGHLIGHT BANNER */}
-      {newlyCreatedCode && (
-        <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border-2 border-emerald-400 rounded-2xl p-5 sm:p-6 shadow-md space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2.5 text-emerald-900 font-extrabold text-sm sm:text-base">
-              <Sparkles className="w-5 h-5 text-emerald-600" />
-              <span>President Invitation Key Created: {newlyCreatedRole}</span>
-            </div>
-            <button
-              onClick={() => setNewlyCreatedCode(null)}
-              className="text-xs font-bold text-emerald-700 hover:text-emerald-900 px-2 py-1 rounded hover:bg-emerald-100 transition-colors"
-            >
-              Dismiss
-            </button>
-          </div>
-
-          <p className="text-xs text-emerald-800">
-            Share this key with the new leader. When they enter this key during login, the system will automatically promote them to their designated squad leadership.
+      {/* Security Guidance Notice */}
+      <div className="p-4 bg-gradient-to-r from-blue-50 via-indigo-50/40 to-white rounded-2xl border border-blue-200/80 shadow-2xs flex items-start gap-3">
+        <ShieldCheck className="w-5 h-5 text-gdgoc-blue flex-shrink-0 mt-0.5" />
+        <div className="text-xs text-gdgoc-gray-700 space-y-1">
+          <p className="font-bold text-gdgoc-gray-900">
+            How Constant Leadership Keys Work:
           </p>
+          <p className="leading-relaxed text-gdgoc-gray-600">
+            Candidates for these 6 positions use their role's assigned key during <strong>Sign Up</strong>. 
+            The system verifies that the key matches the exact position in the database. 
+            Once registered, officers log in directly with their email & password without ever re-entering the key.
+          </p>
+        </div>
+      </div>
 
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="w-full flex-1 bg-white border-2 border-emerald-300 rounded-xl px-4 py-3 font-mono text-sm sm:text-base font-bold text-gdgoc-gray-900 select-all tracking-wider shadow-inner flex items-center justify-between">
-              <span>{newlyCreatedCode}</span>
-              <span className="text-[10px] font-sans font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                Single-Use Key
-              </span>
+      {/* 6 Constant Role Keys Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        {roleKeys.map((item) => (
+          <div
+            key={item.id || item.position}
+            className="bg-white rounded-2xl border border-gdgoc-gray-200 p-5 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between group"
+          >
+            <div>
+              {/* Top row: Position badge and icon */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-gdgoc-gray-50 border border-gdgoc-gray-100 group-hover:scale-105 transition-transform">
+                    {getRoleIcon(item.position)}
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-gdgoc-gray-900 text-sm">
+                      {item.position}
+                    </h3>
+                    <span className="text-[10px] font-bold text-gdgoc-blue bg-blue-50 border border-blue-200/60 px-2 py-0.2 rounded-md font-mono">
+                      {item.role}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => handleOpenEdit(item)}
+                  title="Customize or rotate key"
+                  className="p-1.5 text-gdgoc-gray-400 hover:text-gdgoc-gray-700 hover:bg-gdgoc-gray-100 rounded-lg transition-colors"
+                >
+                  <Edit3 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+
+              {/* Description */}
+              <p className="text-xs text-gdgoc-gray-600 line-clamp-2 mb-4 leading-relaxed">
+                {getRoleDescription(item.position)}
+              </p>
+
+              {/* Constant Key Box */}
+              <div className="p-3 bg-gdgoc-gray-50/80 rounded-xl border border-gdgoc-gray-200/80 space-y-1.5">
+                <div className="flex items-center justify-between text-[11px] text-gdgoc-gray-500 font-semibold uppercase tracking-wider">
+                  <span>Constant Key</span>
+                  <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-sans font-bold">
+                    Active & Bound
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-gdgoc-gray-200">
+                  <code className="text-xs font-bold text-gdgoc-gray-900 font-mono tracking-wide">
+                    {item.keyCode}
+                  </code>
+                  <button
+                    onClick={() => handleCopyKey(item)}
+                    className="p-1 text-gdgoc-gray-500 hover:text-gdgoc-blue transition-colors rounded"
+                    title="Copy Key Code"
+                  >
+                    {copiedKeyId === item.id ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                </div>
+              </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto">
+            {/* Bottom Actions */}
+            <div className="mt-4 pt-3 border-t border-gdgoc-gray-100 flex items-center justify-between gap-2">
               <button
-                onClick={() => copyToClipboard(newlyCreatedCode)}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-xs transition-colors shadow-2xs whitespace-nowrap"
+                onClick={() => handleCopyKey(item)}
+                className="flex-1 py-1.5 px-2.5 text-xs font-semibold text-gdgoc-gray-700 bg-white border border-gdgoc-gray-200 hover:bg-gdgoc-gray-50 rounded-lg transition-colors inline-flex items-center justify-center gap-1.5 shadow-2xs"
               >
-                {copiedCode ? <Check className="w-4 h-4 text-emerald-200" /> : <Copy className="w-4 h-4" />}
-                <span>{copiedCode ? 'Key Copied!' : 'Copy Key'}</span>
+                {copiedKeyId === item.id ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-emerald-600" />
+                    <span className="text-emerald-700">Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5 text-gdgoc-gray-500" />
+                    <span>Copy Key</span>
+                  </>
+                )}
               </button>
 
               <button
-                onClick={copyInviteMessage}
-                className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-4 py-3 bg-white hover:bg-emerald-100 text-emerald-800 border border-emerald-300 rounded-xl font-bold text-xs transition-colors shadow-2xs whitespace-nowrap"
-                title="Copy ready-to-send invite for WhatsApp/Slack"
+                onClick={() => handleCopyInviteMessage(item)}
+                className="flex-1 py-1.5 px-2.5 text-xs font-semibold text-white bg-gdgoc-blue hover:bg-blue-600 rounded-lg transition-colors inline-flex items-center justify-center gap-1.5 shadow-2xs"
               >
-                {copiedMessage ? <Check className="w-4 h-4 text-emerald-600" /> : <Send className="w-4 h-4 text-emerald-600" />}
-                <span>{copiedMessage ? 'Message Copied!' : 'Copy Invite Text'}</span>
+                {copiedInviteId === item.id ? (
+                  <>
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Invite Copied!</span>
+                  </>
+                ) : (
+                  <>
+                    <Share2 className="w-3.5 h-3.5" />
+                    <span>Share Invite</span>
+                  </>
+                )}
               </button>
             </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Edit Key Modal */}
+      {editingKey && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs p-4">
+          <div className="bg-white rounded-2xl max-w-md w-full p-6 shadow-xl border border-gdgoc-gray-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <Key className="w-5 h-5 text-gdgoc-blue" />
+                <h3 className="font-extrabold text-gdgoc-gray-900 text-lg">
+                  Edit Key for {editingKey.position}
+                </h3>
+              </div>
+              <button
+                onClick={() => setEditingKey(null)}
+                className="text-gdgoc-gray-400 hover:text-gdgoc-gray-700 rounded-lg p-1"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-gdgoc-gray-500 mb-4">
+              Update the constant key stored in the database. Anyone signing up for{' '}
+              <strong className="text-gdgoc-gray-800">{editingKey.position}</strong> will need this exact key.
+            </p>
+
+            <form onSubmit={handleSaveEdit} className="space-y-4">
+              <div>
+                <label className="block text-xs font-semibold text-gdgoc-gray-700 uppercase tracking-wider mb-1">
+                  Constant Key Code *
+                </label>
+                <input
+                  type="text"
+                  value={editKeyCode}
+                  onChange={(e) => setEditKeyCode(e.target.value.toUpperCase())}
+                  required
+                  placeholder="e.g. GDGOC-SEC-KEY"
+                  className="w-full px-3 py-2 text-sm font-mono font-bold bg-gdgoc-gray-50 border border-gdgoc-gray-300 rounded-xl focus:outline-none focus:border-gdgoc-blue uppercase"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingKey(null)}
+                  className="px-3.5 py-2 text-xs font-semibold text-gdgoc-gray-600 hover:bg-gdgoc-gray-100 rounded-xl"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-4 py-2 text-xs font-semibold text-white bg-gdgoc-blue hover:bg-blue-600 rounded-xl inline-flex items-center gap-1.5 shadow-2xs disabled:opacity-50"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{isSaving ? 'Updating DB...' : 'Save to Database'}</span>
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
-
-      {/* Quick Appoint Preset Bar */}
-      <div className="bg-white rounded-2xl border border-gdgoc-gray-200 p-4 sm:p-5 shadow-2xs space-y-3">
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-bold uppercase tracking-wider text-gdgoc-gray-500 flex items-center gap-1.5">
-            <Award className="w-4 h-4 text-amber-500" />
-            <span>1-Click Preset Roles</span>
-          </span>
-          <span className="text-[11px] text-gdgoc-gray-400">Click to autofill appointment parameters</span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-          <button
-            type="button"
-            onClick={() => applyPreset({ role: 'ADMIN', position: 'Technical Lead', teamKeyword: 'tech', suggestedKey: 'GDGOC-TECH-KEY' })}
-            className="p-2.5 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/60 text-left transition-colors flex items-center gap-2"
-          >
-            <Laptop className="w-4 h-4 text-gdgoc-blue flex-shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-gdgoc-gray-900 truncate">Tech Lead</p>
-              <p className="text-[10px] text-gdgoc-blue truncate">Tech Squad</p>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyPreset({ role: 'ADMIN', position: 'Media & Motion Lead', teamKeyword: 'media', suggestedKey: 'GDGOC-MEDIA-KEY' })}
-            className="p-2.5 rounded-xl border border-purple-200 bg-purple-50/50 hover:bg-purple-100/60 text-left transition-colors flex items-center gap-2"
-          >
-            <Video className="w-4 h-4 text-purple-600 flex-shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-gdgoc-gray-900 truncate">Media Lead</p>
-              <p className="text-[10px] text-purple-600 truncate">Media Squad</p>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyPreset({ role: 'ADMIN', position: 'Editorial Lead', teamKeyword: 'content', suggestedKey: 'GDGOC-CONTENT-KEY' })}
-            className="p-2.5 rounded-xl border border-amber-200 bg-amber-50/50 hover:bg-amber-100/60 text-left transition-colors flex items-center gap-2"
-          >
-            <PenTool className="w-4 h-4 text-amber-600 flex-shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-gdgoc-gray-900 truncate">Editorial Lead</p>
-              <p className="text-[10px] text-amber-600 truncate">Content Squad</p>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyPreset({ role: 'ADMIN', position: 'Vice President', suggestedKey: 'GDGOC-VP-KEY' })}
-            className="p-2.5 rounded-xl border border-red-200 bg-red-50/50 hover:bg-red-100/60 text-left transition-colors flex items-center gap-2"
-          >
-            <Crown className="w-4 h-4 text-gdgoc-red flex-shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-gdgoc-gray-900 truncate">Vice President</p>
-              <p className="text-[10px] text-gdgoc-red truncate">Executive Core</p>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyPreset({ role: 'ADMIN', position: 'Secretary', suggestedKey: 'GDGOC-SEC-KEY' })}
-            className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/60 text-left transition-colors flex items-center gap-2"
-          >
-            <Users className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-gdgoc-gray-900 truncate">Secretary</p>
-              <p className="text-[10px] text-emerald-600 truncate">Executive Core</p>
-            </div>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => applyPreset({ role: 'ADMIN', position: 'Organizer', suggestedKey: 'GDGOC-ORG-KEY' })}
-            className="p-2.5 rounded-xl border border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100/60 text-left transition-colors flex items-center gap-2"
-          >
-            <Sparkles className="w-4 h-4 text-indigo-600 flex-shrink-0" />
-            <div className="min-w-0">
-              <p className="text-xs font-bold text-gdgoc-gray-900 truncate">Organizer</p>
-              <p className="text-[10px] text-indigo-600 truncate">Executive Core</p>
-            </div>
-          </button>
-        </div>
-      </div>
-
-      {/* Code Generation Form Card */}
-      <div className="bg-white rounded-2xl border border-gdgoc-gray-200 p-5 sm:p-6 shadow-2xs space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-gdgoc-gray-100">
-          <h2 className="text-sm font-bold text-gdgoc-gray-900 flex items-center gap-2">
-            <KeyRound className="w-4 h-4 text-amber-500" />
-            <span>Issue New President Key</span>
-          </h2>
-          <span className="text-[11px] font-semibold text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full">
-            Single-Use Cryptographic Key
-          </span>
-        </div>
-
-        <form onSubmit={handleGenerate} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Elevation Tier */}
-          <div>
-            <label className="block text-xs font-semibold text-gdgoc-gray-700 mb-1">
-              Elevated Role Level *
-            </label>
-            <select
-              value={roleInput}
-              onChange={(e) => setRoleInput(e.target.value as any)}
-              className="w-full py-2.5 px-3 text-xs bg-gdgoc-gray-50 border border-gdgoc-gray-200 rounded-xl focus:outline-hidden focus:border-amber-500 font-semibold"
-            >
-              <option value="ADMIN">ADMIN (Squad Lead / Core Officer)</option>
-              <option value="PRESIDENT">PRESIDENT (Executive Lead / Co-President)</option>
-            </select>
-          </div>
-
-          {/* Official Position */}
-          <div>
-            <label className="block text-xs font-semibold text-gdgoc-gray-700 mb-1">
-              Official Position Title *
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Technical Lead"
-              value={positionInput}
-              onChange={(e) => setPositionInput(e.target.value)}
-              className="w-full py-2.5 px-3 text-xs bg-gdgoc-gray-50 border border-gdgoc-gray-200 rounded-xl focus:outline-hidden focus:border-amber-500 font-medium"
-            />
-          </div>
-
-          {/* Intended Squad */}
-          <div>
-            <label className="block text-xs font-semibold text-gdgoc-gray-700 mb-1">
-              Squad Domain Scope
-            </label>
-            <select
-              value={teamInput}
-              onChange={(e) => setTeamInput(e.target.value)}
-              className="w-full py-2.5 px-3 text-xs bg-gdgoc-gray-50 border border-gdgoc-gray-200 rounded-xl focus:outline-hidden focus:border-amber-500 font-medium"
-            >
-              <option value="">Executive Core / Whole Club</option>
-              {teams.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Expiration Hours */}
-          <div>
-            <label className="block text-xs font-semibold text-gdgoc-gray-700 mb-1">
-              Token Expiry Window
-            </label>
-            <select
-              value={expiresInHours}
-              onChange={(e) => setExpiresInHours(Number(e.target.value))}
-              className="w-full py-2.5 px-3 text-xs bg-gdgoc-gray-50 border border-gdgoc-gray-200 rounded-xl focus:outline-hidden focus:border-amber-500 font-medium"
-            >
-              <option value={24}>24 Hours</option>
-              <option value={48}>48 Hours (Recommended)</option>
-              <option value={72}>72 Hours (3 Days)</option>
-              <option value={168}>7 Days</option>
-              <option value={720}>30 Days</option>
-            </select>
-          </div>
-
-          {/* Custom Key Code (Optional) */}
-          <div className="sm:col-span-2">
-            <label className="block text-xs font-semibold text-gdgoc-gray-700 mb-1">
-              Custom Key Code (Optional)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. GDGOC-LEAD-2026 (Leave empty to auto-generate)"
-              value={customKeyInput}
-              onChange={(e) => setCustomKeyInput(e.target.value.toUpperCase())}
-              className="w-full py-2.5 px-3 text-xs bg-gdgoc-gray-50 border border-gdgoc-gray-200 rounded-xl focus:outline-hidden focus:border-amber-500 font-mono tracking-wider"
-            />
-            <p className="text-[10px] text-gdgoc-gray-400 mt-1">
-              If omitted, the vault automatically generates a clean cryptographic token (e.g., <code className="font-mono text-gdgoc-gray-600">GDGOC-TECH-7A2F</code>).
-            </p>
-          </div>
-
-          {/* Intended Email Lock */}
-          <div>
-            <label className="block text-xs font-semibold text-gdgoc-gray-700 mb-1">
-              Lock to Specific Email (Optional)
-            </label>
-            <input
-              type="email"
-              placeholder="e.g. lead@psit.ac.in"
-              value={emailInput}
-              onChange={(e) => setEmailInput(e.target.value)}
-              className="w-full py-2.5 px-3 text-xs bg-gdgoc-gray-50 border border-gdgoc-gray-200 rounded-xl focus:outline-hidden focus:border-amber-500 font-mono"
-            />
-          </div>
-
-          {/* Submit Action */}
-          <div className="flex items-end">
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-xs font-bold rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-            >
-              <KeyRound className="w-4 h-4" />
-              <span>{isSubmitting ? 'Hashing Key...' : 'Issue President Key'}</span>
-            </button>
-          </div>
-        </form>
-      </div>
-
-      {/* Invitations History Table Card */}
-      <div className="bg-white rounded-2xl border border-gdgoc-gray-200 overflow-hidden shadow-2xs">
-        {/* Table Toolbar */}
-        <div className="p-4 sm:p-5 border-b border-gdgoc-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-gdgoc-gray-700">
-              Vault Registry ({filteredInvitations.length})
-            </h3>
-            <div className="flex items-center gap-1 bg-gdgoc-gray-100 p-0.5 rounded-lg text-[11px] font-semibold text-gdgoc-gray-600">
-              {(['ALL', 'ACTIVE', 'USED', 'REVOKED'] as const).map((tab) => (
-                <button
-                  key={tab}
-                  type="button"
-                  onClick={() => setStatusFilter(tab)}
-                  className={`px-2.5 py-1 rounded-md transition-all ${
-                    statusFilter === tab
-                      ? 'bg-white text-gdgoc-gray-900 shadow-2xs'
-                      : 'hover:text-gdgoc-gray-900'
-                  }`}
-                >
-                  {tab === 'ALL' ? 'All' : tab.charAt(0) + tab.slice(1).toLowerCase()}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="relative w-full sm:w-64">
-            <Search className="w-3.5 h-3.5 text-gdgoc-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search keys, positions..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-gdgoc-gray-50 border border-gdgoc-gray-200 rounded-lg focus:outline-hidden focus:border-amber-500 font-medium"
-            />
-          </div>
-        </div>
-
-        {/* Table Content */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs text-gdgoc-gray-700">
-            <thead className="bg-gdgoc-gray-50 border-b border-gdgoc-gray-200 text-gdgoc-gray-500 font-semibold uppercase tracking-wider text-[10px]">
-              <tr>
-                <th className="py-3 px-4">Position & Role</th>
-                <th className="py-3 px-4">Key Code / Recipient</th>
-                <th className="py-3 px-4">Status</th>
-                <th className="py-3 px-4">Expires</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gdgoc-gray-100">
-              {filteredInvitations.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="py-12 text-center text-gdgoc-gray-400">
-                    No keys found matching the selected filter.
-                  </td>
-                </tr>
-              ) : (
-                filteredInvitations.map((inv) => {
-                  const isRevoked = inv.status === 'REVOKED' || inv.status === 'EXPIRED';
-                  const isUsed = inv.status === 'USED';
-                  const isActive = inv.status === 'ACTIVE';
-                  const displayPosition = inv.position || inv.intendedPosition || 'Lead Officer';
-                  const displayRole = inv.role || inv.intendedRole || 'ADMIN';
-                  const displayCode = inv.rawCode || `Key ID: ${inv.id.slice(0, 14)}...`;
-
-                  return (
-                    <tr key={inv.id} className="hover:bg-gdgoc-gray-50/70 transition-colors">
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="font-bold text-gdgoc-gray-900 flex items-center gap-1.5">
-                          <span>{displayPosition}</span>
-                          {displayRole === 'PRESIDENT' && (
-                            <span className="p-0.5 rounded bg-amber-50 text-amber-600 border border-amber-200" title="Executive President Role">
-                              <Crown className="w-3 h-3" />
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-gdgoc-gray-400 font-mono mt-0.5">
-                          {displayRole} • Created {new Date(inv.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <code className="text-xs font-mono font-bold text-gdgoc-gray-800 bg-gdgoc-gray-100 px-2 py-0.5 rounded border border-gdgoc-gray-200">
-                            {displayCode}
-                          </code>
-                          {inv.rawCode && (
-                            <button
-                              onClick={() => copyToClipboard(inv.rawCode!)}
-                              className="text-gdgoc-gray-400 hover:text-gdgoc-gray-700 transition-colors"
-                              title="Copy Key Code"
-                            >
-                              <Copy className="w-3.5 h-3.5" />
-                            </button>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-gdgoc-gray-500 mt-0.5">
-                          {inv.intendedEmail ? (
-                            <span className="font-mono text-gdgoc-blue">{inv.intendedEmail}</span>
-                          ) : (
-                            <span className="text-gdgoc-gray-400">Open to any designated candidate</span>
-                          )}
-                        </div>
-                      </td>
-
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        {isActive && (
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-0.5 rounded-full">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                            Active & Ready
-                          </span>
-                        )}
-                        {isUsed && (
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-blue-700 bg-blue-50 border border-blue-200 px-2.5 py-0.5 rounded-full">
-                            <CheckCircle2 className="w-3 h-3 text-blue-600" />
-                            Claimed / Active
-                          </span>
-                        )}
-                        {isRevoked && (
-                          <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-red-700 bg-red-50 border border-red-200 px-2.5 py-0.5 rounded-full">
-                            <XCircle className="w-3 h-3 text-red-600" />
-                            Revoked
-                          </span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-4 whitespace-nowrap text-gdgoc-gray-600 text-[11px]">
-                        {new Date(inv.expiresAt).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </td>
-
-                      <td className="py-3.5 px-4 whitespace-nowrap text-right">
-                        {isActive && (
-                          <button
-                            onClick={() => handleRevoke(inv.id)}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-red-700 hover:text-red-900 hover:bg-red-50 rounded-lg border border-red-200 transition-colors"
-                          >
-                            <Trash2 className="w-3 h-3" />
-                            <span>Revoke</span>
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 };
