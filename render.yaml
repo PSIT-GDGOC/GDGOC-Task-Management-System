@@ -42,6 +42,8 @@ services:
         generateValue: true
       - key: SYSTEM_OWNER_EMAIL
         value: gdgoc.psit@gmail.com
+      - key: BREVO_API_KEY
+        sync: false
       - key: CLIENT_ORIGIN
         sync: false
       - key: ADMIN_ORIGIN
