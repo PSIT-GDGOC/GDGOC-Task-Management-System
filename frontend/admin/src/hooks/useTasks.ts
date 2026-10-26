@@ -13,6 +13,7 @@ interface TasksResponse {
   success: boolean;
   count: number;
   data: Task[];
+  pagination?:{totalPages:number};
 }
 
 export function useTasks(filters: TaskFilters = {}) {
@@ -25,10 +26,15 @@ export function useTasks(filters: TaskFilters = {}) {
       if (filters.status) searchParams.set('status', filters.status);
       if (filters.search) searchParams.set('search', filters.search);
 
-      const qs = searchParams.toString();
-      const endpoint = `/tasks${qs ? `?${qs}` : ''}`;
-      const response = await apiClient<TasksResponse>(endpoint);
-      return response.data;
+      const data:Task[]=[];
+      let page=1,totalPages=1;
+      searchParams.set('limit','100');
+      do {
+        searchParams.set('page',String(page));
+        const response=await apiClient<TasksResponse>(`/tasks?${searchParams}`);
+        data.push(...response.data); totalPages=response.pagination?.totalPages??1;page++;
+      } while(page<=totalPages);
+      return data;
     },
     refetchInterval: 12000,
     refetchIntervalInBackground: false,

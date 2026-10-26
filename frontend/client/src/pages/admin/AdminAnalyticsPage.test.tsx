@@ -3,6 +3,8 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen } from '@testing-library/react';
 import { AdminAnalyticsPage } from './AdminAnalyticsPage';
 import { adminApi } from '../../services/api';
+vi.mock('../../hooks/useTeams', () => ({useTeams: () => ({teams: ['tech','media','content'].map(id=>({id, name:id, leadName:'Unassigned'}))})}));
+vi.mock('../../components/common/SquadActivityFeed', () => ({SquadActivityFeed: () => null}));
 vi.mock('../../services/api', () => ({ adminApi: { getStatistics: vi.fn() } }));
 vi.mock('../../context/TaskContext', () => ({ useTasks: () => ({ tasks: [] }) }));
 beforeEach(() => vi.resetAllMocks());

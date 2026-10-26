@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseEnvironment } from '../src/config/env';
+import { parseEnvironment, isTrustedFrontendOrigin } from '../src/config/env';
 
 const production = {
   NODE_ENV: 'production',
@@ -72,4 +72,13 @@ describe('Production configuration boundaries', () => {
       parseEnvironment({ ...initial, RENDER_EXTERNAL_URL: 'http://fixture.onrender.com' }),
     ).toThrow();
   });
+});
+
+it('does not trust lookalike Vercel projects', () => {
+  expect(isTrustedFrontendOrigin('https://gdgoc-task-management-system.vercel.app')).toBe(true);
+  expect(isTrustedFrontendOrigin('https://gdgoc-task-management-system-evil.vercel.app')).toBe(false);
+});
+it('requires explicit production registration opt-in', () => {
+  expect(parseEnvironment({...production, ALLOW_SELF_REGISTRATION:'true'}).ALLOW_SELF_REGISTRATION).toBe(true);
+  expect(parseEnvironment(production).ALLOW_SELF_REGISTRATION).toBe(false);
 });

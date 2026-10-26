@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/authContext';
 import { Logo } from '../common/Logo';
-import { TEAMS } from '../../data/mockData';
+import { useTeams } from '../../hooks/useTeams';
 import { useTasks } from '../../context/TaskContext';
 import { ProfilePanel } from '../common/ProfilePanel';
 import { 
@@ -22,6 +22,7 @@ interface LeaderSidebarProps {
 }
 
 export const LeaderSidebar: React.FC<LeaderSidebarProps> = ({ onCloseMobile }) => {
+  const { teams: TEAMS } = useTeams();
   const { user, logout } = useAuth();
   const { tasks } = useTasks();
   const navigate = useNavigate();

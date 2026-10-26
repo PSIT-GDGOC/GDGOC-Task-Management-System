@@ -1,4 +1,3 @@
-import { DeadlineReminderService } from './services/deadline-reminder.service';
 import app from './app';
 import { checkSessionStore, closeSessionStore } from './lib/session-store';
 import { env } from './config/env';
@@ -34,16 +33,7 @@ async function start() {
 
   const server = app.listen(env.PORT, () => {
     console.log(`GDGOC Task Management Server running on port ${env.PORT}`);
-    const reminderInterval = setInterval(() => {
-      DeadlineReminderService.scanAndSendReminders().catch((err) => {
-        console.error('[DeadlineReminder] Periodic scan error:', err);
-      });
-    }, 6 * 60 * 60 * 1000);
-    reminderInterval.unref();
 
-    setTimeout(() => {
-      DeadlineReminderService.scanAndSendReminders().catch(() => {});
-    }, 3000).unref();
   });
 
   let stopping = false;

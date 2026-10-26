@@ -26,7 +26,7 @@ export const App: React.FC = () => {
   // Check existing session on mount
   useEffect(() => {
     let active = true;
-    localStorage.removeItem('gdgoc_admin_user');
+    try { localStorage.removeItem('gdgoc_admin_user'); } catch { /* Preferences are optional. */ }
     apiClient<{ success: boolean; user: any }>('/auth/me')
       .then((res) => {
         if (active) setUser(res.user || null);

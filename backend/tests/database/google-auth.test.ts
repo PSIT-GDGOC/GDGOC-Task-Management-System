@@ -182,7 +182,7 @@ describe('Google OAuth and browser security', () => {
           .patch('/api/v1/users/me')
           .set('X-CSRF-Token', csrf.body.csrfToken)
           .set('Origin', 'http://localhost:5173')
-          .send({ position: 'Developer' })
+          .send({ githubUsername: 'developer' })
       ).status,
     ).toBe(200);
   });

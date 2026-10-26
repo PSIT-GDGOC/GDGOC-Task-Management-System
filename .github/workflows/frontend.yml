@@ -30,6 +30,8 @@ jobs:
       - run: npm ci
       - run: npm run typecheck --workspace=frontend/client
       - run: npm run typecheck --workspace=frontend/admin
+      - run: npm run lint --workspace=frontend/client
+      - run: npm run lint --workspace=frontend/admin
       - run: npm run test --workspace=frontend/client
       - run: npm run test --workspace=frontend/admin
       - run: npm run build:client

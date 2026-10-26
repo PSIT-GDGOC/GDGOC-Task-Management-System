@@ -1,3 +1,4 @@
+import { localPreferences } from '../utils/storage';
 import React, {
   createContext,
   useContext,
@@ -39,8 +40,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     mounted.current = true;
     try {
-      localStorage.removeItem('gdgoc_current_user');
-      localStorage.removeItem('gdgoc_taskflow_session_user');
+      localPreferences.removeItem('gdgoc_current_user');
+      localPreferences.removeItem('gdgoc_taskflow_session_user');
     } catch {
       /* No preview identity is restored. */
     }
@@ -85,7 +86,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setSessionError(null);
     setAuthError(null);
     if (credentials.isSignUp && credentials.name?.trim())
-      localStorage.setItem(`gdgoc_name_confirmed_${current.id}`, 'true');
+      localPreferences.setItem(`gdgoc_name_confirmed_${current.id}`, 'true');
     return current;
   };
 
@@ -98,7 +99,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
     setAuthError(null);
     restoreVersion.current += 1;
-    localStorage.removeItem('gdgoc_current_user');
+    localPreferences.removeItem('gdgoc_current_user');
     setUser(null);
   };
 
@@ -108,7 +109,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       throw new Error('Name must be between 2 and 100 characters.');
     const result = await authApi.updateName(trimmed);
     setUser((previous) => (previous ? { ...previous, name: result.user.name } : null));
-    if (user) localStorage.setItem(`gdgoc_name_confirmed_${user.id}`, 'true');
+    if (user) localPreferences.setItem(`gdgoc_name_confirmed_${user.id}`, 'true');
   };
 
   return (

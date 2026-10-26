@@ -44,7 +44,7 @@ export const LoginForm: React.FC = () => {
     const params = new URLSearchParams(location.search);
     const oauthError = params.get('error');
     if (oauthError) {
-      setFormError(decodeURIComponent(oauthError));
+      setFormError(oauthError);
     }
   }, [location.search]);
 

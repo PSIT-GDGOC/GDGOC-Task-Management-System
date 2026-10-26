@@ -167,14 +167,15 @@ describe('Real Redis, BullMQ, caching and notifications', () => {
     expect((await request(b).get('/')).status).toBe(200);
     expect((await request(a).get('/')).status).toBe(429);
   });
-  it('registers both recurring jobs and preserves one schedule each across worker restarts', async () => {
+  it('registers all recurring jobs and preserves one schedule each across worker restarts', async () => {
     const start = (await import('../../src/jobs/runtime.js')).startJobs;
     for (let restart = 0; restart < 2; restart++) {
       await jobs.close();
       jobs = await start({ url: process.env.TEST_REDIS_URL, prefix, database: fixture.db });
-      expect(await jobs.queue.getJobSchedulersCount()).toBe(2);
+      expect(await jobs.queue.getJobSchedulersCount()).toBe(3);
       expect(await jobs.queue.getJobScheduler('overdue-scan')).toBeDefined();
       expect(await jobs.queue.getJobScheduler('cleanup')).toBeDefined();
+      expect(await jobs.queue.getJobScheduler('deadline-reminders')).toBeDefined();
     }
   });
   it('reports readiness and fails closed if distributed limits lose Redis', async () => {

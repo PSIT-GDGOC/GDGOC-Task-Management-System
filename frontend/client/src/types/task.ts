@@ -2,7 +2,7 @@ export type Priority = 'High' | 'Medium' | 'Low';
 
 export type TaskStatus = 'Assigned' | 'To Do' | 'In Progress' | 'Pending Review' | 'Completed';
 
-export type TeamId = 'core' | 'tech' | 'media' | 'content';
+export type TeamId = string;
 
 export interface AttachedFile {
   id: string;
@@ -21,6 +21,7 @@ export interface TeamMember {
 }
 
 export interface Team {
+  databaseId?: string;
   id: TeamId;
   name: string;
   slug: string;

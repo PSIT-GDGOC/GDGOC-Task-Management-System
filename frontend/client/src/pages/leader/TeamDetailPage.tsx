@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { TEAMS, getTeamMetrics } from '../../data/mockData';
+import { getTeamMetrics } from '../../data/mockData';
+import { useTeams } from '../../hooks/useTeams';
 import { useTasks } from '../../context/TaskContext';
-import { TeamId, Task } from '../../types/task';
+import { Task } from '../../types/task';
 import { TaskRow } from '../../components/common/TaskRow';
 import { TaskDetailsModal } from '../../components/common/TaskDetailsModal';
 import { 
@@ -16,14 +17,18 @@ import {
 } from 'lucide-react';
 
 export const TeamDetailPage: React.FC = () => {
+  const { teams: TEAMS, isLoading: teamsLoading, error: teamsError } = useTeams();
   const { teamId } = useParams<{ teamId: string }>();
   const navigate = useNavigate();
   const { tasks } = useTasks();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  // Find team by id or fallback to first team
-  const currentTeam = TEAMS.find((t) => t.id === teamId) || TEAMS[0];
-  const metrics = getTeamMetrics(currentTeam.id as TeamId, tasks);
+  // Resolve the requested team without silently substituting another squad.
+  const currentTeam = TEAMS.find((t) => t.id === teamId || t.databaseId === teamId);
+  const metrics = getTeamMetrics(currentTeam?.id || '', tasks);
+  if (teamsLoading) return <p role="status">Loading team…</p>;
+  if (teamsError) return <p role="alert">Unable to load the team directory. Please reload to retry.</p>;
+  if (!currentTeam) return <p role="alert">Team not found or you do not have access to this team.</p>;
 
   const getAccentColorBadge = () => {
     switch (currentTeam.accent) {

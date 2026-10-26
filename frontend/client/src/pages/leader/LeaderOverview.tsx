@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/authContext';
 import { useTasks } from '../../context/TaskContext';
-import { TEAMS, getDashboardStats } from '../../data/mockData';
+import { getDashboardStats } from '../../data/mockData';
+import { useTeams } from '../../hooks/useTeams';
 import { TeamCard } from '../../components/leader/TeamCard';
 import { TaskStatusBadge } from '../../components/common/TaskStatusBadge';
 import { TaskDetailsModal } from '../../components/common/TaskDetailsModal';
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react';
 
 export const LeaderOverview: React.FC = () => {
+  const { teams: TEAMS } = useTeams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { tasks, approveTask } = useTasks();

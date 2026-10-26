@@ -59,8 +59,8 @@ describe('Work history and completion statistics', () => {
     ).toBe(403);
     expect((await fixture.agents.memberA.get('/api/v1/history')).status).toBe(403);
   });
-  it('allows admin roles club-wide audit while USER heads are scoped to headed teams', async () => {
-    expect((await fixture.agents.adminA.get('/api/v1/history')).body.pagination.total).toBe(4);
+  it('scopes team admins and heads while allowing executive audit', async () => {
+    expect((await fixture.agents.adminA.get('/api/v1/history')).body.pagination.total).toBe(2);
     expect((await fixture.agents.headA.get('/api/v1/history')).body.pagination.total).toBe(2);
     expect((await fixture.agents.headA.get('/api/v1/history?teamId=' + fixture.teamB)).status).toBe(
       403,
@@ -122,4 +122,12 @@ describe('Work history and completion statistics', () => {
       completed: 3,
     });
   });
+});
+
+it('includes real activity records and blocks scoped admins from other-team history', async () => {
+  const task = await fixture.db.task.findFirstOrThrow({where:{completedById:fixture.users.memberA}});
+  await fixture.db.taskActivity.create({data:{taskId:task.id,actorId:fixture.users.owner,action:'APPROVED'}});
+  const response=await fixture.agents.memberA.get('/api/v1/history/me');
+  expect(response.body.data.find((row: {id:string})=>row.id===task.id).activities).toEqual([expect.objectContaining({action:'APPROVED'})]);
+  expect((await fixture.agents.adminA.get('/api/v1/history?teamId='+fixture.teamB)).status).toBe(403);
 });

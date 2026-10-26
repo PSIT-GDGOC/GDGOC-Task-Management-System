@@ -82,23 +82,25 @@ export const MemberMyWork: React.FC = () => {
     });
   }, [memberTasks, statusFilter, searchQuery]);
 
-  const handleAcceptTask = async (task: Task) => {
+  const handleAcceptTask = async (task: Task, propagate = false) => {
     try {
       const updated = await acceptTask(task.id);
       setActionMessage(`Task "${task.title}" accepted! Moved to In Progress.`);
       if (selectedTask?.id === task.id) setSelectedTask(updated);
     } catch (err) {
       setActionMessage(err instanceof Error ? err.message : 'Unable to start task.');
+      if (propagate) throw err;
     }
   };
 
-  const handleSubmitDone = async (task: Task) => {
+  const handleSubmitDone = async (task: Task, propagate = false) => {
     try {
       const updated = await submitTask(task.id, { note: 'Deliverables completed, ready for lead verification.' });
       setActionMessage(`Task "${task.title}" submitted for review.`);
       if (selectedTask?.id === task.id) setSelectedTask(updated);
     } catch (err) {
       setActionMessage(err instanceof Error ? err.message : 'Unable to submit task.');
+      if (propagate) throw err;
     }
   };
 
@@ -434,8 +436,8 @@ export const MemberMyWork: React.FC = () => {
             setIsModalOpen(false);
             setSelectedTask(null);
           }}
-          onAccept={handleAcceptTask}
-          onSubmitForReview={handleSubmitDone}
+          onAccept={(task) => handleAcceptTask(task, true)}
+          onSubmitForReview={(task) => handleSubmitDone(task, true)}
           userRole="MEMBER"
         />
       </div>

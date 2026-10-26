@@ -12,6 +12,9 @@ export interface User {
   team?: string;
   avatarUrl?: string;
   isTeamHead?: boolean;
+  canManageClub?: boolean;
+  managedTeamIds?: string[];
+  teamMemberships?: Array<{teamId: string; isTeamHead: boolean; team: {id: string; name: string; slug: string}}>;
 }
 
 export interface LoginCredentials {

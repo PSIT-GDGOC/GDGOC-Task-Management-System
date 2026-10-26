@@ -36,7 +36,7 @@ export interface ConfettiOptions {
 
 let activeCanvas: HTMLCanvasElement | null = null;
 let animationFrameId: number | null = null;
-let particles: Particle[] = [];
+const particles: Particle[] = [];
 
 function getOrCreateCanvas(): HTMLCanvasElement {
   if (activeCanvas && document.body.contains(activeCanvas)) {

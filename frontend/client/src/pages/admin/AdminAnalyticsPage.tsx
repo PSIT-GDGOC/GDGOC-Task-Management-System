@@ -1,23 +1,22 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useTasks } from '../../context/TaskContext';
+import { SquadActivityFeed } from '../../components/common/SquadActivityFeed';
 import { adminApi } from '../../services/api';
-import { TEAMS } from '../../data/mockData';
+import { useTeams } from '../../hooks/useTeams';
 import { 
   TrendingUp, 
   CheckCircle2, 
   Clock, 
   Users, 
-  Activity, 
-  Award, 
-  GitPullRequest,
-  ShieldCheck
 } from 'lucide-react';
 
 const metricNumber = new Intl.NumberFormat('en-US', { maximumFractionDigits: 2, notation: 'compact' });
 const validMetric = (value: number | null): value is number => typeof value === 'number' && Number.isFinite(value) && value >= 0;
 
 export const AdminAnalyticsPage: React.FC = () => {
+  const { teams: TEAMS } = useTeams();
   const { tasks } = useTasks();
+  const [error, setError] = useState('');
   const [stats, setStats] = useState<{
     totalCompleted: number;
     onTimeRate: number | null;
@@ -36,8 +35,9 @@ export const AdminAnalyticsPage: React.FC = () => {
     try {
       const data = await adminApi.getStatistics();
       setStats(data);
+      setError('');
     } catch {
-      // fallback
+      setError('Unable to load analytics. Please retry.');
     }
   };
 
@@ -89,6 +89,7 @@ export const AdminAnalyticsPage: React.FC = () => {
         </p>
       </div>
 
+      {error && <p role="alert" className="text-red-700">{error} <button onClick={() => void loadStats()} className="underline">Retry analytics</button></p>}
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <div className="min-w-0 bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs">
@@ -174,7 +175,7 @@ export const AdminAnalyticsPage: React.FC = () => {
               </p>
             </div>
             <span className="text-xs font-semibold text-gdgoc-blue bg-blue-50 px-2.5 py-0.5 rounded-full">
-              Sprint 04
+              All tasks
             </span>
           </div>
 
@@ -228,58 +229,7 @@ export const AdminAnalyticsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Audit Log / Event Feed */}
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-3 border-b border-gdgoc-gray-100">
-              <h3 className="text-sm font-bold text-gdgoc-gray-900 flex items-center gap-1.5">
-                <Activity className="w-4 h-4 text-gdgoc-blue" />
-                <span>Audit & Activity Stream</span>
-              </h3>
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            </div>
-
-            <div className="mt-4 space-y-3.5 text-xs">
-              <div className="flex items-start gap-2.5">
-                <div className="w-6 h-6 rounded-full bg-blue-100 text-gdgoc-blue flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <GitPullRequest className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <p className="font-semibold text-gdgoc-gray-900">GitHub Webhook Synced</p>
-                  <p className="text-[11px] text-gdgoc-gray-500">PR merged on repository</p>
-                  <span className="text-[10px] text-gdgoc-gray-400">12 mins ago</span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2.5">
-                <div className="w-6 h-6 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <Award className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <p className="font-semibold text-gdgoc-gray-900">Milestone Verified</p>
-                  <p className="text-[11px] text-gdgoc-gray-500">Lead signed off DevFest auth task</p>
-                  <span className="text-[10px] text-gdgoc-gray-400">1 hour ago</span>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-2.5">
-                <div className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                  <ShieldCheck className="w-3.5 h-3.5" />
-                </div>
-                <div>
-                  <p className="font-semibold text-gdgoc-gray-900">Invitation Issued</p>
-                  <p className="text-[11px] text-gdgoc-gray-500">Single-use token issued for Tech Lead</p>
-                  <span className="text-[10px] text-gdgoc-gray-400">3 hours ago</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-5 pt-3 border-t border-gdgoc-gray-100 flex items-center justify-between text-[11px] text-gdgoc-gray-400">
-            <span>Audit log synced with PostgreSQL</span>
-            <span className="font-mono text-emerald-600 font-semibold">ONLINE</span>
-          </div>
-        </div>
+        <SquadActivityFeed title="Audit & Activity Stream" />
       </div>
     </div>
   );

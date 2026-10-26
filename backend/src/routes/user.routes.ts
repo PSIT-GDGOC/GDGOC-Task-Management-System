@@ -12,7 +12,6 @@ router.use(requireAuth);
 
 const profileSchema = z
   .object({
-    position: z.string().trim().min(1).max(100).nullable().optional(),
     githubUsername: z
       .string()
       .trim()

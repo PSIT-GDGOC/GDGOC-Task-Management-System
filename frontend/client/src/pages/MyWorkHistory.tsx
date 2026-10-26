@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { HelpButton } from '../components/tour/HelpButton';
+import { useTasks } from '../context/TaskContext';
 import { useAuth } from '../auth/authContext';
 import { apiRequest } from '../services/api';
 
@@ -44,6 +45,7 @@ export const MyWorkHistory: React.FC<{
   user?: { id: string; name: string; email: string; role: string } | null;
 }> = () => {
   const { user } = useAuth();
+  const { tasks: currentTasks } = useTasks();
   const [reload, setReload] = useState(0);
   const [tasks, setTasks] = useState<WorkTask[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,9 +92,9 @@ export const MyWorkHistory: React.FC<{
     };
   }, [user?.id, reload]);
   const completed = tasks.filter((task) => task.status === 'DONE' && task.completedAt);
-  const eligible = completed.filter((task) => task.isOnTime !== null || task.deadline);
-  const inProgress = tasks.filter((task) => task.status === 'IN_PROGRESS').length;
-  const pending = tasks.filter((task) => task.status === 'IN_REVIEW').length;
+  const eligible = completed.filter((task) => task.deadline);
+  const inProgress = currentTasks.filter((task) => task.assigneeId === user?.id && task.status === 'In Progress').length;
+  const pending = currentTasks.filter((task) => task.assigneeId === user?.id && task.status === 'Pending Review').length;
   const onTime = eligible.length
     ? `${Math.round((eligible.filter((task) => task.isOnTime ?? new Date(task.completedAt!) <= new Date(task.deadline!)).length / eligible.length) * 100)}%`
     : 'No rated tasks';

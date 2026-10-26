@@ -84,8 +84,9 @@ export class TaskService {
   /** Refresh grants inside the transaction, including membership eligibility used by writes. */
   private static mutate<T>(
     actor: AuthenticatedUser,
-    action: (tx: Prisma.TransactionClient, current: AuthenticatedUser) => Promise<T>,
+    action: (tx: Prisma.TransactionClient, current: AuthenticatedUser, afterCommit: Array<() => void>) => Promise<T>,
   ) {
+    const afterCommit: Array<() => void> = [];
     const result = prisma.$transaction(
       async (tx) => {
         const current = await tx.user.findUnique({
@@ -94,11 +95,12 @@ export class TaskService {
         });
         if (!current) throw new AppError('Authentication required', 401);
         if (!current.isActive) throw new AppError('Your account has been deactivated', 403);
-        return action(tx, current);
+        return action(tx, current, afterCommit);
       },
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
     return result.then(async (value) => {
+      for (const deliver of afterCommit) setImmediate(deliver);
       await queryCache.invalidate();
       return value;
     });
@@ -144,7 +146,7 @@ export class TaskService {
   }
 
   static createTask(data: CreateTaskInput, actor: AuthenticatedUser) {
-    return this.mutate(actor, async (tx, current) => {
+    return this.mutate(actor, async (tx, current, afterCommit) => {
       const scope = data.scope ?? (data.teamId ? TaskScope.TEAM : TaskScope.WHOLE_CLUB);
       const teamId = data.teamId ?? null;
       if ((scope === TaskScope.TEAM) !== Boolean(teamId))
@@ -182,7 +184,7 @@ export class TaskService {
         });
         if (assignee?.email) {
           const teamName = task.team?.name;
-          setImmediate(() => {
+          afterCommit.push(() => {
             EmailService.sendTaskAssignedEmail(
               { name: assignee.name, email: assignee.email },
               {
@@ -241,7 +243,7 @@ export class TaskService {
   }
 
   static assignTask(id: string, assigneeId: string | null, actor: AuthenticatedUser) {
-    return this.mutate(actor, async (tx, current) => {
+    return this.mutate(actor, async (tx, current, afterCommit) => {
       const task = await TaskRepository.active(tx, id);
       assertManager(current, task);
       assertEditable(task);
@@ -270,7 +272,7 @@ export class TaskService {
             const team = await tx.team.findUnique({ where: { id: task.teamId }, select: { name: true } });
             teamName = team?.name;
           }
-          setImmediate(() => {
+          afterCommit.push(() => {
             EmailService.sendTaskAssignedEmail(
               { name: assignee.name, email: assignee.email },
               {
@@ -321,7 +323,7 @@ export class TaskService {
   }
 
   static submitForReview(id: string, actor: AuthenticatedUser, submission: SubmissionInput) {
-    return this.mutate(actor, async (tx, current) => {
+    return this.mutate(actor, async (tx, current, afterCommit) => {
       const task = await TaskRepository.active(tx, id);
       assertVisible(current, task);
       if (task.assigneeId !== current.id)
@@ -395,7 +397,7 @@ export class TaskService {
           teamName = team?.name;
         }
         for (const r of recipients) {
-          setImmediate(() => {
+          afterCommit.push(() => {
             EmailService.sendTaskSubmittedEmail(
               { name: r.name, email: r.email },
               { id: task.id, title: task.title, teamName },
@@ -411,7 +413,7 @@ export class TaskService {
   }
 
   static reviewTask(id: string, actor: AuthenticatedUser, review: ReviewInput) {
-    return this.mutate(actor, async (tx, current) => {
+    return this.mutate(actor, async (tx, current, afterCommit) => {
       const task = await TaskRepository.active(tx, id);
       assertManager(current, task);
       if (task.assigneeId === current.id)
@@ -464,7 +466,7 @@ export class TaskService {
           select: { name: true, email: true },
         });
         if (assignee?.email) {
-          setImmediate(() => {
+          afterCommit.push(() => {
             EmailService.sendTaskReviewedEmail(
               { name: assignee.name, email: assignee.email },
               { title: task.title },

@@ -24,6 +24,7 @@ export const SquadActivityFeed: React.FC<SquadActivityFeedProps> = ({
   className = '',
 }) => {
   const [activities, setActivities] = useState<TaskActivityItem[]>([]);
+  const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   useEffect(() => {
@@ -41,49 +42,13 @@ export const SquadActivityFeed: React.FC<SquadActivityFeedProps> = ({
     if (!silent) setIsLoading(true);
     try {
       const data = await taskApi.getActivityFeed();
-      if (data && data.length > 0) {
-        setActivities(data);
-      } else {
-        fallbackMockFeed();
-      }
-    } catch {
-      fallbackMockFeed();
+      setActivities(data);
+      setError('');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unable to load activity.');
     } finally {
       if (!silent) setIsLoading(false);
     }
-  };
-
-  const fallbackMockFeed = () => {
-    const mockFeed: TaskActivityItem[] = [
-      {
-        id: 'act_1',
-        taskId: 't1',
-        actorId: 'u1',
-        action: 'APPROVED',
-        timestamp: new Date(Date.now() - 5 * 60000).toISOString(),
-        actor: { id: 'u1', name: 'Aditya Rajput', email: 'president@psit.ac.in', position: 'President', role: 'ADMIN' },
-        task: { id: 't1', title: 'Implement OAuth Token Refresh Architecture', status: 'DONE', team: { id: 'tech', name: 'Tech Squad', slug: 'tech' }, assignee: { id: 'u2', name: 'Rohan Sharma' } },
-      },
-      {
-        id: 'act_2',
-        taskId: 't2',
-        actorId: 'u2',
-        action: 'SUBMITTED_FOR_REVIEW',
-        timestamp: new Date(Date.now() - 18 * 60000).toISOString(),
-        actor: { id: 'u2', name: 'Rohan Sharma', email: 'rohan@psit.ac.in', position: 'Lead Developer', role: 'MEMBER' },
-        task: { id: 't2', title: 'Build Database Pooler Connection & Migrations', status: 'IN_REVIEW', team: { id: 'tech', name: 'Tech Squad', slug: 'tech' }, assignee: { id: 'u2', name: 'Rohan Sharma' } },
-      },
-      {
-        id: 'act_3',
-        taskId: 't3',
-        actorId: 'u3',
-        action: 'ASSIGNED',
-        timestamp: new Date(Date.now() - 45 * 60000).toISOString(),
-        actor: { id: 'u3', name: 'Technical Lead', email: 'tech.lead@psit.ac.in', position: 'Tech Lead', role: 'ADMIN' },
-        task: { id: 't3', title: 'Design Component Library in Tailwind CSS', status: 'ASSIGNED', team: { id: 'media', name: 'Media Squad', slug: 'media' }, assignee: { id: 'u4', name: 'Priya Verma' } },
-      },
-    ];
-    setActivities(mockFeed);
   };
 
   const getActionBadge = (action: string) => {
@@ -170,6 +135,8 @@ export const SquadActivityFeed: React.FC<SquadActivityFeedProps> = ({
 
       {/* Feed List */}
       <div className="divide-y divide-gdgoc-gray-100 max-h-96 overflow-y-auto">
+        {error && <p role="alert" className="p-4 text-sm text-red-700">{error}</p>}
+        {!isLoading && !error && activities.length === 0 && <p className="p-4 text-sm text-gdgoc-gray-600">No recent activity.</p>}
         {activities.slice(0, maxItems).map((act) => {
           const badge = getActionBadge(act.action);
           const actorName = act.actor?.name || 'Squad Member';
