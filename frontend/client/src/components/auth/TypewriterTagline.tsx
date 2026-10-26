@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import './TypewriterBranding.css';
 
 interface CharConfig {
@@ -6,46 +6,27 @@ interface CharConfig {
   color?: string;
 }
 
-// Line 1: "Great teams."
-const LINE1_CHARS: CharConfig[] = [
-  { char: 'G' },
-  { char: 'r' },
-  { char: 'e' },
-  { char: 'a' },
-  { char: 't' },
-  { char: ' ' },
-  { char: 't' },
-  { char: 'e' },
-  { char: 'a' },
-  { char: 'm' },
-  { char: 's' },
-  { char: '.' },
+interface TaglinePair {
+  first: CharConfig[];
+  second: CharConfig[];
+}
+
+const GOOGLE_COLORS = ['#4285F4', '#EA4335', '#34A853'];
+
+const makeLine = (words: string[]): CharConfig[] => [
+  ...words.flatMap((word, index) => [
+    ...Array.from(word, (char) => ({ char, color: GOOGLE_COLORS[index % GOOGLE_COLORS.length] })),
+    ...(index < words.length - 1 ? [{ char: ' ', color: GOOGLE_COLORS[index % GOOGLE_COLORS.length] }] : []),
+  ]),
+  { char: '.', color: '#FBBC04' },
 ];
 
-// Line 2: "Great things done."
-// "Great " in #4285F4 (Google Blue)
-// "things " in #EA4335 (Google Red)
-// "done" in #34A853 (Google Green)
-// "." in #FBBC04 (Google Yellow)
-const LINE2_CHARS: CharConfig[] = [
-  { char: 'G', color: '#4285F4' },
-  { char: 'r', color: '#4285F4' },
-  { char: 'e', color: '#4285F4' },
-  { char: 'a', color: '#4285F4' },
-  { char: 't', color: '#4285F4' },
-  { char: ' ', color: '#4285F4' },
-  { char: 't', color: '#EA4335' },
-  { char: 'h', color: '#EA4335' },
-  { char: 'i', color: '#EA4335' },
-  { char: 'n', color: '#EA4335' },
-  { char: 'g', color: '#EA4335' },
-  { char: 's', color: '#EA4335' },
-  { char: ' ', color: '#EA4335' },
-  { char: 'd', color: '#34A853' },
-  { char: 'o', color: '#34A853' },
-  { char: 'n', color: '#34A853' },
-  { char: 'e', color: '#34A853' },
-  { char: '.', color: '#FBBC04' },
+// Each cycle changes both headline lines, with Google colors on the lower line.
+const TAGLINE_PAIRS: TaglinePair[] = [
+  { first: makeLine(['Great', 'teams']), second: makeLine(['Great', 'things', 'done']) },
+  { first: makeLine(['Bright', 'ideas']), second: makeLine(['Bold', 'impact']) },
+  { first: makeLine(['Work', 'together']), second: makeLine(['Go', 'further']) },
+  { first: makeLine(['Good', 'teams']), second: makeLine(['Big', 'wins']) },
 ];
 
 type TaglineAnimState =
@@ -59,16 +40,17 @@ type TaglineAnimState =
   | 'PAUSE_EMPTY';
 
 export const TypewriterTagline: React.FC<{ className?: string }> = ({ className = '' }) => {
-  const [line1Count, setLine1Count] = useState<number>(0);
-  const [line2Count, setLine2Count] = useState<number>(0);
+  const [line1Count, setLine1Count] = useState(0);
+  const [line2Count, setLine2Count] = useState(0);
+  const [pairIndex, setPairIndex] = useState(0);
   const [activeCursorLine, setActiveCursorLine] = useState<1 | 2>(1);
   const [animState, setAnimState] = useState<TaglineAnimState>('TYPING_L1');
+  const currentPair = TAGLINE_PAIRS[pairIndex];
 
   useEffect(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    if (prefersReducedMotion) {
-      setLine1Count(LINE1_CHARS.length);
-      setLine2Count(LINE2_CHARS.length);
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      setLine1Count(TAGLINE_PAIRS[0].first.length);
+      setLine2Count(TAGLINE_PAIRS[0].second.length);
       setActiveCursorLine(2);
       return;
     }
@@ -76,129 +58,92 @@ export const TypewriterTagline: React.FC<{ className?: string }> = ({ className 
     let timeoutId: ReturnType<typeof setTimeout>;
 
     switch (animState) {
-      case 'TYPING_L1': {
+      case 'TYPING_L1':
         setActiveCursorLine(1);
-        if (line1Count < LINE1_CHARS.length) {
-          timeoutId = setTimeout(() => {
-            setLine1Count((prev) => prev + 1);
-          }, 70);
+        if (line1Count < currentPair.first.length) {
+          timeoutId = setTimeout(() => setLine1Count((count) => count + 1), 70);
         } else {
           setAnimState('PAUSE_AFTER_L1');
         }
         break;
-      }
-
-      case 'PAUSE_AFTER_L1': {
+      case 'PAUSE_AFTER_L1':
         setActiveCursorLine(2);
-        timeoutId = setTimeout(() => {
-          setAnimState('TYPING_L2');
-        }, 180);
+        timeoutId = setTimeout(() => setAnimState('TYPING_L2'), 180);
         break;
-      }
-
-      case 'TYPING_L2': {
+      case 'TYPING_L2':
         setActiveCursorLine(2);
-        if (line2Count < LINE2_CHARS.length) {
-          timeoutId = setTimeout(() => {
-            setLine2Count((prev) => prev + 1);
-          }, 70);
+        if (line2Count < currentPair.second.length) {
+          timeoutId = setTimeout(() => setLine2Count((count) => count + 1), 70);
         } else {
           setAnimState('PAUSE_FULL');
         }
         break;
-      }
-
-      case 'PAUSE_FULL': {
-        timeoutId = setTimeout(() => {
-          setAnimState('ERASING_L2');
-        }, 2500);
+      case 'PAUSE_FULL':
+        timeoutId = setTimeout(() => setAnimState('ERASING_L2'), 2500);
         break;
-      }
-
-      case 'ERASING_L2': {
+      case 'ERASING_L2':
         setActiveCursorLine(2);
         if (line2Count > 0) {
-          timeoutId = setTimeout(() => {
-            setLine2Count((prev) => prev - 1);
-          }, 35);
+          timeoutId = setTimeout(() => setLine2Count((count) => count - 1), 35);
         } else {
           setAnimState('PAUSE_AFTER_ERASE_L2');
         }
         break;
-      }
-
-      case 'PAUSE_AFTER_ERASE_L2': {
+      case 'PAUSE_AFTER_ERASE_L2':
         setActiveCursorLine(1);
-        timeoutId = setTimeout(() => {
-          setAnimState('ERASING_L1');
-        }, 120);
+        timeoutId = setTimeout(() => setAnimState('ERASING_L1'), 120);
         break;
-      }
-
-      case 'ERASING_L1': {
+      case 'ERASING_L1':
         setActiveCursorLine(1);
         if (line1Count > 0) {
-          timeoutId = setTimeout(() => {
-            setLine1Count((prev) => prev - 1);
-          }, 35);
+          timeoutId = setTimeout(() => setLine1Count((count) => count - 1), 35);
         } else {
           setAnimState('PAUSE_EMPTY');
         }
         break;
-      }
-
-      case 'PAUSE_EMPTY': {
+      case 'PAUSE_EMPTY':
         setActiveCursorLine(1);
         timeoutId = setTimeout(() => {
+          setPairIndex((index) => (index + 1) % TAGLINE_PAIRS.length);
           setAnimState('TYPING_L1');
-        }, 500);
+        }, 300);
         break;
-      }
     }
 
     return () => clearTimeout(timeoutId);
-  }, [animState, line1Count, line2Count]);
+  }, [animState, currentPair, line1Count, line2Count]);
 
-  const isFullyTyped = line1Count === LINE1_CHARS.length && line2Count === LINE2_CHARS.length;
+  const isFullyTyped = line1Count === currentPair.first.length && line2Count === currentPair.second.length;
+  const accessibleLabel = `${currentPair.first.map(({ char }) => char).join('')} ${currentPair.second.map(({ char }) => char).join('')}`;
 
   return (
     <h2
       className={`text-3xl sm:text-4xl lg:text-[42px] font-extrabold text-gdgoc-gray-900 tracking-tight leading-[1.18] min-h-[72px] sm:min-h-[86px] lg:min-h-[100px] flex flex-col justify-center select-none ${className}`}
-      aria-label="Great teams. Great things done."
+      aria-label={accessibleLabel}
     >
-      {/* Line 1: Great teams. */}
       <div className="flex items-baseline min-h-[1.18em]">
         <span>
-          {LINE1_CHARS.slice(0, line1Count).map((c, i) => (
-            <span key={`l1-${i}`} style={{ color: c.color || 'inherit' }}>
-              {c.char === ' ' ? '\u00A0' : c.char}
+          {currentPair.first.slice(0, line1Count).map((char, index) => (
+            <span key={`l1-${index}`} className="tagline-google-shadow">
+              {char.char === ' ' ? '\u00A0' : char.char}
             </span>
           ))}
         </span>
-        {activeCursorLine === 1 && (
-          <span className="typewriter-cursor" aria-hidden="true" />
-        )}
+        {activeCursorLine === 1 && <span className="typewriter-cursor" aria-hidden="true" />}
       </div>
 
-      {/* Line 2: Great things done. */}
       <div className="flex items-baseline min-h-[1.18em]">
         <span>
-          {LINE2_CHARS.slice(0, line2Count).map((c, i) => (
-            <span key={`l2-${i}`} style={{ color: c.color }}>
-              {c.char === ' ' ? '\u00A0' : c.char}
+          {currentPair.second.slice(0, line2Count).map((char, index) => (
+            <span key={`l2-${index}`} className="tagline-google-shadow" style={{ color: char.color }}>
+              {char.char === ' ' ? '\u00A0' : char.char}
             </span>
           ))}
         </span>
-        {activeCursorLine === 2 && (
-          <span className="typewriter-cursor" aria-hidden="true" />
-        )}
-
-        {/* Playful Google brackets doodle accent from the reference design */}
+        {activeCursorLine === 2 && <span className="typewriter-cursor" aria-hidden="true" />}
         <span
           className={`inline-flex items-center ml-2.5 align-middle select-none transition-all duration-300 ${
-            isFullyTyped
-              ? 'opacity-100 scale-100'
-              : 'opacity-0 scale-75 pointer-events-none'
+            isFullyTyped ? 'opacity-100 scale-100' : 'opacity-0 scale-75 pointer-events-none'
           }`}
           aria-hidden="true"
         >

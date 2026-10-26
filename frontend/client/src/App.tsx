@@ -9,6 +9,7 @@ import { TourManager } from './components/tour/TourManager';
 import { FullNameModal } from './components/common/FullNameModal';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
+import { SiteIntro } from './components/auth/SiteIntro';
 const AdminLayout = lazy(() => import('./layouts/AdminLayout').then(module => ({ default: module.AdminLayout })));
 const AdminTasksPage = lazy(() => import('./pages/admin/AdminTasksPage').then(module => ({ default: module.AdminTasksPage })));
 const AdminMembersTeamsPage = lazy(() => import('./pages/admin/AdminMembersTeamsPage').then(module => ({ default: module.AdminMembersTeamsPage })));
@@ -126,6 +127,7 @@ export const App: React.FC = () => {
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
               </Suspense>
+              <SiteIntro />
             </TaskProvider>
           </TourProvider>
         </AuthProvider>

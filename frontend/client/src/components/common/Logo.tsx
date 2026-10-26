@@ -50,15 +50,11 @@ export const Logo: React.FC<LogoProps> = ({
             <span style={{ color: '#34A853' }}>C</span>
           </span>
 
-          {/* TaskHub with Google Brand Colors */}
+          {/* TaskHub in the shared dark blue brand color */}
           <span className="inline-flex">
-            <span style={{ color: '#4285F4' }}>T</span>
-            <span style={{ color: '#EA4335' }}>a</span>
-            <span style={{ color: '#FBBC04' }}>s</span>
-            <span style={{ color: '#34A853' }}>k</span>
-            <span style={{ color: '#4285F4' }}>H</span>
-            <span style={{ color: '#EA4335' }}>u</span>
-            <span style={{ color: '#34A853' }}>b</span>
+            {'TaskHub'.split('').map((letter, index) => (
+              <span key={`${letter}-${index}`} style={{ color: 'rgb(var(--gray-900))' }}>{letter}</span>
+            ))}
           </span>
         </div>
         {showSubtitle && (
