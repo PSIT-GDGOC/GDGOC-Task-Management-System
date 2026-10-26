@@ -21,7 +21,7 @@ services:
       - key: ALLOW_STAGING_DEV_LOGIN
         value: 'true'
       - key: ALLOW_SELF_REGISTRATION
-        value: 'false'
+        value: 'true'
       - key: COOKIE_SAME_SITE
         value: none
       - key: GOOGLE_AUTH_ENABLED
