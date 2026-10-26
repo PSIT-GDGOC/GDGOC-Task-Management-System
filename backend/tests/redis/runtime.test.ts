@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { QueueEvents } from 'bullmq';
 import { rateLimit } from 'express-rate-limit';
-import { RedisStore } from 'rate-limit-redis';
+import { RecoveringRedisStore as RedisStore } from '../../src/security/recovering-redis-store';
 import express from 'express';
 import request from 'supertest';
 import type Redis from 'ioredis';
@@ -166,6 +166,16 @@ describe('Real Redis, BullMQ, caching and notifications', () => {
     expect((await request(a).get('/')).status).toBe(200);
     expect((await request(b).get('/')).status).toBe(200);
     expect((await request(a).get('/')).status).toBe(429);
+  });
+  it('reloads rate-limit scripts after Redis clears its script cache while preserving counters', async () => {
+    const store = new RedisStore({
+      prefix: prefix + ':reload-test:',
+      sendCommand: async (...args) => (await client.call(args[0], ...args.slice(1))) as never,
+    });
+    await store.init({windowMs:60000} as Parameters<RedisStore['init']>[0]);
+    expect((await store.increment('member')).totalHits).toBe(1);
+    await client.script('FLUSH');
+    expect((await store.increment('member')).totalHits).toBe(2);
   });
   it('registers all recurring jobs and preserves one schedule each across worker restarts', async () => {
     const start = (await import('../../src/jobs/runtime.js')).startJobs;

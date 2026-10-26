@@ -1,16 +1,18 @@
 import { rateLimit, ipKeyGenerator } from 'express-rate-limit';
-import { RedisStore } from 'rate-limit-redis';
+import { RecoveringRedisStore } from './recovering-redis-store';
 import { redis, redisPrefix } from '../lib/redis';
 import { AppError } from '../middleware/errorHandler';
 export function redisLimitStore(suffix: string) {
   const client = redis;
   return client
-    ? new RedisStore({
+    ? new RecoveringRedisStore({
         prefix: `${redisPrefix}:limits:${suffix}:`,
         sendCommand: async (...args) => {
           try {
             return (await client.call(args[0], ...args.slice(1))) as never;
-          } catch {
+          } catch (error) {
+            // Let rate-limit-redis reload scripts after Redis restarts/flushes.
+            if (error instanceof Error && /^NOSCRIPT(?:\s|$)/.test(error.message)) throw error;
             throw new AppError('Request limiting is temporarily unavailable', 503);
           }
         },
