@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import {z} from 'zod';
 import { Router } from 'express';
 import { requireAuth } from '../middleware/auth';
 import { validate } from '../middleware/validate';
@@ -40,25 +41,17 @@ router.patch(
     if (!isPresident) {
       throw new AppError('Only the President can update leadership keys', 403);
     }
-    const { keyCode } = req.body;
-    if (!keyCode || typeof keyCode !== 'string' || keyCode.trim().length < 2) {
-      throw new AppError('A valid key code (at least 2 characters) is required', 400);
-    }
-
-    const target = await prisma.roleKey.findFirst({
-      where: {
-        OR: [{ id: req.params.id }, { position: { equals: req.params.id, mode: 'insensitive' } }],
-      },
-    });
-
-    if (!target) {
-      throw new AppError('Role key record not found', 404);
-    }
-
-    const updated = await prisma.roleKey.update({
-      where: { id: target.id },
-      data: { keyCode: keyCode.trim().toUpperCase() },
-    });
+    const {keyCode} = z.object({keyCode:z.string().trim().min(12).max(200)}).strict().parse(req.body);
+    const normalized = keyCode.toUpperCase();
+    const updated = await prisma.$transaction(async tx => {
+      const target = await tx.roleKey.findFirst({where:{OR:[{id:req.params.id},{position:{equals:req.params.id,mode:'insensitive'}}]}});
+      if (!target) throw new AppError('Role key record not found',404);
+      const duplicate = await tx.roleKey.findFirst({where:{id:{not:target.id},keyCode:{equals:normalized,mode:'insensitive'}}});
+      if (duplicate) throw new AppError('This key is already assigned to another leadership position',409);
+      const saved = await tx.roleKey.update({where:{id:target.id},data:{keyCode:normalized}});
+      await tx.adminEvent.create({data:{actorId:req.user!.id,action:'ROLE_KEY_ROTATED',resourceId:target.id}});
+      return saved;
+    },{isolationLevel:'Serializable'});
     res.json({ success: true, data: updated });
   }),
 );

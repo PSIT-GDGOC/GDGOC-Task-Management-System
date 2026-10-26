@@ -1,6 +1,7 @@
 ﻿import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Team } from '../../types/task';
+import { useTasks } from '../../context/TaskContext';
 import { getTeamMetrics } from '../../data/mockData';
 import { ArrowRight, Users, CheckCircle2 } from 'lucide-react';
 
@@ -10,7 +11,8 @@ interface TeamCardProps {
 
 export const TeamCard: React.FC<TeamCardProps> = ({ team }) => {
   const navigate = useNavigate();
-  const metrics = getTeamMetrics(team.id);
+  const { tasks } = useTasks();
+  const metrics = getTeamMetrics(team.id, tasks);
 
   // Restrained Google-inspired accent styles
   const getAccentStyles = () => {

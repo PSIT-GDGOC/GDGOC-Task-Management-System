@@ -9,7 +9,7 @@ interface MyWorkHistoryProps {
   } | null;
 }
 
-export const MyWorkHistory: React.FC<MyWorkHistoryProps> = ({ user }) => {
+export const MyWorkHistory: React.FC<MyWorkHistoryProps> = () => {
   const [selectedMember, setSelectedMember] = useState('ALL');
 
   return (

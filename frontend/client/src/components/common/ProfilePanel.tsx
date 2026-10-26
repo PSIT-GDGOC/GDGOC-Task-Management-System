@@ -40,6 +40,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({ user, tasks, onClose
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(user?.name || '');
   const [isSavingName, setIsSavingName] = useState(false);
+  const [nameError, setNameError] = useState('');
 
   useEffect(() => {
     setNameInput(user?.name || '');
@@ -51,12 +52,13 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({ user, tasks, onClose
       setIsEditingName(false);
       return;
     }
+    setNameError('');
     setIsSavingName(true);
     try {
       await updateUserName(trimmed);
       setIsEditingName(false);
     } catch (err) {
-      console.error(err);
+      setNameError(err instanceof Error ? err.message : 'Unable to save your name.');
     } finally {
       setIsSavingName(false);
     }
@@ -195,6 +197,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({ user, tasks, onClose
           </div>
         </div>
 
+        {nameError && <p role="alert" className="mt-3 text-sm text-red-700">{nameError}</p>}
         <section className="mt-4">
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-sm font-semibold text-gdgoc-gray-900">Basic Information</h3>

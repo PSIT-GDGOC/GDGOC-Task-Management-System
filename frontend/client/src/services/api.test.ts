@@ -135,3 +135,27 @@ it('treats an HTML fallback as a server error rather than an expired session', a
   const api = await import('./api');
   await expect(api.authApi.getCurrentUser()).rejects.toThrow('invalid response');
 });
+
+it('maps scoped admins to leader access and ignores self-declared leadership titles', async () => {
+  vi.stubGlobal('fetch', vi.fn()
+    .mockResolvedValueOnce(reply({user:{id:'lead',role:'ADMIN',canManageClub:false,managedTeamIds:['team-tech'],teamMemberships:[{teamId:'team-tech',isTeamHead:true,team:{id:'team-tech',slug:'tech',name:'Tech'}}]}}))
+    .mockResolvedValueOnce(reply({user:{id:'member',role:'USER',position:'Tech Lead',teamMemberships:[]}}))
+    .mockResolvedValueOnce(reply({user:{id:'executive',role:'ADMIN',canManageClub:true,teamMemberships:[]}})));
+  const {authApi} = await import('./api');
+  expect(await authApi.getCurrentUser()).toMatchObject({role:'TEAM_LEADER',managedTeamIds:['team-tech']});
+  expect(await authApi.getCurrentUser()).toMatchObject({role:'MEMBER'});
+  expect(await authApi.getCurrentUser()).toMatchObject({role:'ADMIN'});
+});
+it('loads subsequent directory pages so assignment is not limited to the first 100 members', async () => {
+  const fetch=vi.fn().mockResolvedValueOnce(reply({data:[{id:'first'}],pagination:{totalPages:2}})).mockResolvedValueOnce(reply({data:[{id:'last'}],pagination:{totalPages:2}}));
+  vi.stubGlobal('fetch',fetch);
+  const {adminApi}=await import('./api');
+  expect((await adminApi.getUsers()).map(user=>user.id)).toEqual(['first','last']);
+  expect(fetch.mock.calls[1][0]).toContain('page=2');
+});
+it('surfaces notification and activity outages instead of returning invented empty results', async () => {
+  vi.stubGlobal('fetch',vi.fn().mockImplementation(async()=>reply({error:{message:'Service unavailable'}},503)));
+  const {notificationApi,taskApi}=await import('./api');
+  await expect(notificationApi.getNotifications()).rejects.toThrow('Service unavailable');
+  await expect(taskApi.getActivityFeed()).rejects.toThrow('Service unavailable');
+});

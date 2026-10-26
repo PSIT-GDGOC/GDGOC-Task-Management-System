@@ -19,23 +19,36 @@ export const NotificationBell: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [unreadCount, setUnreadCount] = useState<number>(0);
-  const [_isLoading, setIsLoading] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [error, setError] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchNotifications();
-
-    // Poll for notifications every 8 seconds and refresh on window focus for real-time reactivity
-    const handleFocus = () => fetchNotifications(true);
-    window.addEventListener('focus', handleFocus);
-    const interval = setInterval(() => {
-      fetchNotifications(true);
-    }, 8000);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      clearInterval(interval);
+    let active = true;
+    let pending = false;
+    setNotifications([]);
+    setUnreadCount(0);
+    setError('');
+    const refresh = async () => {
+      if (!user?.id || pending) return;
+      pending = true;
+      setIsLoading(true);
+      try {
+        const data = await notificationApi.getNotifications();
+        if (active) { setNotifications(data.notifications); setUnreadCount(data.unreadCount); setError(''); }
+      } catch {
+        if (active) setError('Unable to load notifications. Please retry shortly.');
+      } finally {
+        pending = false;
+        if (active) setIsLoading(false);
+      }
     };
+    void refresh();
+    const handleFocus = () => { void refresh(); };
+    const timer = setInterval(() => { if (!document.hidden) void refresh(); }, 30_000);
+    window.addEventListener('focus', handleFocus);
+    return () => { active = false; clearInterval(timer); window.removeEventListener('focus', handleFocus); };
   }, [user?.id]);
 
   useEffect(() => {
@@ -51,46 +64,32 @@ export const NotificationBell: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [isOpen]);
 
-  const fetchNotifications = async (silent = false) => {
-    if (!silent) setIsLoading(true);
-    try {
-      const data = await notificationApi.getNotifications();
-      setNotifications(data.notifications);
-      setUnreadCount(data.unreadCount);
-    } catch {
-      // offline or silent skip
-    } finally {
-      if (!silent) setIsLoading(false);
-    }
-  };
-
   const handleMarkAllRead = async () => {
-    await notificationApi.markAllAsRead();
-    setNotifications((prev) =>
-      prev.map((n) => ({ ...n, readAt: new Date().toISOString() }))
-    );
-    setUnreadCount(0);
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      await notificationApi.markAllAsRead();
+      setNotifications(previous => previous.map(item => ({...item, readAt:new Date().toISOString()})));
+      setUnreadCount(0);
+      setError('');
+    } catch { setError('Unable to mark notifications as read. Please retry.'); }
+    finally { setIsSaving(false); }
   };
 
   const handleItemClick = async (notif: AppNotification) => {
-    if (!notif.readAt) {
-      notificationApi.markAsRead(notif.id);
-      setNotifications((prev) =>
-        prev.map((n) => (n.id === notif.id ? { ...n, readAt: new Date().toISOString() } : n))
-      );
-      setUnreadCount((prev) => Math.max(0, prev - 1));
-    }
-
-    setIsOpen(false);
-
-    // Route based on user role and notification
-    if (user?.role === 'ADMIN' && (user.position === 'President' || user.position === 'Vice President' || user.position === 'Secretary' || user.position === 'Organizer')) {
-      navigate('/admin/tasks');
-    } else if (user?.role === 'TEAM_LEADER' || user?.isTeamHead) {
-      navigate('/leader/overview');
-    } else {
-      navigate('/member');
-    }
+    if (isSaving) return;
+    setIsSaving(true);
+    try {
+      if (!notif.readAt) {
+        await notificationApi.markAsRead(notif.id);
+        setNotifications(previous => previous.map(item => item.id === notif.id ? {...item,readAt:new Date().toISOString()} : item));
+        setUnreadCount(previous => Math.max(0, previous-1));
+      }
+      setError('');
+      setIsOpen(false);
+      navigate(user?.role === 'ADMIN' ? '/admin/tasks' : user?.role === 'TEAM_LEADER' ? '/leader/overview' : '/member');
+    } catch { setError('Unable to mark the notification as read. Please retry.'); }
+    finally { setIsSaving(false); }
   };
 
   const getNotificationIcon = (kind: string) => {
@@ -157,7 +156,7 @@ export const NotificationBell: React.FC = () => {
 
       {/* Popover Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl border border-gdgoc-gray-200 shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
+        <div className="absolute right-0 mt-2 w-[min(24rem,calc(100vw-2rem))] bg-white rounded-2xl border border-gdgoc-gray-200 shadow-xl z-50 overflow-hidden animate-in fade-in slide-in-from-top-2">
           {/* Header */}
           <div className="p-3.5 px-4 bg-gdgoc-gray-50 border-b border-gdgoc-gray-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -171,7 +170,8 @@ export const NotificationBell: React.FC = () => {
 
             {unreadCount > 0 && (
               <button
-                onClick={handleMarkAllRead}
+                disabled={isSaving}
+                onClick={() => void handleMarkAllRead()}
                 className="text-[11px] font-semibold text-gdgoc-blue hover:text-blue-700 flex items-center gap-1 transition-colors"
               >
                 <CheckCheck className="w-3.5 h-3.5" />
@@ -180,9 +180,11 @@ export const NotificationBell: React.FC = () => {
             )}
           </div>
 
+          {error && <p role="alert" className="p-3 text-sm text-red-700">{error}</p>}
+          {isLoading && <p role="status" className="p-3 text-sm">Loading notifications…</p>}
           {/* List */}
           <div className="max-h-80 overflow-y-auto divide-y divide-gdgoc-gray-100">
-            {notifications.length === 0 ? (
+            {!isLoading && !error && notifications.length === 0 ? (
               <div className="py-10 text-center text-gdgoc-gray-400 space-y-1.5">
                 <Inbox className="w-8 h-8 mx-auto text-gdgoc-gray-300" />
                 <p className="text-xs font-medium">All caught up!</p>

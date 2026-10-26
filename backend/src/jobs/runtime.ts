@@ -115,6 +115,7 @@ export async function startJobs(
         { every: 300000 },
         { name: 'overdue-scan', data: {} },
       );
+      await queue.upsertJobScheduler('deadline-reminders', { every: 6 * 60 * 60 * 1000 }, { name: 'deadline-reminders', data: {} });
       await queue.upsertJobScheduler('cleanup', { every: 3600000 }, { name: 'cleanup', data: {} });
     }
   } catch (error) {

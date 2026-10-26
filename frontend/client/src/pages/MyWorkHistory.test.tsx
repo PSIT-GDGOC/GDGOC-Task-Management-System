@@ -4,11 +4,13 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { MyWorkHistory } from './MyWorkHistory';
 import { apiRequest } from '../services/api';
+const live = vi.hoisted(() => ({tasks: [] as Array<{assigneeId: string; status: string}>}));
+vi.mock('../context/TaskContext', () => ({useTasks: () => live}));
 vi.mock('../services/api', () => ({ apiRequest: vi.fn() }));
 vi.mock('../auth/authContext', () => ({ useAuth: () => ({ user: { id: 'member' } }) }));
 vi.mock('../components/tour/HelpButton', () => ({ HelpButton: () => null }));
 afterEach(cleanup);
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {vi.resetAllMocks(); live.tasks=[];});
 const mount = () =>
   render(
     <MemoryRouter>
@@ -48,4 +50,35 @@ it('does not display invented zero statistics when history fails and allows retr
   expect(screen.queryByText('No rated tasks')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Retry loading history' }));
   expect(await screen.findByText('No rated tasks')).toBeTruthy();
+});
+
+it('renders completed summaries from the history API without an activities relation', async () => {
+  const { activities: _activities, ...summary } = task('Completed milestone', true);
+  vi.mocked(apiRequest).mockResolvedValue({data: [{...summary, submissions: [{id:'submission', outcome:'APPROVED', prUrl:'https://github.com/example/repo/pull/1'}]}]});
+  mount();
+  expect(await screen.findByText('Completed milestone')).toBeTruthy();
+  expect(screen.getByText('100%')).toBeTruthy();
+  expect(screen.getByText('Approved')).toBeTruthy();
+  expect(screen.getByRole('link', {name:'View PR'}).getAttribute('href')).toBe('https://github.com/example/repo/pull/1');
+  expect(screen.getByText('No activity matches these filters.')).toBeTruthy();
+});
+it('renders historical tasks with null relations without losing the page', async () => {
+  vi.mocked(apiRequest).mockResolvedValue({data: [{...task('Legacy milestone', true), activities:null, submissions:null}]});
+  mount();
+  expect(await screen.findByText('Legacy milestone')).toBeTruthy();
+  expect(screen.getByRole('heading', {name:'My Work History'})).toBeTruthy();
+});
+
+it('counts active work from the task board rather than the completed-only history response', async () => {
+  live.tasks=[{assigneeId:'member',status:'In Progress'},{assigneeId:'member',status:'Pending Review'},{assigneeId:'someone-else',status:'In Progress'}];
+  vi.mocked(apiRequest).mockResolvedValue({data:[]});
+  mount();
+  await screen.findByText('No rated tasks');
+  expect(screen.getByText('In Progress').parentElement?.textContent).toBe('In Progress1');
+  expect(screen.getByText('Pending Review').parentElement?.textContent).toBe('Pending Review1');
+});
+it('excludes completed tasks without deadlines from the on-time denominator',async()=>{
+  vi.mocked(apiRequest).mockResolvedValue({data:[task('Rated',false),{...task('No deadline',true),deadline:null}]});
+  mount();
+  expect(await screen.findByText('0%')).toBeTruthy();
 });

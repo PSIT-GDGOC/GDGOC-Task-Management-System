@@ -218,8 +218,8 @@ describe('Activity and reminder access', () => {
 });
 
 describe('Same-origin frontend session transport', () => {
-  it('keeps sessions usable across reload/history and uses the same trusted preview origin for CSRF', async () => {
-    const origin = 'https://gdgoc-task-management-system-git-fix-session-gdg-o-c-psit.vercel.app';
+  it('keeps sessions usable across reload/history and uses the exact trusted production origin for CSRF', async () => {
+    const origin = 'https://gdgoc-task-management-system.vercel.app';
     const member = await fixture.db.user.findUniqueOrThrow({
       where: { id: fixture.users.memberA },
     });

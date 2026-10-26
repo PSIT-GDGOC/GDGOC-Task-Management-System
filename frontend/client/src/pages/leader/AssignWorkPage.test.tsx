@@ -7,7 +7,7 @@ import { adminApi } from '../../services/api';
 const mocks = vi.hoisted(() => ({ assignTask: vi.fn() }));
 vi.mock('../../auth/authContext', () => ({
   useAuth: () => ({
-    user: { id: 'lead', email: 'lead@example.com', role: 'TEAM_LEADER', team: 'Tech' },
+    user: { id: 'lead', email: 'lead@example.com', role: 'TEAM_LEADER', team: 'Tech', managedTeamIds:['team-tech'] },
   }),
 }));
 vi.mock('../../context/TaskContext', () => ({
@@ -115,4 +115,11 @@ it('shows permission or connection failures at form level rather than marking th
     ),
   );
   expect(screen.getByLabelText(/Task Title/).getAttribute('aria-invalid')).toBe('false');
+});
+
+it('does not offer unrelated squads when the lead has no matching management grant',async()=>{
+  vi.mocked(adminApi.getTeams).mockResolvedValue([{id:'other-team',slug:'media',name:'Media'}]);
+  render(<MemoryRouter><AssignWorkPage/></MemoryRouter>);
+  await waitFor(()=>expect(adminApi.getTeams).toHaveBeenCalled());
+  expect(screen.queryByRole('option',{name:'Media'})).toBeNull();
 });

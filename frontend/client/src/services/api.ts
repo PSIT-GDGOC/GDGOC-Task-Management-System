@@ -286,16 +286,16 @@ export const authApi = {
         let role: Role = 'MEMBER';
         const isHead = res.user.teamMemberships?.some((m: any) => m.isTeamHead);
         if (
-          res.user.role === 'ADMIN' ||
+          res.user.canManageClub === true ||
           res.user.role === 'PRESIDENT' ||
           res.user.role === 'SYSTEM_OWNER'
         ) {
           role = 'ADMIN';
-        } else if (isHead || res.user.position?.toLowerCase().includes('lead')) {
+        } else if (isHead || res.user.role === 'ADMIN') {
           role = 'TEAM_LEADER';
         }
 
-        const teamName = res.user.teamMemberships?.[0]?.team?.name || 'Tech Team';
+        const teamName = res.user.teamMemberships?.[0]?.team?.name || 'No team';
 
         return {
           id: res.user.id,
@@ -305,6 +305,9 @@ export const authApi = {
           position: res.user.position,
           team: teamName,
           isTeamHead: isHead,
+          canManageClub: res.user.canManageClub === true,
+          managedTeamIds: res.user.managedTeamIds || [],
+          teamMemberships: res.user.teamMemberships || [],
           membershipStatus:
             role === 'ADMIN' || role === 'TEAM_LEADER' ? 'CORE_MEMBER' : 'REGULAR_MEMBER',
           avatarUrl: res.user.avatarUrl,
@@ -416,14 +419,8 @@ export const taskApi = {
   },
 
   async getActivityFeed(): Promise<TaskActivityItem[]> {
-    try {
-      const res = await apiRequest<{ success: boolean; data: TaskActivityItem[] }>(
-        '/tasks/activity/feed',
-      );
-      return res.data || [];
-    } catch {
-      return [];
-    }
+    const res = await apiRequest<{ success: boolean; data: TaskActivityItem[] }>('/tasks/activity/feed');
+    return res.data || [];
   },
 };
 
@@ -466,6 +463,21 @@ export interface LeadershipRoleKey {
   teamSlug?: string | null;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface DirectoryTeam { id: string; name: string; slug: string; description?: string; _count?: {memberships: number; tasks: number} }
+export interface DirectoryMembership { id: string; isTeamHead: boolean; user: {id: string; name: string; email: string; position?: string; role: string} }
+async function fetchAllPages<T>(endpoint: string): Promise<T[]> {
+  const result: T[] = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const response = await apiRequest<{data:T[];pagination?:{totalPages:number}}>(`${endpoint}&page=${page}`);
+    result.push(...response.data);
+    totalPages = response.pagination?.totalPages ?? 1;
+    page += 1;
+  } while (page <= totalPages);
+  return result;
 }
 
 export const adminApi = {
@@ -522,25 +534,18 @@ export const adminApi = {
     if (params.isActive !== undefined) query.append('isActive', String(params.isActive));
     query.append('limit', '100');
 
-    const res = await apiRequest<{ success: boolean; data: any[] }>(`/users?${query.toString()}`);
-    return res.data || [];
+    return fetchAllPages<AdminUser>(`/users?${query.toString()}`);
   },
 
   async toggleUserStatus(userId: string, isActive: boolean): Promise<void> {
     await apiRequest(`/users/${userId}/status`, 'PATCH', { isActive });
   },
 
-  async getTeams(): Promise<
-    {
-      id: string;
-      name: string;
-      slug: string;
-      description?: string;
-      _count?: { memberships: number; tasks: number };
-    }[]
-  > {
-    const res = await apiRequest<{ success: boolean; data: any[] }>('/teams');
-    return res.data || [];
+  async getTeams(): Promise<DirectoryTeam[]> {
+    return fetchAllPages<DirectoryTeam>('/teams?limit=100');
+  },
+  async getTeamMembers(teamId: string): Promise<DirectoryMembership[]> {
+    return fetchAllPages<DirectoryMembership>(`/teams/${teamId}/members?limit=100`);
   },
 
   async createTeam(input: { name: string; slug: string; description?: string }): Promise<any> {
@@ -613,31 +618,13 @@ export const notificationApi = {
   async getNotifications(
     unreadOnly = false,
   ): Promise<{ notifications: AppNotification[]; unreadCount: number }> {
-    try {
-      const res = await apiRequest<{
-        success: boolean;
-        data: AppNotification[];
-        unreadCount: number;
-      }>(`/notifications?limit=25&unreadOnly=${unreadOnly}`);
-      return { notifications: res.data || [], unreadCount: res.unreadCount || 0 };
-    } catch {
-      return { notifications: [], unreadCount: 0 };
-    }
+    const res = await apiRequest<{success: boolean; data: AppNotification[]; unreadCount: number}>(`/notifications?limit=25&unreadOnly=${unreadOnly}`);
+    return { notifications: res.data || [], unreadCount: res.unreadCount || 0 };
   },
-
   async markAsRead(notificationId: string): Promise<void> {
-    try {
-      await apiRequest(`/notifications/${notificationId}/read`, 'POST');
-    } catch {
-      // fallback
-    }
+    await apiRequest(`/notifications/${notificationId}/read`, 'POST');
   },
-
   async markAllAsRead(): Promise<void> {
-    try {
-      await apiRequest('/notifications/read-all', 'POST');
-    } catch {
-      // fallback
-    }
+    await apiRequest('/notifications/read-all', 'POST');
   },
 };

@@ -19,7 +19,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ allowedRoles, ch
     return (
       <div className="min-h-screen bg-gdgoc-gray-50 flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-gdgoc-blue border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-gdgoc-blue border-t-transparent rounded-full animate-spin" />
           <p className="text-sm text-gdgoc-gray-600 font-medium">Verifying workspace session...</p>
         </div>
       </div>

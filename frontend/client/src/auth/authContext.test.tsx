@@ -79,3 +79,13 @@ describe('Server backed authentication', () => {
     expect(auth.isAuthenticated).toBe(true);
   });
 });
+
+it('keeps a successful signup authenticated when browser preference storage is blocked', async () => {
+  await mount();
+  vi.mocked(authApi.loginDev).mockResolvedValue(member);
+  const write=vi.spyOn(Storage.prototype,'setItem').mockImplementation(()=>{throw new Error('Storage blocked');});
+  try {
+    await act(async()=>{await expect(auth.login({email:member.email,name:member.name,isSignUp:true,password:'fixture-password'})).resolves.toEqual(member);});
+    expect(auth.isAuthenticated).toBe(true);
+  } finally { write.mockRestore(); }
+});

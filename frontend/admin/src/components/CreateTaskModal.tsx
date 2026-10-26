@@ -1,7 +1,9 @@
+import {useQuery} from '@tanstack/react-query';
+import {apiClient} from '../services/api';
 import React, { useState } from 'react';
 import { useCreateTask } from '../hooks/useTasks';
 import { TaskPriority, TaskScope } from '../types/task';
-import { Plus, X } from 'lucide-react';
+import { X } from 'lucide-react';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -20,11 +22,26 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
   const [tagsInput, setTagsInput] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const teams = useQuery({
+    queryKey:['assignment-teams'], enabled:isOpen,
+    queryFn:async()=>{
+      const all:Array<{id:string;name:string}>=[];
+      let page=1,totalPages=1;
+      do {
+        const result=await apiClient<{data:Array<{id:string;name:string}>;pagination?:{totalPages:number}}>(`/teams?limit=100&page=${page}`);
+        all.push(...result.data);totalPages=result.pagination?.totalPages??1;page++;
+      } while(page<=totalPages);
+      return all;
+    },
+  });
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    if (title.trim().length<3 || description.trim().length<10) {setErrorMsg('Use a title of at least 3 characters and a description of at least 10 characters.');return;}
+    if (scope==='TEAM' && !teamId) {setErrorMsg('Select a team for a team-specific task.');return;}
+
 
     const tags = tagsInput
       .split(',')
@@ -116,6 +133,14 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
             </div>
           </div>
 
+          {scope==='TEAM' && <div>
+            <label htmlFor="legacy-task-team" className="block text-xs font-semibold text-gray-700 mb-1">Team *</label>
+            <select id="legacy-task-team" required value={teamId} onChange={event=>setTeamId(event.target.value)} className="w-full rounded-lg border p-2 text-sm">
+              <option value="">Select team</option>
+              {(teams.data||[]).map(team=><option key={team.id} value={team.id}>{team.name}</option>)}
+            </select>
+            {teams.isError && <p role="alert">Unable to load teams. Please reopen the dialog to retry.</p>}
+          </div>}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1">
               Deadline (Optional)

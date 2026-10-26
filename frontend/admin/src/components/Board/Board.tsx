@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DndContext, DragEndEvent } from '@dnd-kit/core';
+import { DndContext } from '@dnd-kit/core';
 import { Task, TaskStatus } from '../../types/task';
 import { Column } from './Column';
 import { useReviewTask, useDeleteTask } from '../../hooks/useTasks';

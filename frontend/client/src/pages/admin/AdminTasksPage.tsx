@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTasks } from '../../context/TaskContext';
-import { TEAMS } from '../../data/mockData';
+import { useTeams } from '../../hooks/useTeams';
 import { Task } from '../../types/task';
 import { TaskStatusBadge } from '../../components/common/TaskStatusBadge';
 import { PriorityBadge } from '../../components/common/PriorityBadge';
@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 
 export const AdminTasksPage: React.FC = () => {
+  const { teams: TEAMS } = useTeams();
   const navigate = useNavigate();
   const { tasks, approveTask, refreshTasks } = useTasks();
 
@@ -53,8 +54,7 @@ export const AdminTasksPage: React.FC = () => {
 
   // Handle Approve Deliverable with Celebratory Burst
   const handleApproveTask = async (task: Task, e?: React.MouseEvent) => {
-    let updated: Task;
-    try { updated = await approveTask(task.id); } catch { return; }
+    const updated = await approveTask(task.id);
     if (updated) {
       if (e) {
         triggerCelebrationBurst({
@@ -362,7 +362,7 @@ export const AdminTasksPage: React.FC = () => {
                           {/* Approve Milestone Button */}
                           {!isCompleted && (
                             <button
-                              onClick={(e) => handleApproveTask(task, e)}
+                              onClick={(e) => { void handleApproveTask(task, e).catch(() => {}); }}
                               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all shadow-2xs ${
                                 isUnderReview
                                   ? 'bg-gdgoc-green text-white hover:bg-emerald-600 animate-pulse'

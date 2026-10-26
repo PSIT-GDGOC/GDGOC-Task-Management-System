@@ -79,15 +79,6 @@ export const AssignWorkPage: React.FC = () => {
               isTeamHead: Boolean(m.isTeamHead),
             }));
 
-            // Fallback for mock preview account structure
-            if (memberships.length === 0 && typeof u.team === 'string' && u.team.trim()) {
-              memberships.push({
-                teamId: u.team.toLowerCase(),
-                teamSlug: u.team.toLowerCase(),
-                teamName: u.team,
-                isTeamHead: u.role === 'TEAM_LEADER' || (u.position && u.position.toLowerCase().includes('lead')),
-              });
-            }
 
             return {
               id: u.id,
@@ -101,7 +92,7 @@ export const AssignWorkPage: React.FC = () => {
           setLiveUsers(parsedUsers);
         }
       } catch (err) {
-        console.error('[AssignWorkPage] Failed to fetch live teams or users:', err);
+        setSubmitError(err instanceof Error ? err.message : 'Unable to load assignment options.');
       }
     }
     loadFormOptions();
@@ -109,30 +100,8 @@ export const AssignWorkPage: React.FC = () => {
 
   // Filter selectable teams based on user role (President sees all squads; Team Lead sees assigned squads)
   const availableTeams = useMemo(() => {
-    const isPresident =
-      user?.role === 'ADMIN' ||
-      user?.position?.toLowerCase().includes('president') ||
-      user?.email?.toLowerCase().includes('admin');
-
-    if (isPresident) return liveTeams;
-
-    const filtered = liveTeams.filter((t) => {
-      const userTeamMemberships = (user as any)?.teamMemberships || [];
-      return (
-        userTeamMemberships.some(
-          (m: any) =>
-            m.teamId === t.id ||
-            m.team?.id === t.id ||
-            m.team?.slug === t.slug ||
-            m.team?.name?.toLowerCase() === t.name?.toLowerCase()
-        ) ||
-        (user?.team &&
-          (user.team.toLowerCase() === t.name.toLowerCase() ||
-            user.team.toLowerCase() === t.slug.toLowerCase()))
-      );
-    });
-
-    return filtered.length > 0 ? filtered : liveTeams;
+    if (user?.canManageClub || user?.role === 'ADMIN') return liveTeams;
+    return liveTeams.filter((team) => user?.managedTeamIds?.includes(team.id));
   }, [liveTeams, user]);
 
   // Auto-select squad if only one squad is available to the user
@@ -170,16 +139,12 @@ export const AssignWorkPage: React.FC = () => {
         return (
           (m.teamId && m.teamId === targetTeamId) ||
           (m.teamSlug && m.teamSlug === targetTeamSlug) ||
-          (m.teamSlug && targetTeamSlug && (m.teamSlug.includes(targetTeamSlug) || targetTeamSlug.includes(m.teamSlug))) ||
           (targetTeamName && m.teamName && m.teamName.toLowerCase() === targetTeamName)
         );
       });
     });
 
-    const isPresident =
-      user?.role === 'ADMIN' ||
-      user?.position?.toLowerCase().includes('president') ||
-      user?.email?.toLowerCase().includes('admin');
+    const isPresident = user?.role === 'ADMIN' || user?.canManageClub;
 
     if (isPresident) {
       // President's perspective:
@@ -378,7 +343,7 @@ export const AssignWorkPage: React.FC = () => {
               Assign Work
             </h1>
             <p className="text-xs sm:text-sm text-gdgoc-gray-600">
-              Team leaders can assign tasks to team members across Core, Tech, Media, and Content teams.
+              Assign tasks to active members in the teams you manage.
             </p>
           </div>
 

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Task } from '../../types/task';
 import { TaskStatusBadge } from './TaskStatusBadge';
@@ -24,10 +24,10 @@ import {
 interface TaskDetailsModalProps {
   task: Task | null;
   isOpen?: boolean;
-  onClose: () => void;
-  onApprove?: (task: Task) => void;
-  onAccept?: (task: Task) => void;
-  onSubmitForReview?: (task: Task) => void;
+  onClose: () => void | Promise<unknown>;
+  onApprove?: (task: Task) => void | Promise<unknown>;
+  onAccept?: (task: Task) => void | Promise<unknown>;
+  onSubmitForReview?: (task: Task) => void | Promise<unknown>;
   userRole?: string;
 }
 
@@ -40,6 +40,17 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
   onSubmitForReview,
   userRole = 'MEMBER',
 }) => {
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState('');
+  useEffect(() => { setError(''); }, [task?.id]);
+  const perform = async (action: (task: Task) => void | Promise<unknown>) => {
+    if (!task || pending) return;
+    setPending(true);
+    setError('');
+    try { await action(task); onClose(); }
+    catch (err) { setError(err instanceof Error ? err.message : 'Unable to update this task.'); }
+    finally { setPending(false); }
+  };
   // Handle ESC key to close modal
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -126,6 +137,8 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
 
         {/* Modal Body (Scrollable) */}
         <div className="p-6 overflow-y-auto space-y-6">
+          {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+          {pending && <p role="status" className="text-sm">Saving task…</p>}
           {/* Key Task Metadata Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 p-3.5 rounded-xl bg-gdgoc-gray-50/80 border border-[#111111] shadow-[2px_2px_0_#111111]">
             {/* Assigned Member */}
@@ -307,10 +320,8 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
             {isAssigned && onAccept && (
               <button
                 type="button"
-                onClick={() => {
-                  onAccept(task);
-                  onClose();
-                }}
+                disabled={pending}
+                onClick={() => void perform(onAccept)}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gdgoc-blue hover:bg-blue-600 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
               >
                 <Play className="w-3.5 h-3.5 fill-current" />
@@ -322,10 +333,8 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
             {isInProgress && onSubmitForReview && (
               <button
                 type="button"
-                onClick={() => {
-                  onSubmitForReview(task);
-                  onClose();
-                }}
+                disabled={pending}
+                onClick={() => void perform(onSubmitForReview)}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer animate-pulse"
               >
                 <CheckSquare className="w-3.5 h-3.5" />
@@ -337,10 +346,8 @@ export const TaskDetailsModal: React.FC<TaskDetailsModalProps> = ({
             {isPendingReview && onApprove && userRole !== 'MEMBER' && (
               <button
                 type="button"
-                onClick={() => {
-                  onApprove(task);
-                  onClose();
-                }}
+                disabled={pending}
+                onClick={() => void perform(onApprove)}
                 className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-gdgoc-green hover:bg-emerald-600 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5" />

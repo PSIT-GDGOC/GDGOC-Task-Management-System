@@ -136,19 +136,15 @@ export function parseEnvironment(input: NodeJS.ProcessEnv) {
         throw new Error('Production database connections must require SSL');
     }
     const redisUrl = new URL(value.REDIS_URL!);
-    const privateRender =
-      (value.REDIS_TRANSPORT === 'render-internal' ||
-        value.RENDER === 'true' ||
-        process.env.RENDER === 'true' ||
-        /^red-[a-z0-9]+$/.test(redisUrl.hostname)) &&
-      /^red-[a-z0-9]+$/.test(redisUrl.hostname);
+    const privateRender = value.RENDER === 'true' && /^red-[a-z0-9]+$/.test(redisUrl.hostname);
     if (redisUrl.protocol !== 'rediss:' && !privateRender)
       throw new Error('Production Redis must use TLS (rediss://)');
   }
   return {
     ...value,
     ALLOW_SELF_REGISTRATION:
-      value.ALLOW_SELF_REGISTRATION !== 'false',
+      value.ALLOW_SELF_REGISTRATION === 'true' ||
+      (value.ALLOW_SELF_REGISTRATION === undefined && value.NODE_ENV !== 'production'),
     REDIS_PREFIX: value.REDIS_PREFIX ?? `gdgoc-${value.NODE_ENV}`,
   };
 }
@@ -156,13 +152,13 @@ export const env = parseEnvironment(process.env);
 export const frontendOrigins = [
   env.CLIENT_ORIGIN,
   env.ADMIN_ORIGIN,
-  ...(env.ENABLE_DEV_LOGIN ? ['http://localhost:5173', 'http://localhost:5174'] : []),
+  ...(env.ENABLE_DEV_LOGIN && env.NODE_ENV !== 'production' ? ['http://localhost:5173', 'http://localhost:5174'] : []),
 ];
 
 export function isTrustedFrontendOrigin(origin: string) {
   const clean = origin.replace(/\/$/, '');
   return (
     frontendOrigins.some((allowed) => allowed.replace(/\/$/, '') === clean) ||
-    /^https:\/\/gdgoc-task-management-system[a-z0-9-]*\.vercel\.app$/.test(clean)
+    clean === 'https://gdgoc-task-management-system.vercel.app'
   );
 }

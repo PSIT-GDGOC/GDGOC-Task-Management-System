@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { isClubManager, managedTeamIds } from '../utils/permissions';
 import { GoogleAuthService } from '../services/google-auth.service';
 import { authenticationLimit } from '../security/rateLimits';
 import { asyncHandler } from '../utils/asyncHandler';
@@ -21,7 +22,7 @@ const router = Router();
 router.get('/me', requireAuth, (req: Request, res: Response) => {
   res.json({
     success: true,
-    user: req.user,
+    user: { ...req.user, canManageClub: isClubManager(req.user!), managedTeamIds: managedTeamIds(req.user!) },
   });
 });
 
@@ -100,6 +101,7 @@ router.get(
     const portal = (req.query.portal as 'member' | 'admin') || 'member';
     const targetOrigin = portal === 'admin' ? env.ADMIN_ORIGIN : env.CLIENT_ORIGIN;
     if (!GoogleAuthService.configured()) {
+      if (req.accepts(['json', 'html']) !== 'html') throw new AppError('Google authentication is not configured', 503);
       res.redirect(
         `${targetOrigin}/login?error=${encodeURIComponent(
           'Google OAuth 2.0 credentials are not yet configured on the server.',
@@ -124,7 +126,9 @@ router.get(
       hd: z.string().optional(),
     }),
   }),
-  async (req: Request, res: Response) => {
+  async (req: Request, res: Response, next: NextFunction) => {
+    const portal = req.session?.oauth?.portal || 'member';
+    const targetOrigin = portal === 'admin' ? env.ADMIN_ORIGIN : env.CLIENT_ORIGIN;
     try {
       const redirectUrl = await GoogleAuthService.callback(
         req,
@@ -133,12 +137,10 @@ router.get(
         req.query.error as string | undefined,
       );
       res.redirect(redirectUrl);
-    } catch (err: any) {
-      const portal = req.session?.oauth?.portal || 'member';
-      const targetOrigin = portal === 'admin' ? env.ADMIN_ORIGIN : env.CLIENT_ORIGIN;
-      const errorMsg = encodeURIComponent(
-        err.message || 'Google sign-in was cancelled or could not be verified',
-      );
+    } catch (err: unknown) {
+      const safeError = err instanceof AppError ? err : new AppError('Google sign-in could not be verified. Please retry.', 401);
+      if (req.accepts(['json', 'html']) !== 'html') return next(safeError);
+      const errorMsg = encodeURIComponent(safeError.message);
       res.redirect(`${targetOrigin}/login?error=${errorMsg}`);
     }
   },

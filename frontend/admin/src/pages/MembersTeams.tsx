@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Layers, ShieldCheck, UserCheck, Plus } from 'lucide-react';
+import { Users, Layers, ShieldCheck } from 'lucide-react';
 
 interface TeamItem {
   id: string;

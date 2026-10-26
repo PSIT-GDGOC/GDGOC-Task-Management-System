@@ -81,8 +81,8 @@ export const AdminInvitationsPage: React.FC = () => {
     e.preventDefault();
     if (!editingKey) return;
     const trimmed = editKeyCode.trim().toUpperCase();
-    if (trimmed.length < 2) {
-      setFeedbackMsg({ type: 'error', text: 'Key must be at least 2 characters long' });
+    if (trimmed.length < 12 || trimmed.length > 200) {
+      setFeedbackMsg({ type: 'error', text: 'Key must be between 12 and 200 characters long' });
       return;
     }
 
@@ -95,7 +95,7 @@ export const AdminInvitationsPage: React.FC = () => {
 
       setFeedbackMsg({
         type: 'success',
-        text: `Successfully updated constant key for ${editingKey.position} to "${trimmed}" in database.`,
+        text: `Updated the leadership key for ${editingKey.position}.`,
       });
       setEditingKey(null);
     } catch (err: unknown) {
