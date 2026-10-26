@@ -7,6 +7,7 @@ import { validate } from '../middleware/validate';
 import { AppError } from '../middleware/errorHandler';
 import { asyncHandler } from '../utils/asyncHandler';
 import { idSchema, paginationSchema, Pagination } from '../schemas/directory';
+import { isClubManager } from '../utils/permissions';
 import { AuthenticatedUser } from '../types/auth';
 const router = Router();
 router.use(requireAuth);
@@ -15,6 +16,9 @@ function visible(user: AuthenticatedUser): Prisma.NotificationWhereInput {
     userId: user.id,
     task: {
       isDeleted: false,
+      ...(!isClubManager(user) && {
+        OR: [{scope:'WHOLE_CLUB'}, {teamId:{in:user.teamMemberships.map(membership=>membership.teamId)}}],
+      }),
     },
   };
 }

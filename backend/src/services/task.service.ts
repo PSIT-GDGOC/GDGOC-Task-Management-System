@@ -351,40 +351,21 @@ export class TaskService {
         TaskStatus.IN_REVIEW,
         { submissionId: saved.id },
       );
-      const recipients: Array<{ id: string; name: string; email: string }> = [];
-      if (task.creatorId && task.creatorId !== current.id) {
-        const creator = await tx.user.findUnique({
-          where: { id: task.creatorId },
-          select: { id: true, name: true, email: true },
-        });
-        if (creator) recipients.push(creator);
-      }
-      if (task.teamId) {
-        const teamHeads = await tx.teamMembership.findMany({
-          where: { teamId: task.teamId, isTeamHead: true, userId: { not: current.id } },
-          include: { user: { select: { id: true, name: true, email: true } } },
-        });
-        for (const th of teamHeads) {
-          if (th.user && !recipients.some((r) => r.id === th.user.id)) {
-            recipients.push(th.user);
-          }
-        }
-      }
-
-      // Notify all Super Admins, Presidents, and Executive Admins
-      const superAdmins = await tx.user.findMany({
+      // Notifications contain task content, so recipients need current review permission.
+      const candidates = await tx.user.findMany({
         where: {
-          role: { in: ['SYSTEM_OWNER', 'PRESIDENT', 'ADMIN'] },
-          id: { not: current.id },
           isActive: true,
+          id: { not: current.id },
+          OR: [
+            { role: { in: ['SYSTEM_OWNER', 'PRESIDENT', 'ADMIN'] } },
+            ...(task.teamId ? [{ teamMemberships: { some: { teamId: task.teamId, isTeamHead: true } } }] : []),
+          ],
         },
-        select: { id: true, name: true, email: true },
+        select: userProfileSelect,
       });
-      for (const sa of superAdmins) {
-        if (!recipients.some((r) => r.id === sa.id)) {
-          recipients.push(sa);
-        }
-      }
+      const recipients = candidates.filter(candidate => task.scope === TaskScope.WHOLE_CLUB
+        ? isClubManager(candidate)
+        : Boolean(task.teamId && canManageTeam(candidate, task.teamId)));
 
       for (const r of recipients) {
         await notifyUser(tx, r.id, id, 'TASK_SUBMITTED');

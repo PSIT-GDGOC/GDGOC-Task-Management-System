@@ -502,3 +502,23 @@ describe('Task Board lifecycle through the HTTP API', () => {
     expect((await agents.memberA.get('/api/v1/tasks?status=INVALID')).status).toBe(400);
   });
 });
+
+it('notifies only active reviewers with access to the submitted team task',async()=>{
+  const task=await submitTask();
+  const recipients=await db.notification.findMany({where:{taskId:task.id,kind:'TASK_SUBMITTED'}});
+  expect(recipients.map(notification=>notification.userId).sort()).toEqual([users.owner,users.president,users.adminA,users.headA].sort());
+  await db.user.update({where:{id:users.headA},data:{isActive:false}});
+  try {
+    const second=await submitTask();
+    const inactive=await db.notification.findMany({where:{taskId:second.id,userId:users.headA}});
+    expect(inactive).toHaveLength(0);
+  } finally {await db.user.update({where:{id:users.headA},data:{isActive:true}});}
+});
+it('does not expose legacy notifications for tasks outside the recipient team scope',async()=>{
+  const hidden=await task(teamB);
+  const notification=await db.notification.create({data:{userId:users.memberA,taskId:hidden.id,kind:'TASK_SUBMITTED'}});
+  const response=await agents.memberA.get('/api/v1/notifications');
+  expect(response.status).toBe(200);
+  expect(response.body.data.some((item:{id:string})=>item.id===notification.id)).toBe(false);
+  expect((await agents.memberA.post(`/api/v1/notifications/${notification.id}/read`).send({})).status).toBe(404);
+});
