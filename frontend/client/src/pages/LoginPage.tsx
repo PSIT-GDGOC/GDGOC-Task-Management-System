@@ -13,7 +13,7 @@ import { MarqueeStrip } from '../components/auth/MarqueeStrip';
 export const LoginPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const [isSignUp, setIsSignUp] = useState(searchParams.get('mode') === 'signup');
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading, sessionError, retrySession } = useAuth();
   const navigate = useNavigate();
 
   // Redirect if already authenticated
@@ -134,6 +134,19 @@ export const LoginPage: React.FC = () => {
                     Sign up
                   </button>
                 </nav>
+                {isLoading && (
+                  <p role="status" className="mb-4 text-sm text-gdgoc-gray-700">
+                    Checking your session. You can sign in while the server connects.
+                  </p>
+                )}
+                {sessionError && (
+                  <div role="alert" className="mb-4 text-sm text-gdgoc-gray-700">
+                    <p>Session check unavailable. Please retry or sign in.</p>
+                    <button type="button" onClick={() => void retrySession()} className="underline">
+                      Retry session check
+                    </button>
+                  </div>
+                )}
                 {isSignUp ? <SignUpForm onLogIn={() => setIsSignUp(false)} /> : <LoginForm />}
               </div>
             </div>

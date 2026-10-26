@@ -54,9 +54,8 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onLogIn }) => {
             'Google OAuth 2.0 credentials are not yet configured on this server. Please sign up using the form below.',
         );
       }
-    } catch {
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
-      window.location.href = `${apiBase}/auth/google?portal=member`;
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'Google sign-up is unavailable. Please retry.');
     } finally {
       setIsGoogleLoading(false);
     }

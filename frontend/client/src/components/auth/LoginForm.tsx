@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/authContext';
 import { authApi } from '../../services/api';
 import { MembershipStatus } from '../../types/auth';
-import { authApi } from '../../services/api';
 import {
   Eye,
   EyeOff,
@@ -62,9 +61,8 @@ export const LoginForm: React.FC = () => {
             'Google OAuth 2.0 credentials are not yet configured on this server. Please sign in with your email or test accounts below.',
         );
       }
-    } catch {
-      const apiBase = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
-      window.location.href = `${apiBase}/auth/google?portal=member`;
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Google sign-in is unavailable. Please retry.');
     } finally {
       setIsGoogleLoading(false);
     }
@@ -119,16 +117,6 @@ export const LoginForm: React.FC = () => {
     setPassword(e.target.value);
     if (passwordError) validatePassword(e.target.value);
     if (formError) setFormError(null);
-  };
-
-  const handleGoogleSignIn = async () => {
-    setIsSubmitting(true);
-    setFormError(null);
-    try { window.location.assign(await authApi.getGoogleUrl()); }
-    catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Google sign-in is unavailable.');
-      setIsSubmitting(false);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -551,11 +539,6 @@ export const LoginForm: React.FC = () => {
           )}
         </button>
       </form>
-
-      <button type="button" disabled={isSubmitting} onClick={handleGoogleSignIn}
-        className="mt-4 w-full rounded-xl border border-gray-300 bg-white py-2.5 text-sm font-semibold disabled:opacity-70">
-        Continue with Google
-      </button>
 
       {/* Clean Brand Footnote */}
       <div className="mt-6 pt-3 border-t border-gdgoc-gray-100 text-center text-xs text-gdgoc-gray-400">

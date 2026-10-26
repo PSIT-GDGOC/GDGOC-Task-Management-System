@@ -27,8 +27,8 @@ type WorkTask = {
   completedAt: string | null;
   isOnTime: boolean | null;
   team?: { id: string; name: string } | null;
-  activities: Activity[];
-  submissions: Submission[];
+  activities?: Activity[] | null;
+  submissions?: Submission[] | null;
 };
 const pretty = (status: string) =>
   ({
@@ -102,7 +102,7 @@ export const MyWorkHistory: React.FC<{
   const activity = useMemo(
     () =>
       tasks
-        .flatMap((task) => task.activities.map((event) => ({ ...event, task })))
+        .flatMap((task) => (task.activities ?? []).map((event) => ({ ...event, task })))
         .filter((event) => {
           const matchesStatus =
             status === 'ALL' ||
@@ -321,9 +321,9 @@ export const MyWorkHistory: React.FC<{
                                 {event.details.comment}
                               </p>
                             )}
-                            {event.task.submissions[0]?.prUrl && (
+                            {event.task.submissions?.[0]?.prUrl && (
                               <a
-                                href={event.task.submissions[0].prUrl}
+                                href={event.task.submissions?.[0].prUrl}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="mt-1 inline-block text-xs text-blue-600 underline"
@@ -370,7 +370,7 @@ export const MyWorkHistory: React.FC<{
                       </thead>
                       <tbody className="divide-y divide-gdgoc-gray-100">
                         {completed.map((task) => {
-                          const sub = task.submissions[0];
+                          const sub = task.submissions?.[0];
                           const timely = statusLabel(task);
                           return (
                             <tr key={task.id}>

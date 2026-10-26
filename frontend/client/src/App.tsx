@@ -7,7 +7,6 @@ import { TaskProvider } from './context/TaskContext';
 import { TourProvider } from './context/TourContext';
 import { TourManager } from './components/tour/TourManager';
 import { FullNameModal } from './components/common/FullNameModal';
-import { SessionRecovery } from './auth/SessionRecovery';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 import { AdminLayout } from './layouts/AdminLayout';
@@ -30,22 +29,12 @@ import { MyWorkHistory } from './pages/MyWorkHistory';
  * Smart Root Redirector
  * Resolves root URL '/' to user's assigned role dashboard or to '/login'
  */
-const RootRedirector: React.FC = () => {
-  const { user, isAuthenticated, isLoading, sessionError } = useAuth();
+export const RootRedirector: React.FC = () => {
+  const { user, isAuthenticated, isLoading } = useAuth();
 
-  if (sessionError) return <SessionRecovery />;
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gdgoc-gray-50 flex items-center justify-center">
-        <div className="w-8 h-8 border-3 border-gdgoc-blue border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  if (!isAuthenticated || !user) {
-    return <Navigate to="/login" replace />;
-  }
+  // Public account access must not wait for a sleeping API to restore a session.
+  // LoginPage redirects to the server-confirmed role once restoration finishes.
+  if (isLoading || !isAuthenticated || !user) return <LoginPage />;
 
   switch (user.role) {
     case 'ADMIN':

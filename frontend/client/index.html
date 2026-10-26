@@ -18,7 +18,13 @@
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
   </head>
   <body class="bg-gdgoc-gray-50 text-gdgoc-gray-900 font-sans antialiased min-h-screen">
-    <div id="root"></div>
+    <div id="root">
+      <div role="status" style="min-height:100vh;display:grid;place-content:center;text-align:center;font-family:system-ui,sans-serif">
+        <h1 style="font-size:1.5rem">GDGoC TaskHub</h1>
+        <p>Loading your workspace…</p>
+      </div>
+    </div>
+    <noscript>Please enable JavaScript to use TaskHub.</noscript>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

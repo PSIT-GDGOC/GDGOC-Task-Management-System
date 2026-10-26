@@ -49,3 +49,20 @@ it('does not display invented zero statistics when history fails and allows retr
   fireEvent.click(screen.getByRole('button', { name: 'Retry loading history' }));
   expect(await screen.findByText('No rated tasks')).toBeTruthy();
 });
+
+it('renders completed summaries from the history API without an activities relation', async () => {
+  const { activities, ...summary } = task('Completed milestone', true);
+  vi.mocked(apiRequest).mockResolvedValue({data: [{...summary, submissions: [{id:'submission', outcome:'APPROVED', prUrl:'https://github.com/example/repo/pull/1'}]}]});
+  mount();
+  expect(await screen.findByText('Completed milestone')).toBeTruthy();
+  expect(screen.getByText('100%')).toBeTruthy();
+  expect(screen.getByText('Approved')).toBeTruthy();
+  expect(screen.getByRole('link', {name:'View PR'}).getAttribute('href')).toBe('https://github.com/example/repo/pull/1');
+  expect(screen.getByText('No activity matches these filters.')).toBeTruthy();
+});
+it('renders historical tasks with null relations without losing the page', async () => {
+  vi.mocked(apiRequest).mockResolvedValue({data: [{...task('Legacy milestone', true), activities:null, submissions:null}]});
+  mount();
+  expect(await screen.findByText('Legacy milestone')).toBeTruthy();
+  expect(screen.getByRole('heading', {name:'My Work History'})).toBeTruthy();
+});
