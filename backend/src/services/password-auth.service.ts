@@ -62,6 +62,18 @@ export async function passwordLogin(input: LoginInput) {
             401,
           );
         }
+        const isSuperAdmin =
+          existing.role === SystemRole.SYSTEM_OWNER ||
+          existing.role === SystemRole.ADMIN ||
+          ['president', 'vice president', 'secretary', 'organizer', 'system owner', 'super admin', 'admin'].includes(
+            (existing.position || '').trim().toLowerCase(),
+          );
+
+        if (isSuperAdmin) {
+          // Ensure any legacy or accidental squad memberships are purged for super admins
+          await tx.teamMembership.deleteMany({ where: { userId: existing.id } });
+        }
+
         return tx.user.findUniqueOrThrow({ where: { id: existing.id }, select: userProfileSelect });
       }
       if (existing)
@@ -106,7 +118,7 @@ export async function passwordLogin(input: LoginInput) {
             throw new AppError('Leadership key does not match the selected team.', 400);
           role = SystemRole.ADMIN;
           position = roleKey.position;
-          teamSlug = roleKey.teamSlug ?? teamSlug;
+          teamSlug = roleKey.teamSlug ?? undefined;
           isTeamHead = Boolean(roleKey.teamSlug);
         } else {
           invitation = await tx.adminInvitation.findFirst({
@@ -133,10 +145,23 @@ export async function passwordLogin(input: LoginInput) {
             throw new AppError('Invitation does not match the selected team.', 400);
           role = invitation.intendedRole;
           position = invitation.intendedPosition || 'Team Member';
-          teamSlug = invitation.intendedTeam?.slug ?? teamSlug;
+          teamSlug = invitation.intendedTeam?.slug ?? undefined;
           isTeamHead = Boolean(invitation.intendedTeamId);
         }
       }
+
+      const isSuperAdminRole =
+        role === SystemRole.SYSTEM_OWNER ||
+        role === SystemRole.ADMIN ||
+        ['president', 'vice president', 'secretary', 'organizer', 'system owner', 'super admin', 'admin'].includes(
+          position.trim().toLowerCase(),
+        );
+
+      if (isSuperAdminRole) {
+        teamSlug = undefined;
+        isTeamHead = false;
+      }
+
       const team = teamSlug ? await tx.team.findUnique({ where: { slug: teamSlug } }) : null;
       if (teamSlug && !team) throw new AppError('Selected team not found.', 400);
       if (['President', 'Vice President', 'Secretary', 'Organizer'].includes(position)) {
@@ -164,7 +189,7 @@ export async function passwordLogin(input: LoginInput) {
           position,
         },
       });
-      if (team)
+      if (team && !isSuperAdminRole)
         await tx.teamMembership.create({ data: { userId: user.id, teamId: team.id, isTeamHead } });
       if (invitation) {
         const claimed = await tx.adminInvitation.updateMany({

@@ -229,7 +229,6 @@ export const TeamDetailPage: React.FC = () => {
                     <tr className="bg-gdgoc-gray-50/70 border-b border-gdgoc-gray-200 text-[11px] font-bold uppercase tracking-wider text-gdgoc-gray-600">
                       <th className="py-2.5 px-4">Task</th>
                       <th className="py-2.5 px-4">Assigned Member</th>
-                      <th className="py-2.5 px-4">Priority</th>
                       <th className="py-2.5 px-4">Deadline</th>
                       <th className="py-2.5 px-4 text-right sm:text-left">Status</th>
                     </tr>

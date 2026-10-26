@@ -4,7 +4,6 @@ import { useTasks } from '../../context/TaskContext';
 import { useTeams } from '../../hooks/useTeams';
 import { Task } from '../../types/task';
 import { TaskStatusBadge } from '../../components/common/TaskStatusBadge';
-import { PriorityBadge } from '../../components/common/PriorityBadge';
 import { TaskDetailsModal } from '../../components/common/TaskDetailsModal';
 import { 
   CelebrationNotification, 
@@ -32,7 +31,6 @@ export const AdminTasksPage: React.FC = () => {
 
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [teamFilter, setTeamFilter] = useState<string>('ALL');
-  const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
   // Selected task for Details Modal
@@ -94,10 +92,6 @@ export const AdminTasksPage: React.FC = () => {
         teamFilter === 'ALL' ||
         task.teamId.toLowerCase() === teamFilter.toLowerCase();
 
-      const matchesPriority =
-        priorityFilter === 'ALL' ||
-        (task.priority && task.priority.toLowerCase() === priorityFilter.toLowerCase());
-
       const matchesSearch =
         !searchQuery.trim() ||
         task.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -105,9 +99,9 @@ export const AdminTasksPage: React.FC = () => {
         task.assigneeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
         task.id.toLowerCase().includes(searchQuery.toLowerCase());
 
-      return matchesStatus && matchesTeam && matchesPriority && matchesSearch;
+      return matchesStatus && matchesTeam && matchesSearch;
     });
-  }, [tasks, statusFilter, teamFilter, priorityFilter, searchQuery]);
+  }, [tasks, statusFilter, teamFilter, searchQuery]);
 
   // Global KPIs
   const metrics = useMemo(() => {
@@ -250,18 +244,6 @@ export const AdminTasksPage: React.FC = () => {
               <option value="Completed">Completed</option>
             </select>
           </div>
-
-          {/* Priority */}
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="py-1.5 px-2.5 text-xs bg-gdgoc-gray-50 border border-gdgoc-gray-200 rounded-lg font-medium text-gdgoc-gray-700 focus:outline-hidden focus:border-gdgoc-blue"
-          >
-            <option value="ALL">All Priorities</option>
-            <option value="High">High</option>
-            <option value="Medium">Medium</option>
-            <option value="Low">Low</option>
-          </select>
         </div>
       </div>
 
@@ -274,7 +256,6 @@ export const AdminTasksPage: React.FC = () => {
                 <th className="py-3 px-4">Deliverable & ID</th>
                 <th className="py-3 px-4">Squad</th>
                 <th className="py-3 px-4">Assignee</th>
-                <th className="py-3 px-4">Priority</th>
                 <th className="py-3 px-4">Status</th>
                 <th className="py-3 px-4">Deadline</th>
                 <th className="py-3 px-4 text-right">Governance Actions</th>
@@ -283,7 +264,7 @@ export const AdminTasksPage: React.FC = () => {
             <tbody className="divide-y divide-gdgoc-gray-100">
               {filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-gdgoc-gray-400">
+                  <td colSpan={6} className="py-12 text-center text-gdgoc-gray-400">
                     <p className="text-sm font-medium">No deliverables found</p>
                     <p className="text-xs mt-1 text-gdgoc-gray-400">
                       Try adjusting filters or search query.
@@ -333,11 +314,6 @@ export const AdminTasksPage: React.FC = () => {
                             </p>
                           </div>
                         </div>
-                      </td>
-
-                      {/* Priority */}
-                      <td className="py-3.5 px-4 whitespace-nowrap">
-                        <PriorityBadge priority={task.priority} size="sm" />
                       </td>
 
                       {/* Status */}

@@ -337,12 +337,14 @@ export const mockAuthService = {
       if (!displayName) displayName = role === 'ADMIN' ? 'President' : role === 'TEAM_LEADER' ? 'Tech Lead' : 'Regular Member';
     }
 
+    const isSuperAdmin = isPresident || isExecutiveOfficer || role === 'ADMIN';
+
     const assignedPosition = isPresident
       ? 'President'
       : credentials.position || (role === 'TEAM_LEADER' ? 'Tech Lead' : 'Team Member');
 
-    const assignedTeam = isPresident
-      ? 'Executive Core'
+    const assignedTeam = isSuperAdmin
+      ? 'Executive Board (No Squad)'
       : credentials.team || (credentials.teamSlug ? credentials.teamSlug.toUpperCase() : 'Tech');
 
     const sessionUser: User = {

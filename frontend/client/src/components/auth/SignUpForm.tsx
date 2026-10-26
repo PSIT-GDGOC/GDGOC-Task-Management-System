@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/authContext';
 import { authApi } from '../../services/api';
-import { Eye, EyeOff, AlertCircle, Loader2, Key } from 'lucide-react';
+import { Eye, EyeOff, AlertCircle, Loader2, Key, Crown } from 'lucide-react';
 
 type SignUpFormProps = {
   onLogIn: () => void;
@@ -90,14 +90,35 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onLogIn }) => {
     setIsSubmitting(true);
 
     try {
+      const isSuperAdmin = ['Vice President', 'Secretary', 'Organizer', 'President'].includes(fields.position);
       const isLead = fields.position !== 'Member';
+
+      let derivedTeam: string | undefined = undefined;
+      let derivedTeamSlug: string | undefined = undefined;
+
+      if (!isSuperAdmin) {
+        if (fields.position === 'Tech Lead') {
+          derivedTeam = 'TECH';
+          derivedTeamSlug = 'tech';
+        } else if (fields.position === 'Media Lead') {
+          derivedTeam = 'MEDIA';
+          derivedTeamSlug = 'media';
+        } else if (fields.position === 'Content Lead') {
+          derivedTeam = 'CONTENT';
+          derivedTeamSlug = 'content';
+        } else {
+          derivedTeam = fields.team;
+          derivedTeamSlug = fields.team.toLowerCase();
+        }
+      }
+
       const user = await login({
         name: fields.name.trim(),
         email: fields.email.trim(),
         password: fields.password,
         position: fields.position === 'Member' ? 'Team Member' : fields.position,
-        team: fields.team,
-        teamSlug: fields.team.toLowerCase(),
+        team: derivedTeam,
+        teamSlug: derivedTeamSlug,
         isTeamHead: isLead && fields.position.toLowerCase().includes('lead'),
         membershipStatus: isLead ? 'CORE_MEMBER' : 'REGULAR_MEMBER',
         invitationKey: isLead ? fields.invitationKey.trim() : undefined,
@@ -279,51 +300,102 @@ export const SignUpForm: React.FC<SignUpFormProps> = ({ onLogIn }) => {
           {renderError('password')}
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label
-              htmlFor="signup-team"
-              className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gdgoc-gray-700"
-            >
-              Team *
-            </label>
-            <select
-              id="signup-team"
-              required
-              value={fields.team}
-              onChange={(event) => updateField('team', event.target.value)}
-              className={fieldClass('team')}
-            >
-              <option value="TECH">💻 Tech Team</option>
-              <option value="MEDIA">🎨 Media Team</option>
-              <option value="CONTENT">📝 Content Team</option>
-            </select>
-            {renderError('team')}
-          </div>
+        {/* Position & Squad Assignment */}
+        {['Vice President', 'Secretary', 'Organizer', 'President'].includes(fields.position) ? (
+          <div className="space-y-2">
+            <div>
+              <label
+                htmlFor="signup-role"
+                className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gdgoc-gray-700"
+              >
+                Super Admin Role *
+              </label>
+              <select
+                id="signup-role"
+                value={fields.position}
+                onChange={(event) => updateField('position', event.target.value)}
+                className={fieldClass('position')}
+              >
+                <option value="Member">👤 Team Member</option>
+                <option value="Tech Lead">💻 Tech Lead</option>
+                <option value="Media Lead">🎨 Media Lead</option>
+                <option value="Content Lead">📝 Content Lead</option>
+                <option value="Secretary">📋 Secretary</option>
+                <option value="Organizer">🎯 Organizer</option>
+                <option value="Vice President">🛡️ Vice President</option>
+              </select>
+            </div>
 
-          <div>
-            <label
-              htmlFor="signup-role"
-              className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gdgoc-gray-700"
-            >
-              Position *
-            </label>
-            <select
-              id="signup-role"
-              value={fields.position}
-              onChange={(event) => updateField('position', event.target.value)}
-              className={fieldClass('position')}
-            >
-              <option value="Member">👤 Team Member</option>
-              <option value="Tech Lead">💻 Tech Lead</option>
-              <option value="Media Lead">🎨 Media Lead</option>
-              <option value="Content Lead">📝 Content Lead</option>
-              <option value="Secretary">📋 Secretary</option>
-              <option value="Organizer">🎯 Organizer</option>
-              <option value="Vice President">🛡️ Vice President</option>
-            </select>
+            <div className="p-2.5 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-center gap-2 text-xs text-amber-900 shadow-2xs">
+              <Crown className="w-4 h-4 text-amber-600 flex-shrink-0" />
+              <div className="text-[11px] leading-relaxed">
+                <span className="font-semibold text-amber-950">Chapter-Wide Governance:</span>{' '}
+                Executive Super Admins govern all club operations and are not assigned to individual squads.
+              </div>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label
+                htmlFor="signup-team"
+                className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gdgoc-gray-700"
+              >
+                Team *
+              </label>
+              <select
+                id="signup-team"
+                required
+                value={
+                  fields.position === 'Tech Lead'
+                    ? 'TECH'
+                    : fields.position === 'Media Lead'
+                    ? 'MEDIA'
+                    : fields.position === 'Content Lead'
+                    ? 'CONTENT'
+                    : fields.team
+                }
+                disabled={fields.position.toLowerCase().includes('lead')}
+                onChange={(event) => updateField('team', event.target.value)}
+                className={`${fieldClass('team')} ${fields.position.toLowerCase().includes('lead') ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+              >
+                <option value="TECH">💻 Tech Team</option>
+                <option value="MEDIA">🎨 Media Team</option>
+                <option value="CONTENT">📝 Content Team</option>
+              </select>
+              {renderError('team')}
+            </div>
+
+            <div>
+              <label
+                htmlFor="signup-role"
+                className="mb-1 block text-xs font-semibold uppercase tracking-wider text-gdgoc-gray-700"
+              >
+                Position *
+              </label>
+              <select
+                id="signup-role"
+                value={fields.position}
+                onChange={(event) => {
+                  const val = event.target.value;
+                  updateField('position', val);
+                  if (val === 'Tech Lead') updateField('team', 'TECH');
+                  else if (val === 'Media Lead') updateField('team', 'MEDIA');
+                  else if (val === 'Content Lead') updateField('team', 'CONTENT');
+                }}
+                className={fieldClass('position')}
+              >
+                <option value="Member">👤 Team Member</option>
+                <option value="Tech Lead">💻 Tech Lead</option>
+                <option value="Media Lead">🎨 Media Lead</option>
+                <option value="Content Lead">📝 Content Lead</option>
+                <option value="Secretary">📋 Secretary</option>
+                <option value="Organizer">🎯 Organizer</option>
+                <option value="Vice President">🛡️ Vice President</option>
+              </select>
+            </div>
+          </div>
+        )}
 
         {fields.position !== 'Member' && (
           <div className="p-2.5 bg-blue-50/70 border border-blue-200 rounded-xl space-y-1">

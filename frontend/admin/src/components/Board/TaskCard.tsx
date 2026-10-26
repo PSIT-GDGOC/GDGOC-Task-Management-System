@@ -9,13 +9,6 @@ interface TaskCardProps {
   onDelete?: (taskId: string) => void;
 }
 
-const priorityColors: Record<string, string> = {
-  LOW: 'bg-slate-100 text-slate-700 border-slate-200',
-  MEDIUM: 'bg-blue-50 text-blue-700 border-blue-200',
-  HIGH: 'bg-amber-50 text-amber-700 border-amber-200',
-  URGENT: 'bg-red-50 text-red-700 border-red-200 font-semibold',
-};
-
 export const TaskCard: React.FC<TaskCardProps> = ({ task, onReview, onDelete }) => {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: task.id,
@@ -42,13 +35,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onReview, onDelete }) 
       }`}
     >
       <div className="flex items-center justify-between mb-2">
-        <span
-          className={`text-xs px-2 py-0.5 rounded-full border ${
-            priorityColors[task.priority] || priorityColors.MEDIUM
-          }`}
-        >
-          {task.priority}
-        </span>
         <div className="flex items-center space-x-1.5">
           <span className="text-xs font-medium text-gray-500">
             {task.scope === 'WHOLE_CLUB' ? (

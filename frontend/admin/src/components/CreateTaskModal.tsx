@@ -2,7 +2,7 @@ import {useQuery} from '@tanstack/react-query';
 import {apiClient} from '../services/api';
 import React, { useState } from 'react';
 import { useCreateTask } from '../hooks/useTasks';
-import { TaskPriority, TaskScope } from '../types/task';
+import { TaskScope } from '../types/task';
 import { X } from 'lucide-react';
 
 interface CreateTaskModalProps {
@@ -15,7 +15,6 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
   const [scope, setScope] = useState<TaskScope>('TEAM');
   const [teamId, setTeamId] = useState('');
   const [deadline, setDeadline] = useState('');
@@ -52,7 +51,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
       await createTaskMutation.mutateAsync({
         title,
         description,
-        priority,
+        priority: 'MEDIUM',
         scope,
         teamId: scope === 'WHOLE_CLUB' ? null : teamId || null,
         deadline: deadline ? new Date(deadline).toISOString() : null,
@@ -105,32 +104,16 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Priority</label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                className="w-full text-xs px-2.5 py-2 border border-gray-300 rounded-lg bg-white"
-              >
-                <option value="LOW">Low</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
-                <option value="URGENT">Urgent</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Scope</label>
-              <select
-                value={scope}
-                onChange={(e) => setScope(e.target.value as TaskScope)}
-                className="w-full text-xs px-2.5 py-2 border border-gray-300 rounded-lg bg-white"
-              >
-                <option value="TEAM">Team-Specific</option>
-                <option value="WHOLE_CLUB">Whole Club</option>
-              </select>
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Scope</label>
+            <select
+              value={scope}
+              onChange={(e) => setScope(e.target.value as TaskScope)}
+              className="w-full text-xs px-2.5 py-2 border border-gray-300 rounded-lg bg-white"
+            >
+              <option value="TEAM">Team-Specific</option>
+              <option value="WHOLE_CLUB">Whole Club</option>
+            </select>
           </div>
 
           {scope==='TEAM' && <div>

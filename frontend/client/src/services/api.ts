@@ -285,17 +285,23 @@ export const authApi = {
       if (res.user) {
         let role: Role = 'MEMBER';
         const isHead = res.user.teamMemberships?.some((m: any) => m.isTeamHead);
-        if (
+        const isExecutive =
           res.user.canManageClub === true ||
           res.user.role === 'PRESIDENT' ||
-          res.user.role === 'SYSTEM_OWNER'
-        ) {
+          res.user.role === 'SYSTEM_OWNER' ||
+          ['president', 'vice president', 'secretary', 'organizer', 'system owner', 'super admin', 'admin'].includes(
+            (res.user.position || '').trim().toLowerCase(),
+          );
+
+        if (isExecutive) {
           role = 'ADMIN';
         } else if (isHead || res.user.role === 'ADMIN') {
           role = 'TEAM_LEADER';
         }
 
-        const teamName = res.user.teamMemberships?.[0]?.team?.name || 'No team';
+        const teamName = isExecutive
+          ? 'Executive Board (No Squad)'
+          : res.user.teamMemberships?.[0]?.team?.name || 'No team';
 
         return {
           id: res.user.id,
@@ -304,10 +310,10 @@ export const authApi = {
           role,
           position: res.user.position,
           team: teamName,
-          isTeamHead: isHead,
-          canManageClub: res.user.canManageClub === true,
-          managedTeamIds: res.user.managedTeamIds || [],
-          teamMemberships: res.user.teamMemberships || [],
+          isTeamHead: isExecutive ? false : isHead,
+          canManageClub: res.user.canManageClub === true || isExecutive,
+          managedTeamIds: isExecutive ? [] : res.user.managedTeamIds || [],
+          teamMemberships: isExecutive ? [] : res.user.teamMemberships || [],
           membershipStatus:
             role === 'ADMIN' || role === 'TEAM_LEADER' ? 'CORE_MEMBER' : 'REGULAR_MEMBER',
           avatarUrl: res.user.avatarUrl,

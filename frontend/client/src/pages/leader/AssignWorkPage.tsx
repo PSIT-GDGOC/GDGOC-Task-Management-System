@@ -134,7 +134,15 @@ export const AssignWorkPage: React.FC = () => {
     const targetTeamName = (selectedTeam?.name || '').toLowerCase();
 
     // 1. Filter ONLY users that have an active membership in this team
+    // Exclude super admins and executive officers (President, VP, etc.) who govern chapter-wide and are not squad assignees
     const inTeam = liveUsers.filter((u) => {
+      const isSuperAdmin =
+        u.role === 'SYSTEM_OWNER' ||
+        ['president', 'vice president', 'secretary', 'organizer', 'system owner', 'super admin', 'admin'].includes(
+          (u.position || '').trim().toLowerCase(),
+        );
+      if (isSuperAdmin) return false;
+
       return u.memberships.some((m) => {
         return (
           (m.teamId && m.teamId === targetTeamId) ||

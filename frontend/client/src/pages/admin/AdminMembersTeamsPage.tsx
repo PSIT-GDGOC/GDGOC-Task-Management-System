@@ -52,11 +52,20 @@ export const AdminMembersTeamsPage: React.FC = () => {
       setTeams(liveTeams);
       setMembers(liveUsers.map((u: any) => {
         const memberships = u.teamMemberships || [];
+        const isSuperAdmin =
+          u.role === 'SYSTEM_OWNER' ||
+          u.role === 'ADMIN' ||
+          ['president', 'vice president', 'secretary', 'organizer', 'system owner', 'super admin', 'admin'].includes(
+            (u.position || '').trim().toLowerCase(),
+          );
+
         return {
           id: u.id, name: u.name, email: u.email, role: u.role,
           position: u.position || undefined,
-          team: memberships.map((m: any) => m.team.name).join(', ') || 'No team',
-          isTeamHead: memberships.some((m: any) => m.isTeamHead),
+          team: isSuperAdmin
+            ? 'Executive Chapter Board (No Squad)'
+            : memberships.map((m: any) => m.team.name).join(', ') || 'No team',
+          isTeamHead: isSuperAdmin ? false : memberships.some((m: any) => m.isTeamHead),
           isActive: u.isActive,
           initials: u.name.split(' ').map((part: string) => part[0]).join('').slice(0, 2).toUpperCase(),
         };

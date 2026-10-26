@@ -88,6 +88,11 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({ user, tasks, onClose
   if (!user) return null;
 
   const isMember = user.role === 'MEMBER';
+  const isSuperAdmin =
+    user.role === 'ADMIN' ||
+    ['president', 'vice president', 'secretary', 'organizer', 'system owner', 'super admin'].includes(
+      user.position?.toLowerCase() || '',
+    );
   const memberTasks = isMember
     ? tasks.filter((task) =>
         task.assigneeId === user.id ||
@@ -95,11 +100,13 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({ user, tasks, onClose
       )
     : tasks;
   const assignedTeamNames = [...new Set(memberTasks.map((task) => task.teamName).filter(Boolean))];
-  const teamName = isMember
-    ? assignedTeamNames.length > 0
-      ? assignedTeamNames.join(', ')
-      : user.team
-    : user.team;
+  const teamName = isSuperAdmin
+    ? 'Executive Chapter Board (No Squad)'
+    : isMember
+      ? assignedTeamNames.length > 0
+        ? assignedTeamNames.join(', ')
+        : user.team
+      : user.team;
   const githubUsername = 'githubUsername' in user && typeof user.githubUsername === 'string'
     ? user.githubUsername
     : undefined;
@@ -217,7 +224,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({ user, tasks, onClose
             <InfoRow label="Email Address" value={user.email || 'Not provided'} />
             <InfoRow label="GitHub Username" value={githubUsername} />
             <InfoRow label="Role" value={roleName(user)} />
-            <InfoRow label={isMember ? 'Assigned Team' : 'Team'} value={teamName} />
+            <InfoRow label={isSuperAdmin ? 'Governance Scope' : isMember ? 'Assigned Team' : 'Team'} value={teamName} />
             <InfoRow label="Chapter / Organization" value="GDGoC PSIT Kanpur Chapter" />
           </dl>
         </section>

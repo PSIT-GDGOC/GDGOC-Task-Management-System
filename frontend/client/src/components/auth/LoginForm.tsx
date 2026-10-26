@@ -140,9 +140,11 @@ export const LoginForm: React.FC = () => {
       const position =
         tier === 'PRESIDENT' ? 'President' : tier === 'LEAD' ? leadPosition : 'Team Member';
 
-      // Auto-derive teamSlug based on selection or lead position
-      let teamSlug = selectedTeam;
-      if (tier === 'LEAD') {
+      // Super admins, President, and Executive Officers govern club-wide and are never assigned to a squad
+      let teamSlug: string | undefined = undefined;
+      if (tier === 'CREW') {
+        teamSlug = selectedTeam;
+      } else if (tier === 'LEAD') {
         if (leadPosition.toLowerCase().includes('media')) teamSlug = 'media';
         else if (leadPosition.toLowerCase().includes('content')) teamSlug = 'content';
         else if (leadPosition.toLowerCase().includes('tech')) teamSlug = 'tech';

@@ -312,7 +312,6 @@ export class EmailService {
         <div class="task-meta">
           <div><strong>Squad Domain:</strong> ${escapeHtml(task.teamName || 'Chapter Project')}</div>
           <div><strong>Milestone Cutoff:</strong> <span style="color: #1a73e8; font-weight: 600;">${formattedDeadline}</span></div>
-          ${task.priority ? `<div><strong>Priority:</strong> ${task.priority}</div>` : ''}
           ${task.description ? `<div style="margin-top: 8px; font-size: 12px; color: #5f6368; border-top: 1px dashed #dadce0; padding-top: 8px;">"${escapeHtml(task.description)}"</div>` : ''}
         </div>
       </div>
