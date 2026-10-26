@@ -32,7 +32,7 @@ export const DEV_TEST_ACCOUNTS: DevAccount[] = [
     user: {
       id: 'usr_president_01',
       name: 'Aditya Rajput',
-      email: 'adityarajput.86046@gmail.com',
+      email: 'paneertikkadedo@gmail.com',
       role: 'ADMIN',
       position: 'President',
       membershipStatus: 'CORE_MEMBER',
@@ -191,7 +191,7 @@ export const mockAuthService = {
     }
 
     const isPresidentEmail =
-      normalizedEmail.toLowerCase() === 'adityarajput.86046@gmail.com' ||
+      normalizedEmail.toLowerCase() === 'paneertikkadedo@gmail.com' ||
       normalizedEmail.toLowerCase() === 'gdgoc.psit@gmail.com' ||
       normalizedEmail.toLowerCase() === 'admin@psit.gdgoc.dev';
 
@@ -394,7 +394,7 @@ export const mockAuthService = {
         !parsed ||
         !validRoles.includes(parsed.role) ||
         parsed.team === 'Web Development Core' ||
-        (parsed.email?.toLowerCase() === 'adityarajput.86046@gmail.com' && parsed.role !== 'ADMIN')
+        (parsed.email?.toLowerCase() === 'paneertikkadedo@gmail.com' && parsed.role !== 'ADMIN')
       ) {
         localStorage.removeItem(AUTH_STORAGE_KEY);
         localStorage.removeItem('gdgoc_current_user');

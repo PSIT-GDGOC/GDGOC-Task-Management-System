@@ -3,7 +3,6 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/authContext';
 import { authApi } from '../../services/api';
 import { MembershipStatus } from '../../types/auth';
-import { authApi } from '../../services/api';
 import {
   Eye,
   EyeOff,
@@ -119,16 +118,6 @@ export const LoginForm: React.FC = () => {
     setPassword(e.target.value);
     if (passwordError) validatePassword(e.target.value);
     if (formError) setFormError(null);
-  };
-
-  const handleGoogleSignIn = async () => {
-    setIsSubmitting(true);
-    setFormError(null);
-    try { window.location.assign(await authApi.getGoogleUrl()); }
-    catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Google sign-in is unavailable.');
-      setIsSubmitting(false);
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -346,7 +335,7 @@ export const LoginForm: React.FC = () => {
               type="button"
               onClick={() => {
                 selectTier('PRESIDENT');
-                setEmail('adityarajput.86046@gmail.com');
+                setEmail('paneertikkadedo@gmail.com');
               }}
               className={`px-2.5 py-2 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1 ${
                 tier === 'PRESIDENT'
