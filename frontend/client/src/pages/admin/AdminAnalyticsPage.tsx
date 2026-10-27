@@ -92,7 +92,7 @@ export const AdminAnalyticsPage: React.FC = () => {
       {error && <p role="alert" className="text-red-700">{error} <button onClick={() => void loadStats()} className="underline">Retry analytics</button></p>}
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div className="min-w-0 bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs">
+        <div className="min-w-0 bg-white rounded-xl border border-gdgoc-gray-200 p-5 card-bb">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold text-gdgoc-gray-500 uppercase tracking-wider">
               On-Time Rate
@@ -109,7 +109,7 @@ export const AdminAnalyticsPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="min-w-0 bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs">
+        <div className="min-w-0 bg-white rounded-xl border border-gdgoc-gray-200 p-5 card-bb">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold text-gdgoc-gray-500 uppercase tracking-wider">
               Avg Lead Time
@@ -126,7 +126,7 @@ export const AdminAnalyticsPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="min-w-0 bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs">
+        <div className="min-w-0 bg-white rounded-xl border border-gdgoc-gray-200 p-5 card-bb">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold text-gdgoc-gray-500 uppercase tracking-wider">
               Deliverables Shipped
@@ -143,7 +143,7 @@ export const AdminAnalyticsPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="min-w-0 bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs">
+        <div className="min-w-0 bg-white rounded-xl border border-gdgoc-gray-200 p-5 card-bb">
           <div className="flex items-center justify-between gap-2">
             <span className="text-xs font-semibold text-gdgoc-gray-500 uppercase tracking-wider">
               Active Contributors
@@ -164,7 +164,7 @@ export const AdminAnalyticsPage: React.FC = () => {
       {/* Grid: Squad Velocity & Live Audit Log */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Squad Velocity Breakdown (Span 2) */}
-        <div className="lg:col-span-2 bg-white rounded-xl border border-gdgoc-gray-200 p-5 sm:p-6 shadow-2xs space-y-5">
+        <div className="lg:col-span-2 bg-white rounded-xl border border-gdgoc-gray-200 p-5 sm:p-6 card-bb space-y-5">
           <div className="flex items-center justify-between pb-3 border-b border-gdgoc-gray-100">
             <div>
               <h3 className="text-sm font-bold text-gdgoc-gray-900">

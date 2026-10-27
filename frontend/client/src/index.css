@@ -36,16 +36,16 @@
     background-size: 28px 28px;
   }
 
-  /* Bold black border + offset shadow — main dashboard cards */
+  /* Bold border + offset shadow — main dashboard cards (color set by --card-pop in theme.css) */
   .card-bb {
-    border: 2px solid #111111 !important;
-    box-shadow: 4px 4px 0 #111111 !important;
+    border: 2px solid var(--card-pop, #111111) !important;
+    box-shadow: 4px 4px 0 var(--card-pop, #111111) !important;
   }
 
-  /* Bold black border + offset shadow — smaller controls / member cards */
+  /* Bold border + offset shadow — smaller controls / member cards */
   .card-bb-sm {
-    border: 1.5px solid #111111 !important;
-    box-shadow: 3px 3px 0 #111111 !important;
+    border: 1.5px solid var(--card-pop, #111111) !important;
+    box-shadow: 3px 3px 0 var(--card-pop, #111111) !important;
   }
 }
 
@@ -242,7 +242,7 @@
 @media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
   .profile-card-trigger:hover {
     transform: translateY(-2px);
-    box-shadow: 4px 4px 0 #111111 !important;
+    box-shadow: 4px 4px 0 var(--card-pop, #111111) !important;
   }
 }
 
@@ -340,11 +340,11 @@ main a[class*='px-'][class*='py-'] {
   }
 
   main [class~='card-bb']:not(button):not(a):not(input):not(select):not(textarea):not(:has(div[class~='card-bb'], div[class~='card-bb-sm'])):hover {
-    box-shadow: 6px 6px 0 #111111 !important;
+    box-shadow: 6px 6px 0 var(--card-pop, #111111) !important;
   }
 
   main [class~='card-bb-sm']:not(button):not(a):not(input):not(select):not(textarea):not(:has(div[class~='card-bb'], div[class~='card-bb-sm'])):hover {
-    box-shadow: 4px 4px 0 #111111 !important;
+    box-shadow: 4px 4px 0 var(--card-pop, #111111) !important;
   }
 }
 

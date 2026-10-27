@@ -155,7 +155,7 @@ export const AdminTasksPage: React.FC = () => {
 
       {/* Metric KPI Overview */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-blue-50 text-gdgoc-blue flex items-center justify-center flex-shrink-0">
             <FolderKanban className="w-5 h-5" />
           </div>
@@ -165,7 +165,7 @@ export const AdminTasksPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0">
             <Clock className="w-5 h-5" />
           </div>
@@ -175,7 +175,7 @@ export const AdminTasksPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center flex-shrink-0">
             <AlertCircle className="w-5 h-5" />
           </div>
@@ -185,7 +185,7 @@ export const AdminTasksPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs flex items-center gap-3">
+        <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb flex items-center gap-3">
           <div className="w-10 h-10 rounded-lg bg-emerald-50 text-gdgoc-green flex items-center justify-center flex-shrink-0">
             <CheckCircle2 className="w-5 h-5" />
           </div>
@@ -197,7 +197,7 @@ export const AdminTasksPage: React.FC = () => {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 shadow-2xs space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-3">
+      <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-4 card-bb space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-3">
         {/* Search */}
         <div className="relative flex-1 min-w-[220px]">
           <Search className="w-4 h-4 text-gdgoc-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -248,7 +248,7 @@ export const AdminTasksPage: React.FC = () => {
       </div>
 
       {/* Deliverables Table */}
-      <div className="bg-white rounded-xl border border-gdgoc-gray-200 overflow-hidden shadow-2xs">
+      <div className="bg-white rounded-xl border border-gdgoc-gray-200 overflow-hidden card-bb">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs text-gdgoc-gray-700">
             <thead className="bg-gdgoc-gray-50 border-b border-gdgoc-gray-200 text-gdgoc-gray-500 font-semibold uppercase tracking-wider text-[10px]">

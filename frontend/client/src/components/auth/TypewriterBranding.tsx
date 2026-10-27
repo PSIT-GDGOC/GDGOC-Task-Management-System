@@ -22,20 +22,6 @@ const LINE1_DATA: LetterConfig[] = [
   { char: 'B', color: '#34A853' }, // Green
 ];
 
-// Line 2: "GDGoC PSIT" styled with Google's iconic four colors
-const LINE2_DATA: LetterConfig[] = [
-  { char: 'G', color: '#4285F4' }, // Blue
-  { char: 'D', color: '#EA4335' }, // Red
-  { char: 'G', color: '#FBBC04' }, // Yellow
-  { char: 'o', color: '#4285F4' }, // Blue
-  { char: 'C', color: '#34A853' }, // Green
-  { char: ' ', color: 'transparent' },
-  { char: 'P', color: '#4285F4' }, // Blue
-  { char: 'S', color: '#EA4335' }, // Red
-  { char: 'I', color: '#FBBC04' }, // Yellow
-  { char: 'T', color: '#34A853' }, // Green
-];
-
 /**
  * Steady Webapp Branding: GDGoC TASKHUB / GDGoC PSIT
  * Kept steady with zero animation as requested.
@@ -64,16 +50,8 @@ export const TypewriterBranding: React.FC<{ className?: string }> = ({ className
 
       {/* Line 2: Steady GDGoC PSIT */}
       <div className="flex items-baseline pt-2">
-        <p className="text-xs sm:text-sm font-extrabold tracking-[0.28em] uppercase leading-none font-sans">
-          {LINE2_DATA.map((item, idx) => (
-            <span
-              key={`l2-${idx}`}
-              style={{ color: item.color }}
-              className="inline-block"
-            >
-              {item.char === ' ' ? '\u00A0' : item.char}
-            </span>
-          ))}
+        <p className="text-xs sm:text-sm font-extrabold tracking-[0.28em] uppercase leading-none font-sans text-black dark:text-white">
+          GDGoC PSIT
         </p>
       </div>
     </div>

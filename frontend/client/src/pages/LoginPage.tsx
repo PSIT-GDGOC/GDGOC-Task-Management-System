@@ -48,6 +48,8 @@ export const LoginPage: React.FC = () => {
         {/* Soft White Overlay for natural blending and high readability */}
         <div className="absolute inset-0 bg-white/40" />
 
+        <div className="login-dark-background absolute inset-0" />
+
         {/* Soft Ambient Color Glows (Google 4-Colors) */}
         <div className="absolute -top-32 -left-32 w-96 h-96 rounded-full bg-blue-100/35 blur-3xl" />
         <div className="absolute top-12 -right-32 w-80 h-80 rounded-full bg-red-100/25 blur-3xl" />
@@ -78,7 +80,7 @@ export const LoginPage: React.FC = () => {
           {/* -------------------------------------------------------------------
               LEFT COLUMN: BRANDING AND VISUAL IDENTITY
               ------------------------------------------------------------------- */}
-          <section className="flex flex-col justify-center text-left space-y-6 sm:space-y-7 max-w-lg mx-auto lg:mx-0 order-2 lg:order-1">
+          <section className="flex flex-col justify-center text-left space-y-6 sm:space-y-7 max-w-lg mx-auto lg:mx-0 order-2 lg:order-1 -translate-y-6">
             {/* Typewriter Branding: GDGoC TASKHUB / GDGoC PSIT */}
             <div className="pt-1 pb-1">
               <TypewriterBranding className="max-w-[480px] w-full" />

@@ -209,7 +209,7 @@ export const AdminInvitationsPage: React.FC = () => {
         {roleKeys.map((item) => (
           <div
             key={item.id || item.position}
-            className="bg-white rounded-2xl border border-gdgoc-gray-200 p-5 shadow-2xs hover:shadow-xs transition-all flex flex-col justify-between group"
+            className="bg-white rounded-2xl border border-gdgoc-gray-200 p-5 card-bb flex flex-col justify-between group"
           >
             <div>
               {/* Top row: Position badge and icon */}

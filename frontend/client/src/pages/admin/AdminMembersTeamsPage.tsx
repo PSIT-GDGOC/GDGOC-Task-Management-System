@@ -235,7 +235,7 @@ export const AdminMembersTeamsPage: React.FC = () => {
               return (
                 <div
                   key={team.id}
-                  className="bg-white rounded-xl border border-gdgoc-gray-200 p-5 shadow-2xs hover:shadow-xs transition-shadow flex flex-col justify-between"
+                  className="bg-white rounded-xl border border-gdgoc-gray-200 p-5 card-bb flex flex-col justify-between"
                 >
                   <div>
                     <div className="flex items-center justify-between mb-3">
@@ -276,7 +276,7 @@ export const AdminMembersTeamsPage: React.FC = () => {
       {activeTab === 'MEMBERS' && (
         <div className="space-y-4">
           {/* Search & Role Filter */}
-          <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-3 sm:p-4 shadow-2xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="bg-white rounded-xl border border-gdgoc-gray-200 p-3 sm:p-4 card-bb flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="relative flex-1 min-w-[220px]">
               <Search className="w-4 h-4 text-gdgoc-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
               <input
@@ -302,7 +302,7 @@ export const AdminMembersTeamsPage: React.FC = () => {
           </div>
 
           {/* Directory Table */}
-          <div className="bg-white rounded-xl border border-gdgoc-gray-200 overflow-hidden shadow-2xs">
+          <div className="bg-white rounded-xl border border-gdgoc-gray-200 overflow-hidden card-bb">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs text-gdgoc-gray-700">
                 <thead className="bg-gdgoc-gray-50 border-b border-gdgoc-gray-200 text-gdgoc-gray-500 font-semibold uppercase tracking-wider text-[10px]">

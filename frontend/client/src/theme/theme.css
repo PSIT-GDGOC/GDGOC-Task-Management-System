@@ -23,6 +23,7 @@
   --gray-900: 19 30 47;
   --card-border: #d2dae5;
   --card-shadow: 0 2px 10px rgb(20 35 60 / 7%);
+  --card-pop: #111111;
 }
 .dark {
   color-scheme: dark;
@@ -49,6 +50,7 @@
   --gray-900: 244 247 252;
   --card-border: #3a4a61;
   --card-shadow: 0 2px 12px rgb(0 0 0 / 18%);
+  --card-pop: #b0bec5;
 }
 html,
 body,
@@ -65,10 +67,13 @@ body {
 .google-border-beam-content {
   background: var(--surface);
 }
-.card-bb,
+.card-bb {
+  border: 2px solid var(--card-pop) !important;
+  box-shadow: 4px 4px 0 var(--card-pop) !important;
+}
 .card-bb-sm {
-  border: 1px solid var(--card-border) !important;
-  box-shadow: var(--card-shadow) !important;
+  border: 1.5px solid var(--card-pop) !important;
+  box-shadow: 3px 3px 0 var(--card-pop) !important;
 }
 .theme-toggle {
   flex-shrink: 0;
@@ -90,6 +95,16 @@ textarea::placeholder {
   background-image: none !important;
   background-color: var(--app-background) !important;
 }
+.login-dark-background {
+  display: none;
+}
+.dark .login-dark-background {
+  display: block;
+  background-image: url('/login-dark-bg.webp');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
 .dark .google-border-beam-container {
   background: var(--surface-muted);
 }
@@ -102,10 +117,14 @@ textarea::placeholder {
 .dark .google-border-beam-content {
   backdrop-filter: none;
 }
-.dark .profile-card-trigger:hover,
-.dark main .card-bb:hover,
-.dark main .card-bb-sm:hover {
-  box-shadow: 0 4px 16px rgb(0 0 0 / 25%) !important;
+.dark .profile-card-trigger:hover {
+  box-shadow: 4px 4px 0 var(--card-pop) !important;
+}
+.dark main .card-bb:not(button):not(a):not(input):not(select):not(textarea):hover {
+  box-shadow: 6px 6px 0 var(--card-pop) !important;
+}
+.dark main .card-bb-sm:not(button):not(a):not(input):not(select):not(textarea):hover {
+  box-shadow: 4px 4px 0 var(--card-pop) !important;
 }
 @media (prefers-reduced-motion: reduce) {
   .theme-toggle {
