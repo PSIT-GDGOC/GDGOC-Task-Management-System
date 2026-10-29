@@ -271,18 +271,15 @@ export const LoginForm: React.FC = () => {
       </button>
 
       {/* Divider */}
-      <div className="relative my-4">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200" />
-        </div>
-        <div className="relative flex justify-center text-xs">
-          <span className="bg-[#FAFAFC] px-2 text-gray-400 font-medium uppercase tracking-wider">
-            or sign in with password
-          </span>
-        </div>
+      <div className="my-4 flex items-center gap-3 text-xs" role="separator">
+        <span className="h-px flex-1 bg-current opacity-20" />
+        <span className="font-medium uppercase tracking-wider opacity-60">
+          or sign in with password
+        </span>
+        <span className="h-px flex-1 bg-current opacity-20" />
       </div>
 
-      <form noValidate onSubmit={handleSubmit} className="space-y-3.5 text-left">
+      <form noValidate onSubmit={handleSubmit} className="space-y-4 text-left">
         {/* Tier Hierarchy Selection */}
         <div>
           <label className="block text-[11px] font-bold text-stone-500 uppercase tracking-wider font-mono mb-2">
@@ -377,10 +374,8 @@ export const LoginForm: React.FC = () => {
               <select
                 id="lead-position-select"
                 value={leadPosition}
-                onChange={(e) => setLeadPosition(e.target.value)}
-                className="w-full px-3.5 py-2.5 text-xs font-semibold bg-white border border-blue-200 rounded-xl text-stone-900 shadow-2xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all cursor-pointer"
                 onChange={(e) => { setLeadPosition(e.target.value); setEmail(''); setPassword(''); setFormError(null); }}
-                className="w-full px-3 py-2 text-xs bg-white border border-blue-200 rounded-lg text-gdgoc-gray-900 focus:outline-none focus:ring-2 focus:ring-gdgoc-blue"
+                className="w-full px-3.5 py-2.5 text-xs font-semibold bg-white border border-blue-200 rounded-xl text-stone-900 shadow-2xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all cursor-pointer"
               >
                 <option value="Tech Lead">💻 Tech Lead (Creates & Assigns Tech Tasks)</option>
                 <option value="Media Lead">🎨 Media Lead (Oversees Design & Media)</option>

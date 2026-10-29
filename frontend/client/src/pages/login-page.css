@@ -708,3 +708,21 @@
     transition-duration: 0.01ms !important;
   }
 }
+
+.auth-session-note {
+  margin: 0 0 16px;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  color: var(--auth-muted, inherit);
+}
+
+.auth-session-note p { margin: 0 0 4px; }
+
+.auth-session-note button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
