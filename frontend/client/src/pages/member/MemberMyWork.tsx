@@ -29,7 +29,6 @@ export const MemberMyWork: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [actionMessage, setActionMessage] = useState<string | null>(null);
-
   // Selected task for Details Modal
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
@@ -103,14 +102,11 @@ export const MemberMyWork: React.FC = () => {
     <div
       className="relative -m-4 sm:-m-6 lg:-m-8 min-h-full flex-1"
       style={{
-        backgroundImage: 'url(/dashboard-bg.jpg)',
-        backgroundSize: 'contain',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundColor: '#F1F9FB',
+        backgroundImage: 'none',
+        backgroundColor: 'transparent',
       }}
     >
-      <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: 'rgba(255, 255, 255, 0.35)' }} aria-hidden="true" />
+      <div className="member-page-atmosphere absolute inset-0 pointer-events-none" aria-hidden="true" />
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 space-y-6 text-left">
         {/* ---------------------------------------------------------------------
             HEADER SECTION
@@ -120,8 +116,8 @@ export const MemberMyWork: React.FC = () => {
             <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-green-50 border border-green-200 text-[10px] font-bold uppercase tracking-wider text-gdgoc-green">
               Personal Workspace
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-gdgoc-gray-900 tracking-tight">
-              Welcome back, {user?.name || 'Rohan Gupta'}
+            <h1 className="member-welcome-title text-2xl sm:text-3xl font-extrabold text-gdgoc-gray-900 tracking-tight">
+              <span>Welcome back, </span><span className="member-welcome-gradient">{user?.name || 'Rohan Gupta'}</span>
             </h1>
             <p className="text-xs sm:text-sm text-gdgoc-gray-600">
               My Work • Track deliverables, accept assignments, and submit your work for Super Admin and Lead verification.
