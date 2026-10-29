@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useAuth } from '../../auth/authContext';
 import { useTasks } from '../../context/TaskContext';
+import { displayName } from '../../utils/displayName';
 import { Task } from '../../types/task';
 import { TaskStatusBadge } from '../../components/common/TaskStatusBadge';
 import { HelpButton } from '../../components/tour/HelpButton';
@@ -81,21 +82,25 @@ export const MemberMyWork: React.FC = () => {
     });
   }, [memberTasks, statusFilter, searchQuery]);
 
-  const handleAcceptTask = (task: Task) => {
-    acceptTask(task.id);
-    setActionMessage(`Task "${task.title}" accepted! Moved to In Progress. 🚀`);
-    setTimeout(() => setActionMessage(null), 5000);
-    if (selectedTask?.id === task.id) {
-      setSelectedTask({ ...task, status: 'In Progress' });
+  const handleAcceptTask = async (task: Task, propagate = false) => {
+    try {
+      const updated = await acceptTask(task.id);
+      setActionMessage(`Task "${task.title}" accepted! Moved to In Progress.`);
+      if (selectedTask?.id === task.id) setSelectedTask(updated);
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : 'Unable to start task.');
+      if (propagate) throw err;
     }
   };
 
-  const handleSubmitDone = (task: Task) => {
-    submitTask(task.id, { note: 'Deliverables completed, ready for lead verification.' });
-    setActionMessage(`Task "${task.title}" marked as Done! The Super Admin (President) & Lead have been notified to review. ⏳`);
-    setTimeout(() => setActionMessage(null), 6000);
-    if (selectedTask?.id === task.id) {
-      setSelectedTask({ ...task, status: 'Pending Review' });
+  const handleSubmitDone = async (task: Task, propagate = false) => {
+    try {
+      const updated = await submitTask(task.id, { note: 'Deliverables completed, ready for lead verification.' });
+      setActionMessage(`Task "${task.title}" submitted for review.`);
+      if (selectedTask?.id === task.id) setSelectedTask(updated);
+    } catch (err) {
+      setActionMessage(err instanceof Error ? err.message : 'Unable to submit task.');
+      if (propagate) throw err;
     }
   };
 
@@ -107,10 +112,10 @@ export const MemberMyWork: React.FC = () => {
         backgroundSize: 'contain',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
-        backgroundColor: '#F1F9FB',
+        backgroundColor: 'var(--app-background)',
       }}
     >
-      <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: 'rgba(255, 255, 255, 0.35)' }} aria-hidden="true" />
+      <div className="absolute inset-0 pointer-events-none" style={{ backgroundColor: 'var(--app-background)' }} aria-hidden="true" />
       <div className="relative z-10 p-4 sm:p-6 lg:p-8 space-y-6 text-left">
         {/* ---------------------------------------------------------------------
             HEADER SECTION
@@ -121,7 +126,7 @@ export const MemberMyWork: React.FC = () => {
               Personal Workspace
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-gdgoc-gray-900 tracking-tight">
-              Welcome back, {user?.name || 'Rohan Gupta'}
+              Welcome back{displayName(user?.name, user?.email) ? `, ${displayName(user?.name, user?.email)}` : ''}
             </h1>
             <p className="text-xs sm:text-sm text-gdgoc-gray-600">
               My Work • Track deliverables, accept assignments, and submit your work for Super Admin and Lead verification.
@@ -154,7 +159,7 @@ export const MemberMyWork: React.FC = () => {
             --------------------------------------------------------------------- */}
         <div data-tour="mywork-stats" className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
           {/* Assigned Tasks */}
-          <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#FDECEC' }}>
+          <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: 'var(--surface-red)' }}>
             <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-gdgoc-gray-500">
                 Assigned Tasks
@@ -168,7 +173,7 @@ export const MemberMyWork: React.FC = () => {
           </div>
 
           {/* In Progress */}
-          <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#E8F7EE' }}>
+          <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: 'var(--surface-green)' }}>
             <div className="flex items-center justify-between text-amber-700 mb-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">
                 In Progress
@@ -182,7 +187,7 @@ export const MemberMyWork: React.FC = () => {
           </div>
 
           {/* Pending Review */}
-          <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#EAF3FF' }}>
+          <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: 'var(--surface-blue)' }}>
             <div className="flex items-center justify-between text-blue-700 mb-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-blue-800">
                 Pending Review
@@ -196,7 +201,7 @@ export const MemberMyWork: React.FC = () => {
           </div>
 
           {/* Completed */}
-          <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#FDECEC' }}>
+          <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: 'var(--surface-red)' }}>
             <div className="flex items-center justify-between text-emerald-700 mb-1">
               <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
                 Completed
@@ -257,7 +262,7 @@ export const MemberMyWork: React.FC = () => {
               </h2>
             </div>
             <span className="text-xs text-gdgoc-gray-400">
-              Assigned to {user?.name || 'Rohan Gupta'}
+              Assigned to {displayName(user?.name, user?.email) || 'you'}
             </span>
           </div>
 
@@ -431,8 +436,8 @@ export const MemberMyWork: React.FC = () => {
             setIsModalOpen(false);
             setSelectedTask(null);
           }}
-          onAccept={handleAcceptTask}
-          onSubmitForReview={handleSubmitDone}
+          onAccept={(task) => handleAcceptTask(task, true)}
+          onSubmitForReview={(task) => handleSubmitDone(task, true)}
           userRole="MEMBER"
         />
       </div>

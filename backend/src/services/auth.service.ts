@@ -65,12 +65,17 @@ export class AuthService {
           avatarUrl: googleUser.avatarUrl,
           googleSubject: googleUser.subject,
         };
+
+        if (role === 'SYSTEM_OWNER' && user) {
+          await tx.teamMembership.deleteMany({ where: { userId: user.id } });
+        }
+
         return user
           ? tx.user.update({
               where: { id: user.id },
-              data: { ...identity, ...(role === 'SYSTEM_OWNER' && { role }) },
+              data: { ...identity, ...(role === 'SYSTEM_OWNER' && { role, position: 'President' }) },
             })
-          : tx.user.create({ data: { ...identity, role } });
+          : tx.user.create({ data: { ...identity, role, ...(role === 'SYSTEM_OWNER' && { position: 'President' }) } });
       },
       { isolationLevel: 'Serializable' },
     );

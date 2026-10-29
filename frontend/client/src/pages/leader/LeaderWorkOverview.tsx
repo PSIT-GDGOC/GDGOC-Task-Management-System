@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTasks } from '../../context/TaskContext';
-import { TEAMS } from '../../data/mockData';
+import { useTeams } from '../../hooks/useTeams';
 import { Task } from '../../types/task';
 import { TaskStatusBadge } from '../../components/common/TaskStatusBadge';
 import { TaskDetailsModal } from '../../components/common/TaskDetailsModal';
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 
 export const LeaderWorkOverview: React.FC = () => {
+  const { teams: TEAMS } = useTeams();
   const navigate = useNavigate();
   const { tasks, approveTask } = useTasks();
 
@@ -306,7 +307,7 @@ export const LeaderWorkOverview: React.FC = () => {
         task={selectedTask}
         isOpen={isModalOpen}
         onClose={handleCloseModal}
-        onApprove={(t) => approveTask(t.id)}
+        onApprove={async (t) => { setSelectedTask(await approveTask(t.id)); }}
         userRole="TEAM_LEADER"
       />
       </div>

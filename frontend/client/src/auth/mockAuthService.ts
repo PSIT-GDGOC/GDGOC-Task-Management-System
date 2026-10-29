@@ -32,7 +32,7 @@ export const DEV_TEST_ACCOUNTS: DevAccount[] = [
     user: {
       id: 'usr_president_01',
       name: 'Aditya Rajput',
-      email: 'adityarajput.86046@gmail.com',
+      email: 'paneertikkadedo@gmail.com',
       role: 'ADMIN',
       position: 'President',
       membershipStatus: 'CORE_MEMBER',
@@ -191,7 +191,7 @@ export const mockAuthService = {
     }
 
     const isPresidentEmail =
-      normalizedEmail.toLowerCase() === 'adityarajput.86046@gmail.com' ||
+      normalizedEmail.toLowerCase() === 'paneertikkadedo@gmail.com' ||
       normalizedEmail.toLowerCase() === 'gdgoc.psit@gmail.com' ||
       normalizedEmail.toLowerCase() === 'admin@psit.gdgoc.dev';
 
@@ -337,12 +337,14 @@ export const mockAuthService = {
       if (!displayName) displayName = role === 'ADMIN' ? 'President' : role === 'TEAM_LEADER' ? 'Tech Lead' : 'Regular Member';
     }
 
+    const isSuperAdmin = isPresident || isExecutiveOfficer || role === 'ADMIN';
+
     const assignedPosition = isPresident
       ? 'President'
       : credentials.position || (role === 'TEAM_LEADER' ? 'Tech Lead' : 'Team Member');
 
-    const assignedTeam = isPresident
-      ? 'Executive Core'
+    const assignedTeam = isSuperAdmin
+      ? 'Executive Board (No Squad)'
       : credentials.team || (credentials.teamSlug ? credentials.teamSlug.toUpperCase() : 'Tech');
 
     const sessionUser: User = {
@@ -385,7 +387,7 @@ export const mockAuthService = {
   getStoredUser(): User | null {
     try {
       if (typeof localStorage === 'undefined') return null;
-      const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+      const stored = localStorage.getItem(AUTH_STORAGE_KEY) || localStorage.getItem('gdgoc_current_user');
       if (!stored) return null;
 
       const parsed: User = JSON.parse(stored);
@@ -394,15 +396,17 @@ export const mockAuthService = {
         !parsed ||
         !validRoles.includes(parsed.role) ||
         parsed.team === 'Web Development Core' ||
-        (parsed.email?.toLowerCase() === 'adityarajput.86046@gmail.com' && parsed.role !== 'ADMIN')
+        (parsed.email?.toLowerCase() === 'paneertikkadedo@gmail.com' && parsed.role !== 'ADMIN')
       ) {
         localStorage.removeItem(AUTH_STORAGE_KEY);
+        localStorage.removeItem('gdgoc_current_user');
         return null;
       }
       return parsed;
     } catch {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem(AUTH_STORAGE_KEY);
+        localStorage.removeItem('gdgoc_current_user');
       }
       return null;
     }
@@ -418,6 +422,7 @@ export const mockAuthService = {
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(updated));
+        localStorage.setItem('gdgoc_current_user', JSON.stringify(updated));
 
         // Persist updated name into mock registered directory
         if (updated.email) {
@@ -454,6 +459,7 @@ export const mockAuthService = {
     try {
       if (typeof localStorage !== 'undefined') {
         localStorage.removeItem(AUTH_STORAGE_KEY);
+        localStorage.removeItem('gdgoc_current_user');
       }
     } catch {
       // ignore storage access errors

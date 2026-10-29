@@ -1,7 +1,9 @@
+import {useQuery} from '@tanstack/react-query';
+import {apiClient} from '../services/api';
 import React, { useState } from 'react';
 import { useCreateTask } from '../hooks/useTasks';
-import { TaskPriority, TaskScope } from '../types/task';
-import { Plus, X } from 'lucide-react';
+import { TaskScope } from '../types/task';
+import { X } from 'lucide-react';
 
 interface CreateTaskModalProps {
   isOpen: boolean;
@@ -13,18 +15,32 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<TaskPriority>('MEDIUM');
   const [scope, setScope] = useState<TaskScope>('TEAM');
   const [teamId, setTeamId] = useState('');
   const [deadline, setDeadline] = useState('');
   const [tagsInput, setTagsInput] = useState('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const teams = useQuery({
+    queryKey:['assignment-teams'], enabled:isOpen,
+    queryFn:async()=>{
+      const all:Array<{id:string;name:string}>=[];
+      let page=1,totalPages=1;
+      do {
+        const result=await apiClient<{data:Array<{id:string;name:string}>;pagination?:{totalPages:number}}>(`/teams?limit=100&page=${page}`);
+        all.push(...result.data);totalPages=result.pagination?.totalPages??1;page++;
+      } while(page<=totalPages);
+      return all;
+    },
+  });
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg(null);
+    if (title.trim().length<3 || description.trim().length<10) {setErrorMsg('Use a title of at least 3 characters and a description of at least 10 characters.');return;}
+    if (scope==='TEAM' && !teamId) {setErrorMsg('Select a team for a team-specific task.');return;}
+
 
     const tags = tagsInput
       .split(',')
@@ -35,7 +51,7 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
       await createTaskMutation.mutateAsync({
         title,
         description,
-        priority,
+        priority: 'MEDIUM',
         scope,
         teamId: scope === 'WHOLE_CLUB' ? null : teamId || null,
         deadline: deadline ? new Date(deadline).toISOString() : null,
@@ -88,34 +104,26 @@ export const CreateTaskModal: React.FC<CreateTaskModalProps> = ({ isOpen, onClos
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Priority</label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as TaskPriority)}
-                className="w-full text-xs px-2.5 py-2 border border-gray-300 rounded-lg bg-white"
-              >
-                <option value="LOW">Low</option>
-                <option value="MEDIUM">Medium</option>
-                <option value="HIGH">High</option>
-                <option value="URGENT">Urgent</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Scope</label>
-              <select
-                value={scope}
-                onChange={(e) => setScope(e.target.value as TaskScope)}
-                className="w-full text-xs px-2.5 py-2 border border-gray-300 rounded-lg bg-white"
-              >
-                <option value="TEAM">Team-Specific</option>
-                <option value="WHOLE_CLUB">Whole Club</option>
-              </select>
-            </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-700 mb-1">Scope</label>
+            <select
+              value={scope}
+              onChange={(e) => setScope(e.target.value as TaskScope)}
+              className="w-full text-xs px-2.5 py-2 border border-gray-300 rounded-lg bg-white"
+            >
+              <option value="TEAM">Team-Specific</option>
+              <option value="WHOLE_CLUB">Whole Club</option>
+            </select>
           </div>
 
+          {scope==='TEAM' && <div>
+            <label htmlFor="legacy-task-team" className="block text-xs font-semibold text-gray-700 mb-1">Team *</label>
+            <select id="legacy-task-team" required value={teamId} onChange={event=>setTeamId(event.target.value)} className="w-full rounded-lg border p-2 text-sm">
+              <option value="">Select team</option>
+              {(teams.data||[]).map(team=><option key={team.id} value={team.id}>{team.name}</option>)}
+            </select>
+            {teams.isError && <p role="alert">Unable to load teams. Please reopen the dialog to retry.</p>}
+          </div>}
           <div>
             <label className="block text-xs font-semibold text-gray-700 mb-1">
               Deadline (Optional)

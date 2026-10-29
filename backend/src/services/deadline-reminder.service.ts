@@ -12,7 +12,7 @@ export interface ScanResult {
     taskTitle: string;
     assigneeEmail: string;
     daysRemaining: number;
-    status: 'SENT' | 'SKIPPED_TODAY';
+    status: 'SENT' | 'SKIPPED_TODAY' | 'FAILED';
   }>;
 }
 
@@ -28,7 +28,7 @@ export class DeadlineReminderService {
 
     // Start of current day (midnight UTC / local) to enforce max 1 reminder per day
     const todayMidnight = new Date(now);
-    todayMidnight.setHours(0, 0, 0, 0);
+    todayMidnight.setUTCHours(0, 0, 0, 0);
 
     // 1. Fetch active, in-progress tasks approaching deadline
     const tasks = await database.task.findMany({
@@ -89,6 +89,7 @@ export class DeadlineReminderService {
       }
 
       // Send email reminder
+      try {
       await EmailService.sendDeadlineReminder(
         {
           id: task.assignee.id,
@@ -104,6 +105,11 @@ export class DeadlineReminderService {
         },
         daysRemaining
       );
+
+      } catch {
+        result.details.push({ taskId: task.id, taskTitle: task.title, assigneeEmail: task.assignee.email, daysRemaining, status: 'FAILED' });
+        continue;
+      }
 
       // Record in-app notification so member sees it in NotificationBell and we don't repeat today
       if (typeof (database.notification as { upsert?: unknown }).upsert === 'function') {
@@ -125,7 +131,7 @@ export class DeadlineReminderService {
             kind: 'DEADLINE_REMINDER',
             createdAt: now,
           },
-        }).catch(() => {});
+        });
       } else {
         await database.notification.create({
           data: {
@@ -133,7 +139,7 @@ export class DeadlineReminderService {
             taskId: task.id,
             kind: 'DEADLINE_REMINDER',
           },
-        }).catch(() => {});
+        });
       }
 
       result.emailsSent++;

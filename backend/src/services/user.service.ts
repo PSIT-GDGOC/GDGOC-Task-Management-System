@@ -40,26 +40,9 @@ export class UserService {
 
   static async updateProfile(
     id: string,
-    data: { position?: string | null; githubUsername?: string | null },
+    data: { githubUsername?: string | null },
   ) {
     if (!Object.keys(data).length) throw new AppError('Provide at least one profile field', 400);
-
-    if (data.position) {
-      const SINGLETONS = ['President', 'Vice President', 'Secretary', 'Organizer'];
-      const match = SINGLETONS.find((p) => p.toLowerCase() === data.position?.toLowerCase().trim());
-      if (match) {
-        const existing = await prisma.user.findFirst({
-          where: {
-            position: { equals: match, mode: 'insensitive' },
-            id: { not: id },
-            isActive: true,
-          },
-        });
-        if (existing) {
-          throw new AppError(`Position '${match}' is already assigned. Only one ${match} is allowed.`, 400);
-        }
-      }
-    }
 
     return UserRepository.updateProfile(id, data);
   }

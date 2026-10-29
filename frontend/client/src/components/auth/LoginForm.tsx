@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../auth/authContext';
+import { authApi } from '../../services/api';
 import { MembershipStatus } from '../../types/auth';
 import {
   Eye,
@@ -29,12 +30,42 @@ export const LoginForm: React.FC = () => {
   const [leadPosition, setLeadPosition] = useState('Tech Lead');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
 
   // Validation state
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [forgotPasswordNotice, setForgotPasswordNotice] = useState(false);
+
+  // Parse error passed back from OAuth callback redirect
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const oauthError = params.get('error');
+    if (oauthError) {
+      setFormError(oauthError);
+    }
+  }, [location.search]);
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    setFormError(null);
+    try {
+      const res = await authApi.getGoogleAuthUrl('member');
+      if (res.configured && res.url) {
+        window.location.href = res.url;
+      } else {
+        setFormError(
+          res.message ||
+            'Google OAuth 2.0 credentials are not yet configured on this server. Please sign in with your email or test accounts below.',
+        );
+      }
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Google sign-in is unavailable. Please retry.');
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
 
   const validateEmail = (val: string): boolean => {
     if (!val.trim()) {
@@ -61,6 +92,18 @@ export const LoginForm: React.FC = () => {
     }
     setPasswordError(null);
     return true;
+  };
+
+  const selectTier = (next: ClubTier) => {
+    if (next === tier) return;
+    setTier(next);
+    setEmail('');
+    setPassword('');
+    setShowPassword(false);
+    setEmailError(null);
+    setPasswordError(null);
+    setFormError(null);
+    setForgotPasswordNotice(false);
   };
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -96,9 +139,11 @@ export const LoginForm: React.FC = () => {
       const position =
         tier === 'PRESIDENT' ? 'President' : tier === 'LEAD' ? leadPosition : 'Team Member';
 
-      // Auto-derive teamSlug based on selection or lead position
-      let teamSlug = selectedTeam;
-      if (tier === 'LEAD') {
+      // Super admins, President, and Executive Officers govern club-wide and are never assigned to a squad
+      let teamSlug: string | undefined = undefined;
+      if (tier === 'CREW') {
+        teamSlug = selectedTeam;
+      } else if (tier === 'LEAD') {
         if (leadPosition.toLowerCase().includes('media')) teamSlug = 'media';
         else if (leadPosition.toLowerCase().includes('content')) teamSlug = 'content';
         else if (leadPosition.toLowerCase().includes('tech')) teamSlug = 'tech';
@@ -170,8 +215,9 @@ export const LoginForm: React.FC = () => {
         >
           <Info className="w-4 h-4 text-gdgoc-blue flex-shrink-0 mt-0.5" />
           <div>
-            <span className="font-semibold">Password Notice:</span> Default password for preset accounts is{' '}
-            <span className="font-mono font-bold text-blue-700 bg-blue-100/80 px-1 py-0.5 rounded">Password@123</span>. For newly registered accounts, enter the password you chose during sign up.
+            Use the password you chose during sign up, or continue with Google.
+            If you cannot access your account, contact your chapter administrator.
+
           </div>
         </div>
       )}
@@ -187,7 +233,56 @@ export const LoginForm: React.FC = () => {
         </div>
       )}
 
-      <form noValidate onSubmit={handleSubmit} className="space-y-4 text-left">
+      {/* Primary Google OAuth 2.0 Sign-In Button */}
+      <button
+        type="button"
+        onClick={handleGoogleSignIn}
+        disabled={isGoogleLoading || isSubmitting}
+        className="w-full py-2.5 px-4 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 active:bg-gray-100 text-gray-700 font-semibold text-sm transition-all shadow-2xs hover:shadow-xs flex items-center justify-center gap-3 focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:opacity-60 disabled:cursor-not-allowed group"
+      >
+        {isGoogleLoading ? (
+          <>
+            <Loader2 className="w-4 h-4 animate-spin text-gray-500" />
+            <span className="text-gray-600">Connecting to Google...</span>
+          </>
+        ) : (
+          <>
+            <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24">
+              <path
+                fill="#4285F4"
+                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+              />
+              <path
+                fill="#EA4335"
+                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+              />
+            </svg>
+            <span className="group-hover:text-gray-900">Continue with Google</span>
+          </>
+        )}
+      </button>
+
+      {/* Divider */}
+      <div className="relative my-4">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-gray-200" />
+        </div>
+        <div className="relative flex justify-center text-xs">
+          <span className="bg-[#FAFAFC] px-2 text-gray-400 font-medium uppercase tracking-wider">
+            or sign in with password
+          </span>
+        </div>
+      </div>
+
+      <form noValidate onSubmit={handleSubmit} className="space-y-3.5 text-left">
         {/* Tier Hierarchy Selection */}
         <div>
           <label className="block text-[11px] font-bold text-stone-500 uppercase tracking-wider font-mono mb-2">
@@ -198,7 +293,7 @@ export const LoginForm: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                setTier('CREW');
+                selectTier('CREW');
               }}
               className={`px-3 py-3 rounded-2xl border-2 text-left transition-all duration-200 flex flex-col items-center justify-center gap-1.5 ${
                 tier === 'CREW'
@@ -214,7 +309,7 @@ export const LoginForm: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                setTier('LEAD');
+                selectTier('LEAD');
               }}
               className={`px-3 py-3 rounded-2xl border-2 text-left transition-all duration-200 flex flex-col items-center justify-center gap-1.5 ${
                 tier === 'LEAD'
@@ -230,8 +325,8 @@ export const LoginForm: React.FC = () => {
             <button
               type="button"
               onClick={() => {
-                setTier('PRESIDENT');
-                setEmail('adityarajput.86046@gmail.com');
+                selectTier('PRESIDENT');
+                setEmail('paneertikkadedo@gmail.com');
               }}
               className={`px-3 py-3 rounded-2xl border-2 text-left transition-all duration-200 flex flex-col items-center justify-center gap-1.5 ${
                 tier === 'PRESIDENT'
@@ -284,6 +379,8 @@ export const LoginForm: React.FC = () => {
                 value={leadPosition}
                 onChange={(e) => setLeadPosition(e.target.value)}
                 className="w-full px-3.5 py-2.5 text-xs font-semibold bg-white border border-blue-200 rounded-xl text-stone-900 shadow-2xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all cursor-pointer"
+                onChange={(e) => { setLeadPosition(e.target.value); setEmail(''); setPassword(''); setFormError(null); }}
+                className="w-full px-3 py-2 text-xs bg-white border border-blue-200 rounded-lg text-gdgoc-gray-900 focus:outline-none focus:ring-2 focus:ring-gdgoc-blue"
               >
                 <option value="Tech Lead">💻 Tech Lead (Creates & Assigns Tech Tasks)</option>
                 <option value="Media Lead">🎨 Media Lead (Oversees Design & Media)</option>

@@ -40,6 +40,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({ user, tasks, onClose
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(user?.name || '');
   const [isSavingName, setIsSavingName] = useState(false);
+  const [nameError, setNameError] = useState('');
 
   useEffect(() => {
     setNameInput(user?.name || '');
@@ -51,12 +52,13 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({ user, tasks, onClose
       setIsEditingName(false);
       return;
     }
+    setNameError('');
     setIsSavingName(true);
     try {
       await updateUserName(trimmed);
       setIsEditingName(false);
     } catch (err) {
-      console.error(err);
+      setNameError(err instanceof Error ? err.message : 'Unable to save your name.');
     } finally {
       setIsSavingName(false);
     }
@@ -86,6 +88,11 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({ user, tasks, onClose
   if (!user) return null;
 
   const isMember = user.role === 'MEMBER';
+  const isSuperAdmin =
+    user.role === 'ADMIN' ||
+    ['president', 'vice president', 'secretary', 'organizer', 'system owner', 'super admin'].includes(
+      user.position?.toLowerCase() || '',
+    );
   const memberTasks = isMember
     ? tasks.filter((task) =>
         task.assigneeId === user.id ||
@@ -93,11 +100,13 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({ user, tasks, onClose
       )
     : tasks;
   const assignedTeamNames = [...new Set(memberTasks.map((task) => task.teamName).filter(Boolean))];
-  const teamName = isMember
-    ? assignedTeamNames.length > 0
-      ? assignedTeamNames.join(', ')
-      : user.team
-    : user.team;
+  const teamName = isSuperAdmin
+    ? 'Executive Chapter Board (No Squad)'
+    : isMember
+      ? assignedTeamNames.length > 0
+        ? assignedTeamNames.join(', ')
+        : user.team
+      : user.team;
   const githubUsername = 'githubUsername' in user && typeof user.githubUsername === 'string'
     ? user.githubUsername
     : undefined;
@@ -195,6 +204,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({ user, tasks, onClose
           </div>
         </div>
 
+        {nameError && <p role="alert" className="mt-3 text-sm text-red-700">{nameError}</p>}
         <section className="mt-4">
           <div className="flex items-center justify-between mb-1">
             <h3 className="text-sm font-semibold text-gdgoc-gray-900">Basic Information</h3>
@@ -214,7 +224,7 @@ export const ProfilePanel: React.FC<ProfilePanelProps> = ({ user, tasks, onClose
             <InfoRow label="Email Address" value={user.email || 'Not provided'} />
             <InfoRow label="GitHub Username" value={githubUsername} />
             <InfoRow label="Role" value={roleName(user)} />
-            <InfoRow label={isMember ? 'Assigned Team' : 'Team'} value={teamName} />
+            <InfoRow label={isSuperAdmin ? 'Governance Scope' : isMember ? 'Assigned Team' : 'Team'} value={teamName} />
             <InfoRow label="Chapter / Organization" value="GDGoC PSIT Kanpur Chapter" />
           </dl>
         </section>

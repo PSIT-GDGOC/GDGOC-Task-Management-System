@@ -1,0 +1,38 @@
+name: Frontend checks
+
+on:
+  push:
+    paths:
+      - 'frontend/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/frontend.yml'
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/frontend.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck --workspace=frontend/client
+      - run: npm run typecheck --workspace=frontend/admin
+      - run: npm run lint --workspace=frontend/client
+      - run: npm run lint --workspace=frontend/admin
+      - run: npm run test --workspace=frontend/client
+      - run: npm run test --workspace=frontend/admin
+      - run: npm run build:client
+      - run: npm run build:admin

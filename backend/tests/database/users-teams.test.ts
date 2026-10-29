@@ -1,7 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
-import { ApiFixture, createApiFixture, loginWithCsrf } from './helpers/api-fixture';
+import {
+  ApiFixture,
+  createApiFixture,
+  loginWithCsrf,
+  fixturePassword,
+  fixturePasswordHash,
+} from './helpers/api-fixture';
 
 let fixture: ApiFixture;
 let db: ApiFixture['db'];
@@ -21,7 +27,11 @@ afterAll(async () => {
 
 async function newUser(name: string) {
   return db.user.create({
-    data: { email: `${name.toLowerCase().replaceAll(' ', '-')}-${randomUUID()}@example.com`, name },
+    data: {
+      email: `${name.toLowerCase().replaceAll(' ', '-')}-${randomUUID()}@example.com`,
+      name,
+      passwordHash: fixturePasswordHash(),
+    },
   });
 }
 async function task(teamId: string | null, status: 'FREE' | 'IN_REVIEW' = 'FREE') {
@@ -59,11 +69,13 @@ describe('Users and team permissions through the HTTP API', () => {
   it('updates only editable profile fields and normalizes GitHub identity', async () => {
     const updated = await agents.memberA
       .patch('/api/v1/users/me')
-      .send({ position: ' Developer ', githubUsername: 'Team-Dev' });
+      .send({ githubUsername: 'Team-Dev' });
     expect(updated.status).toBe(200);
-    expect(updated.body.data).toMatchObject({ position: 'Developer', githubUsername: 'team-dev' });
+    expect(updated.body.data).toMatchObject({ githubUsername: 'team-dev' });
     for (const body of [
       { role: 'SYSTEM_OWNER' },
+      { position: 'Super Admin' },
+      { position: 'Tech Lead' },
       { email: 'spoof@example.com' },
       { isActive: true },
       { name: 'Spoof' },
@@ -369,7 +381,7 @@ describe('Users and team permissions through the HTTP API', () => {
     const first = await loginWithCsrf(agent, 'membera@example.com');
     const second = await agent
       .post('/api/v1/auth/dev-login')
-      .send({ email: 'membera@example.com' });
+      .send({ email: 'membera@example.com', password: fixturePassword });
     expect(second.headers['set-cookie'][0]).not.toBe(first.headers['set-cookie'][0]);
   });
 
@@ -403,4 +415,12 @@ describe('Users and team permissions through the HTTP API', () => {
     ).toBe(1);
     expect((await agents.owner.post('/api/v1/users').send(body)).status).toBe(409);
   });
+});
+
+it('prevents scoped admins promoting themselves through profile titles', async () => {
+  for (const position of ['Super Admin', 'Vice President', 'Organizer', null]) {
+    expect((await agents.adminA.patch('/api/v1/users/me').send({position})).status).toBe(400);
+  }
+  expect((await agents.adminA.get('/api/v1/auth/me')).body.user.canManageClub).toBe(false);
+  expect((await agents.owner.get('/api/v1/auth/me')).body.user.canManageClub).toBe(true);
 });

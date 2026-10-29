@@ -4,11 +4,11 @@
 
 @layer base {
   html {
-    font-family: 'Fredoka', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
   body {
-    font-family: 'Fredoka', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-weight: 400;
   }
 
@@ -295,14 +295,7 @@
   }
 }
 
-/* Fredoka is used throughout, including elements with explicit Tailwind font classes. */
-*,
-*::before,
-*::after,
-input::placeholder,
-textarea::placeholder {
-  font-family: 'Fredoka', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
-}
+input, button, select, textarea { font: inherit; }
 
 main h1,
 main h2 {

@@ -3,7 +3,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../auth/authContext';
 import { useTasks } from '../../context/TaskContext';
-import { TEAMS, getDashboardStats } from '../../data/mockData';
+import { getDashboardStats } from '../../data/mockData';
+import { useTeams } from '../../hooks/useTeams';
 import { TeamCard } from '../../components/leader/TeamCard';
 import { TaskStatusBadge } from '../../components/common/TaskStatusBadge';
 import { TaskDetailsModal } from '../../components/common/TaskDetailsModal';
@@ -22,6 +23,7 @@ import {
 } from 'lucide-react';
 
 export const LeaderOverview: React.FC = () => {
+  const { teams: TEAMS } = useTeams();
   const { user } = useAuth();
   const navigate = useNavigate();
   const { tasks, approveTask } = useTasks();
@@ -81,7 +83,7 @@ export const LeaderOverview: React.FC = () => {
           --------------------------------------------------------------------- */}
       <div data-tour="overview-stats" className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Total Tasks */}
-        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#FDECEC' }}>
+        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: 'var(--surface-red)' }}>
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-gdgoc-gray-500">
               Total Tasks
@@ -95,7 +97,7 @@ export const LeaderOverview: React.FC = () => {
         </div>
 
         {/* In Progress */}
-        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#E8F7EE' }}>
+        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: 'var(--surface-green)' }}>
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-amber-800">
               In Progress
@@ -109,7 +111,7 @@ export const LeaderOverview: React.FC = () => {
         </div>
 
         {/* Pending Review */}
-        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#EAF3FF' }}>
+        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: 'var(--surface-blue)' }}>
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-blue-800">
               Pending Review
@@ -123,7 +125,7 @@ export const LeaderOverview: React.FC = () => {
         </div>
 
         {/* Completed */}
-        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: '#FDECEC' }}>
+        <div className="rounded-xl border border-gdgoc-gray-200 p-4 card-bb" style={{ backgroundColor: 'var(--surface-red)' }}>
           <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
             <span className="text-xs font-semibold uppercase tracking-wider text-emerald-800">
               Completed

@@ -1,9 +1,14 @@
-import { Task, TaskStatus, Priority, TeamId, AttachedFile } from '../types/task';
+import { Task, TaskStatus, Priority, TeamId } from '../types/task';
 import { User, Role } from '../types/auth';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api/v1';
+// Production requests stay on the frontend origin so Safari can retain the session cookie.
+const API_BASE = import.meta.env.PROD
+  ? '/api/v1'
+  : (import.meta.env.VITE_API_URL || '/api/v1').replace(/\/+$/, '');
+const REQUEST_TIMEOUT = 60_000;
 
 let cachedCsrfToken: string | null = null;
+let csrfRequest: Promise<string> | null = null;
 
 /**
  * Fetch and cache CSRF token from backend
@@ -11,26 +16,29 @@ let cachedCsrfToken: string | null = null;
 export async function getCsrfToken(): Promise<string> {
   if (cachedCsrfToken) return cachedCsrfToken;
 
-  try {
+  if (csrfRequest) return csrfRequest;
+  csrfRequest = (async () => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(`${API_BASE}/auth/csrf`, {
-      method: 'GET',
-      credentials: 'include',
-      signal: controller.signal,
-    }).finally(() => clearTimeout(timeoutId));
-
-    if (res.ok) {
-      const data = await res.json();
-      if (data.csrfToken) {
-        cachedCsrfToken = data.csrfToken;
-        return data.csrfToken;
-      }
+    const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    try {
+      const res = await fetch(`${API_BASE}/auth/csrf`, {
+        credentials: 'include',
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error('Unable to initialize a secure session. Please try again.');
+      const data = await res.json().catch(() => {
+        throw new Error('The session endpoint returned an invalid response. Please retry.');
+      });
+      if (!data.csrfToken) throw new Error('The server did not return a CSRF token.');
+      cachedCsrfToken = data.csrfToken;
+      return data.csrfToken as string;
+    } finally {
+      clearTimeout(timeoutId);
     }
-  } catch (err) {
-    console.warn('[API] Could not retrieve CSRF token from server:', err);
-  }
-  return '';
+  })().finally(() => {
+    csrfRequest = null;
+  });
+  return csrfRequest;
 }
 
 /**
@@ -39,7 +47,8 @@ export async function getCsrfToken(): Promise<string> {
 export async function apiRequest<T>(
   endpoint: string,
   method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE' = 'GET',
-  body?: unknown
+  body?: unknown,
+  retryCsrf = true,
 ): Promise<T> {
   const url = `${API_BASE}${endpoint.startsWith('/') ? endpoint : `/${endpoint}`}`;
   const headers: Record<string, string> = {};
@@ -57,7 +66,7 @@ export async function apiRequest<T>(
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 8000);
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
 
   let response: Response;
   try {
@@ -70,20 +79,28 @@ export async function apiRequest<T>(
     });
   } catch (err: any) {
     if (err.name === 'AbortError') {
-      throw new Error(`Request to ${endpoint} timed out after 8s. Backend may be offline or starting up.`);
+      throw new Error(
+        `Request to ${endpoint} timed out after 60s. Backend may be offline or starting up.`,
+      );
     }
     throw err;
   } finally {
     clearTimeout(timeoutId);
   }
 
-  // Handle CSRF rotation or session expiration
-  if (response.status === 403) {
-    cachedCsrfToken = null;
+  const data = await response.json().catch(() => {
+    if (response.ok) throw new Error('The API returned an invalid response. Please retry.');
+    return {};
+  });
+  const csrfRejected =
+    response.status === 403 && data?.error?.message === 'A valid X-CSRF-Token header is required';
+  if (response.status === 401 || csrfRejected) cachedCsrfToken = null;
+  // This exact error is returned before the route executes, so one retry is safe.
+  if (csrfRejected && retryCsrf) return apiRequest<T>(endpoint, method, body, false);
+
+  if (response.status === 401 && !endpoint.startsWith('/auth/') && typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('taskhub:session-expired'));
   }
-
-  const data = await response.json().catch(() => ({}));
-
   if (!response.ok) {
     const errorMsg = data?.error?.message || data?.message || `Request failed (${response.status})`;
     const error = new Error(errorMsg);
@@ -146,7 +163,9 @@ export function backendPriorityToFrontend(priority?: string): Priority {
   }
 }
 
-export function frontendPriorityToBackend(priority?: Priority): 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' {
+export function frontendPriorityToBackend(
+  priority?: Priority,
+): 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT' {
   switch (priority) {
     case 'High':
       return 'HIGH';
@@ -185,37 +204,21 @@ export function formatBackendTask(backendTask: any): Task {
         .toUpperCase()
     : 'GD';
 
-  // Parse simulated attachments if in tags or mock
-  const attachments: AttachedFile[] = [];
-  if (backendTask.tags && Array.isArray(backendTask.tags)) {
-    backendTask.tags.forEach((tag: string, index: number) => {
-      if (tag.includes('.')) {
-        attachments.push({
-          id: `att-${index}`,
-          name: tag,
-          size: 1024 * 128,
-          type: tag.split('.').pop() || 'doc',
-          formattedSize: '128 KB',
-        });
-      }
-    });
-  }
-
   return {
     id: backendTask.id || `TSK-${Math.floor(100 + Math.random() * 900)}`,
     title: backendTask.title,
     description: backendTask.description,
-    teamId: (backendTask.team?.slug || backendTask.teamId || 'tech') as TeamId,
-    teamName: backendTask.team?.name || 'Tech Team',
+    teamId: (backendTask.team?.slug || backendTask.teamId || 'core') as TeamId,
+    teamName: backendTask.team?.name || 'Whole Club',
     assigneeId: assignee?.id || backendTask.assigneeId || '',
     assigneeName: assignee?.name || 'Unassigned',
-    assigneeEmail: assignee?.email || 'member@psit.gdgoc.dev',
+    assigneeEmail: assignee?.email || '',
     assigneeInitials: initials,
     priority: backendPriorityToFrontend(backendTask.priority),
     status: backendStatusToFrontend(backendTask.status),
     deadline: deadlineStr,
     createdAt: createdAtStr,
-    attachments,
+    attachments: [],
   };
 }
 
@@ -224,6 +227,14 @@ export function formatBackendTask(backendTask: any): Task {
 // ============================================================================
 
 export const authApi = {
+  async getGoogleUrl(): Promise<string> {
+    const res = await apiRequest<{ url: string }>('/auth/google/url?portal=member');
+    return res.url;
+  },
+
+  async getGoogleAuthUrl(portal: 'member' | 'admin' = 'member'): Promise<{ success: boolean; configured: boolean; url?: string; message?: string }> {
+    return apiRequest<{ success: boolean; configured: boolean; url?: string; message?: string }>(`/auth/google/url?portal=${portal}`);
+  },
   async loginDev(
     email: string,
     name?: string,
@@ -236,17 +247,21 @@ export const authApi = {
     password?: string,
   ): Promise<User> {
     const backendRole = role === 'ADMIN' ? 'ADMIN' : 'USER';
-    const res = await apiRequest<{ success: boolean; user: any; csrfToken?: string }>('/auth/dev-login', 'POST', {
-      email,
-      name,
-      password,
-      role: backendRole,
-      position,
-      teamSlug,
-      isTeamHead,
-      invitationKey,
-      isSignUp,
-    });
+    const res = await apiRequest<{ success: boolean; user: any; csrfToken?: string }>(
+      '/auth/dev-login',
+      'POST',
+      {
+        email,
+        name,
+        password,
+        role: backendRole,
+        position,
+        teamSlug,
+        isTeamHead,
+        invitationKey,
+        isSignUp,
+      },
+    );
 
     // Invalidate stale CSRF token and sync the freshly issued token from login session
     if (res.csrfToken) {
@@ -256,27 +271,12 @@ export const authApi = {
       await getCsrfToken();
     }
 
-    let resolvedRole: Role = 'MEMBER';
-    const isHead = Boolean(isTeamHead) || res.user.teamMemberships?.some((m: any) => m.isTeamHead);
-    if (res.user.role === 'ADMIN' || res.user.role === 'PRESIDENT' || res.user.role === 'SYSTEM_OWNER') {
-      resolvedRole = 'ADMIN';
-    } else if (isHead || res.user.position?.toLowerCase().includes('lead')) {
-      resolvedRole = 'TEAM_LEADER';
-    }
-
-    const teamName = res.user.teamMemberships?.[0]?.team?.name || (teamSlug ? teamSlug.toUpperCase() + ' Team' : 'Tech Team');
-
-    return {
-      id: res.user.id,
-      name: res.user.name,
-      email: res.user.email,
-      role: resolvedRole,
-      position: res.user.position || position,
-      team: teamName,
-      isTeamHead: isHead,
-      membershipStatus: resolvedRole === 'TEAM_LEADER' || resolvedRole === 'ADMIN' ? 'CORE_MEMBER' : 'REGULAR_MEMBER',
-      avatarUrl: res.user.avatarUrl,
-    };
+    const sessionUser = await authApi.getCurrentUser();
+    if (!sessionUser)
+      throw new Error(
+        'The browser could not keep your sign-in session. Please allow cookies for this site and try again.',
+      );
+    return sessionUser;
   },
 
   async getCurrentUser(): Promise<User | null> {
@@ -285,13 +285,23 @@ export const authApi = {
       if (res.user) {
         let role: Role = 'MEMBER';
         const isHead = res.user.teamMemberships?.some((m: any) => m.isTeamHead);
-        if (res.user.role === 'ADMIN' || res.user.role === 'PRESIDENT' || res.user.role === 'SYSTEM_OWNER') {
+        const isExecutive =
+          res.user.canManageClub === true ||
+          res.user.role === 'PRESIDENT' ||
+          res.user.role === 'SYSTEM_OWNER' ||
+          ['president', 'vice president', 'secretary', 'organizer', 'system owner', 'super admin', 'admin'].includes(
+            (res.user.position || '').trim().toLowerCase(),
+          );
+
+        if (isExecutive) {
           role = 'ADMIN';
-        } else if (isHead || res.user.position?.toLowerCase().includes('lead')) {
+        } else if (isHead || res.user.role === 'ADMIN') {
           role = 'TEAM_LEADER';
         }
 
-        const teamName = res.user.teamMemberships?.[0]?.team?.name || 'Tech Team';
+        const teamName = isExecutive
+          ? 'Executive Board (No Squad)'
+          : res.user.teamMemberships?.[0]?.team?.name || 'No team';
 
         return {
           id: res.user.id,
@@ -300,15 +310,20 @@ export const authApi = {
           role,
           position: res.user.position,
           team: teamName,
-          isTeamHead: isHead,
-          membershipStatus: role === 'ADMIN' || role === 'TEAM_LEADER' ? 'CORE_MEMBER' : 'REGULAR_MEMBER',
+          isTeamHead: isExecutive ? false : isHead,
+          canManageClub: res.user.canManageClub === true || isExecutive,
+          managedTeamIds: isExecutive ? [] : res.user.managedTeamIds || [],
+          teamMemberships: isExecutive ? [] : res.user.teamMemberships || [],
+          membershipStatus:
+            role === 'ADMIN' || role === 'TEAM_LEADER' ? 'CORE_MEMBER' : 'REGULAR_MEMBER',
           avatarUrl: res.user.avatarUrl,
         };
       }
-    } catch {
-      // User is not authenticated
+      throw new Error('The server did not return a valid session response.');
+    } catch (err: unknown) {
+      if ((err as { status?: number }).status === 401) return null;
+      throw err;
     }
-    return null;
   },
 
   async logout(): Promise<void> {
@@ -320,17 +335,7 @@ export const authApi = {
   },
 
   async updateName(name: string): Promise<{ success: boolean; user: any }> {
-    try {
-      return await apiRequest<{ success: boolean; user: any }>('/auth/name', 'PATCH', { name });
-    } catch (err: any) {
-      // If rejected due to rotated CSRF token or session refresh, obtain fresh token and retry once
-      if (err?.status === 403 || err?.message?.includes('CSRF')) {
-        cachedCsrfToken = null;
-        await getCsrfToken();
-        return await apiRequest<{ success: boolean; user: any }>('/auth/name', 'PATCH', { name });
-      }
-      throw err;
-    }
+    return apiRequest<{ success: boolean; user: any }>('/auth/name', 'PATCH', { name });
   },
 };
 
@@ -339,15 +344,29 @@ export const authApi = {
 // ============================================================================
 
 export const taskApi = {
-  async fetchTasks(params: { teamId?: string; status?: string; assigneeId?: string } = {}): Promise<Task[]> {
+  async fetchTasks(
+    params: { teamId?: string; status?: string; assigneeId?: string } = {},
+  ): Promise<Task[]> {
     const query = new URLSearchParams();
     if (params.teamId && params.teamId !== 'ALL') query.append('teamId', params.teamId);
-    if (params.status && params.status !== 'ALL') query.append('status', frontendStatusToBackend(params.status as TaskStatus));
+    if (params.status && params.status !== 'ALL')
+      query.append('status', frontendStatusToBackend(params.status as TaskStatus));
     if (params.assigneeId) query.append('assigneeId', params.assigneeId);
     query.append('limit', '100');
 
-    const res = await apiRequest<{ success: boolean; data: any[] }>(`/tasks?${query.toString()}`);
-    return (res.data || []).map(formatBackendTask);
+    const tasks: Task[] = [];
+    let page = 1;
+    let totalPages = 1;
+    do {
+      query.set('page', String(page));
+      const res = await apiRequest<{ data: any[]; pagination?: { totalPages: number } }>(
+        `/tasks?${query}`,
+      );
+      tasks.push(...(res.data || []).map(formatBackendTask));
+      totalPages = res.pagination?.totalPages ?? 1;
+      page += 1;
+    } while (page <= totalPages);
+    return tasks;
   },
 
   async createTask(input: {
@@ -365,11 +384,12 @@ export const taskApi = {
       teamId: input.teamId,
       assigneeId: input.assigneeId || undefined,
       priority: frontendPriorityToBackend(input.priority),
-      deadline: input.deadline ? new Date(input.deadline).toISOString() : undefined,
+      deadline: input.deadline
+        ? new Date(`${input.deadline}T23:59:59.999`).toISOString()
+        : undefined,
     });
     return formatBackendTask(res.data);
   },
-
 
   async startTask(taskId: string): Promise<Task> {
     const res = await apiRequest<{ success: boolean; data: any }>(`/tasks/${taskId}/start`, 'POST');
@@ -377,31 +397,38 @@ export const taskApi = {
   },
 
   async submitTask(taskId: string, payload: { note?: string; prUrl?: string } = {}): Promise<Task> {
-    const res = await apiRequest<{ success: boolean; data: any }>(`/tasks/${taskId}/submit`, 'POST', {
-      note: payload.note || 'Milestone deliverables ready for lead verification.',
-      prUrl: payload.prUrl,
-    });
+    const res = await apiRequest<{ success: boolean; data: any }>(
+      `/tasks/${taskId}/submit`,
+      'POST',
+      {
+        note: payload.note || 'Milestone deliverables ready for lead verification.',
+        prUrl: payload.prUrl,
+      },
+    );
     return formatBackendTask(res.data);
   },
 
-  async reviewTask(taskId: string, outcome: 'APPROVED' | 'SENT_BACK', comment?: string): Promise<Task> {
-    const res = await apiRequest<{ success: boolean; data: any }>(`/tasks/${taskId}/review`, 'POST', {
-      outcome,
-      reviewComment: comment,
-    });
+  async reviewTask(
+    taskId: string,
+    outcome: 'APPROVED' | 'SENT_BACK',
+    comment?: string,
+  ): Promise<Task> {
+    const res = await apiRequest<{ success: boolean; data: any }>(
+      `/tasks/${taskId}/review`,
+      'POST',
+      {
+        outcome,
+        reviewComment: comment,
+      },
+    );
     return formatBackendTask(res.data);
   },
 
   async getActivityFeed(): Promise<TaskActivityItem[]> {
-    try {
-      const res = await apiRequest<{ success: boolean; data: TaskActivityItem[] }>('/tasks/activity/feed');
-      return res.data || [];
-    } catch {
-      return [];
-    }
+    const res = await apiRequest<{ success: boolean; data: TaskActivityItem[] }>('/tasks/activity/feed');
+    return res.data || [];
   },
 };
-
 
 // ============================================================================
 // Admin Services
@@ -444,14 +471,35 @@ export interface LeadershipRoleKey {
   updatedAt?: string;
 }
 
+export interface DirectoryTeam { id: string; name: string; slug: string; description?: string; _count?: {memberships: number; tasks: number} }
+export interface DirectoryMembership { id: string; isTeamHead: boolean; user: {id: string; name: string; email: string; position?: string; role: string} }
+async function fetchAllPages<T>(endpoint: string): Promise<T[]> {
+  const result: T[] = [];
+  let page = 1;
+  let totalPages = 1;
+  do {
+    const response = await apiRequest<{data:T[];pagination?:{totalPages:number}}>(`${endpoint}&page=${page}`);
+    result.push(...response.data);
+    totalPages = response.pagination?.totalPages ?? 1;
+    page += 1;
+  } while (page <= totalPages);
+  return result;
+}
+
 export const adminApi = {
   async getRoleKeys(): Promise<LeadershipRoleKey[]> {
-    const res = await apiRequest<{ success: boolean; data: LeadershipRoleKey[] }>('/invitations/role-keys');
+    const res = await apiRequest<{ success: boolean; data: LeadershipRoleKey[] }>(
+      '/invitations/role-keys',
+    );
     return res.data || [];
   },
 
   async updateRoleKey(id: string, keyCode: string): Promise<LeadershipRoleKey> {
-    const res = await apiRequest<{ success: boolean; data: LeadershipRoleKey }>(`/invitations/role-keys/${id}`, 'PATCH', { keyCode });
+    const res = await apiRequest<{ success: boolean; data: LeadershipRoleKey }>(
+      `/invitations/role-keys/${id}`,
+      'PATCH',
+      { keyCode },
+    );
     return res.data;
   },
 
@@ -483,24 +531,27 @@ export const adminApi = {
     await apiRequest(`/invitations/${id}`, 'DELETE');
   },
 
-  async getUsers(params: { search?: string; role?: string; isActive?: boolean } = {}): Promise<AdminUser[]> {
+  async getUsers(
+    params: { search?: string; role?: string; isActive?: boolean } = {},
+  ): Promise<AdminUser[]> {
     const query = new URLSearchParams();
     if (params.search) query.append('search', params.search);
     if (params.role) query.append('role', params.role);
     if (params.isActive !== undefined) query.append('isActive', String(params.isActive));
     query.append('limit', '100');
 
-    const res = await apiRequest<{ success: boolean; data: any[] }>(`/users?${query.toString()}`);
-    return res.data || [];
+    return fetchAllPages<AdminUser>(`/users?${query.toString()}`);
   },
 
   async toggleUserStatus(userId: string, isActive: boolean): Promise<void> {
     await apiRequest(`/users/${userId}/status`, 'PATCH', { isActive });
   },
 
-  async getTeams(): Promise<{ id: string; name: string; slug: string; description?: string; _count?: { members: number; tasks: number } }[]> {
-    const res = await apiRequest<{ success: boolean; data: any[] }>('/teams');
-    return res.data || [];
+  async getTeams(): Promise<DirectoryTeam[]> {
+    return fetchAllPages<DirectoryTeam>('/teams?limit=100');
+  },
+  async getTeamMembers(teamId: string): Promise<DirectoryMembership[]> {
+    return fetchAllPages<DirectoryMembership>(`/teams/${teamId}/members?limit=100`);
   },
 
   async createTeam(input: { name: string; slug: string; description?: string }): Promise<any> {
@@ -508,13 +559,19 @@ export const adminApi = {
     return res.data;
   },
 
-  async getStatistics(): Promise<{ totalCompleted: number; onTimeRate: number | null; averageLeadTimeHours: number | null }> {
-    try {
-      const res = await apiRequest<{ success: boolean; data: any }>('/history/statistics');
-      return res.data || { totalCompleted: 0, onTimeRate: null, averageLeadTimeHours: null };
-    } catch {
-      return { totalCompleted: 0, onTimeRate: null, averageLeadTimeHours: null };
-    }
+  async getStatistics(): Promise<{
+    totalCompleted: number;
+    onTimeRate: number | null;
+    averageLeadTimeHours: number | null;
+  }> {
+    const res = await apiRequest<{
+      data: {
+        totalCompleted: number;
+        onTimeRate: number | null;
+        averageLeadTimeHours: number | null;
+      };
+    }>('/history/statistics');
+    return res.data;
   },
 };
 
@@ -546,7 +603,13 @@ export interface AppNotification {
   id: string;
   userId: string;
   taskId: string;
-  kind: 'TASK_ASSIGNED' | 'TASK_SUBMITTED' | 'TASK_APPROVED' | 'CHANGES_REQUESTED' | 'TASK_OVERDUE' | string;
+  kind:
+    | 'TASK_ASSIGNED'
+    | 'TASK_SUBMITTED'
+    | 'TASK_APPROVED'
+    | 'CHANGES_REQUESTED'
+    | 'TASK_OVERDUE'
+    | string;
   readAt: string | null;
   createdAt: string;
   task?: {
@@ -558,30 +621,16 @@ export interface AppNotification {
 }
 
 export const notificationApi = {
-  async getNotifications(unreadOnly = false): Promise<{ notifications: AppNotification[]; unreadCount: number }> {
-    try {
-      const res = await apiRequest<{ success: boolean; data: AppNotification[]; unreadCount: number }>(
-        `/notifications?limit=25&unreadOnly=${unreadOnly}`
-      );
-      return { notifications: res.data || [], unreadCount: res.unreadCount || 0 };
-    } catch {
-      return { notifications: [], unreadCount: 0 };
-    }
+  async getNotifications(
+    unreadOnly = false,
+  ): Promise<{ notifications: AppNotification[]; unreadCount: number }> {
+    const res = await apiRequest<{success: boolean; data: AppNotification[]; unreadCount: number}>(`/notifications?limit=25&unreadOnly=${unreadOnly}`);
+    return { notifications: res.data || [], unreadCount: res.unreadCount || 0 };
   },
-
   async markAsRead(notificationId: string): Promise<void> {
-    try {
-      await apiRequest(`/notifications/${notificationId}/read`, 'POST');
-    } catch {
-      // fallback
-    }
+    await apiRequest(`/notifications/${notificationId}/read`, 'POST');
   },
-
   async markAllAsRead(): Promise<void> {
-    try {
-      await apiRequest('/notifications/read-all', 'POST');
-    } catch {
-      // fallback
-    }
+    await apiRequest('/notifications/read-all', 'POST');
   },
 };

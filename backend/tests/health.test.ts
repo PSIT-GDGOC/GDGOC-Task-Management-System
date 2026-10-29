@@ -11,3 +11,9 @@ describe('GET /health', () => {
     expect(res.body).toHaveProperty('uptimeSeconds');
   });
 });
+
+it('does not expose email-sending or configuration diagnostics as public health routes', async () => {
+  for (const path of ['/health/email-test?to=outside@example.com','/health/email-check']) {
+    expect((await request(app).get(path)).status).toBe(404);
+  }
+});

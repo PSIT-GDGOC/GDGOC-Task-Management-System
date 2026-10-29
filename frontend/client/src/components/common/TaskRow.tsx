@@ -1,7 +1,6 @@
 import React from 'react';
 import { Task } from '../../types/task';
 import { TaskStatusBadge } from './TaskStatusBadge';
-import { PriorityBadge } from './PriorityBadge';
 import { Calendar } from 'lucide-react';
 
 interface TaskRowProps {
@@ -47,11 +46,6 @@ export const TaskRow: React.FC<TaskRowProps> = ({ task, showTeam = true, onSelec
             {task.assigneeName}
           </span>
         </div>
-      </td>
-
-      {/* Priority */}
-      <td className="py-3.5 px-4 whitespace-nowrap">
-        <PriorityBadge priority={task.priority} />
       </td>
 
       {/* Deadline */}

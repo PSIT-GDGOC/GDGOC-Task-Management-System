@@ -1,3 +1,4 @@
+import { localPreferences, sessionPreferences } from '../../utils/storage';
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../auth/authContext';
 import { UserCheck, Sparkles, AlertCircle, X } from 'lucide-react';
@@ -18,10 +19,11 @@ export const FullNameModal: React.FC = () => {
     const confirmedKey = `gdgoc_name_confirmed_${user.id}`;
     const dismissedKey = `gdgoc_name_prompt_dismissed_${user.id}`;
 
-    const isConfirmed = localStorage.getItem(confirmedKey) === 'true';
-    const isDismissed = sessionStorage.getItem(dismissedKey) === 'true';
+    const isConfirmed = localPreferences.getItem(confirmedKey) === 'true';
+    const isDismissed = sessionPreferences.getItem(dismissedKey) === 'true';
 
-    if (isConfirmed || isDismissed) {
+    const legacyHandle = user.name.toLowerCase() === user.email.split('@')[0].toLowerCase() && /[\d._-]/.test(user.name);
+    if ((isConfirmed || isDismissed) && !legacyHandle) {
       setIsOpen(false);
       return;
     }
@@ -35,7 +37,7 @@ export const FullNameModal: React.FC = () => {
       !currentName ||
       currentNameLower === emailPrefix ||
       currentName.includes('@') ||
-      /^[a-z0-9._-]+$/i.test(currentName);
+      (/\d/.test(currentName) && currentNameLower === emailPrefix);
 
     if (isPrefixOrHandle) {
       // Suggest clean candidate from prefix if possible
@@ -77,7 +79,7 @@ export const FullNameModal: React.FC = () => {
 
     try {
       await updateUserName(trimmed);
-      localStorage.setItem(`gdgoc_name_confirmed_${user.id}`, 'true');
+      localPreferences.setItem(`gdgoc_name_confirmed_${user.id}`, 'true');
       setIsOpen(false);
     } catch (err: any) {
       setError(err?.message || 'Failed to save full name. Please try again.');
@@ -87,7 +89,7 @@ export const FullNameModal: React.FC = () => {
   };
 
   const handleDismiss = () => {
-    sessionStorage.setItem(`gdgoc_name_prompt_dismissed_${user.id}`, 'true');
+    sessionPreferences.setItem(`gdgoc_name_prompt_dismissed_${user.id}`, 'true');
     setIsOpen(false);
   };
 

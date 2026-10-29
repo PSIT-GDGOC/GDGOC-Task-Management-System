@@ -1,6 +1,13 @@
 import nodemailer, { type Transporter } from 'nodemailer';
 import { env } from '../config/env';
 
+const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (character) =>
+  ({'&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'})[character]!);
+const httpUrl = (value?: string | null) => {
+  try { const url = new URL(value || ''); return ['https:', 'http:'].includes(url.protocol) ? url.href : null; }
+  catch { return null; }
+};
+
 export interface EmailPayload {
   to: string;
   subject: string;
@@ -34,7 +41,9 @@ export class EmailService {
     const host = process.env.SMTP_HOST;
     const user = process.env.SMTP_USER;
     const pass = process.env.SMTP_PASS;
-    const port = Number(process.env.SMTP_PORT) || 587;
+    const configuredPort = Number(process.env.SMTP_PORT);
+    // Port 465 (SSL) avoids cloud host port-587 blocking
+    const port = configuredPort || (process.env.RENDER === 'true' ? 465 : 587);
 
     if (host && user && pass) {
       this.transporter = nodemailer.createTransport({
@@ -42,6 +51,9 @@ export class EmailService {
         port,
         secure: port === 465,
         auth: { user, pass },
+        connectionTimeout: 8000,
+        greetingTimeout: 8000,
+        socketTimeout: 12000,
       });
       return this.transporter;
     }
@@ -49,10 +61,43 @@ export class EmailService {
     return null;
   }
 
-  static async sendMail(payload: EmailPayload): Promise<{ success: boolean; messageId?: string; simulated?: boolean }> {
+  static async sendMail(payload: EmailPayload): Promise<{ success: boolean; messageId?: string; simulated?: boolean; error?: string }> {
+    // 1. Primary & Ultra-Reliable: Brevo HTTPS REST API (Bypasses all cloud host SMTP port blocks!)
+    const brevoApiKey = process.env.BREVO_API_KEY;
+    if (brevoApiKey) {
+      try {
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+          method: 'POST',
+          signal: AbortSignal.timeout(10_000),
+          headers: {
+            'accept': 'application/json',
+            'api-key': brevoApiKey,
+            'content-type': 'application/json',
+          },
+          body: JSON.stringify({
+            sender: { name: 'GDGOC PSIT', email: 'gdgoc.psit@gmail.com' },
+            to: [{ email: payload.to, name: payload.to.split('@')[0] }],
+            subject: payload.subject,
+            htmlContent: payload.html,
+            textContent: payload.text || payload.subject,
+          }),
+        });
+
+        const data = (await response.json()) as { messageId?: string; message?: string };
+        if (response.ok && data.messageId) {
+          console.log(`[EmailService:BrevoREST] Live email dispatched via HTTPS to ${payload.to} [ID: ${data.messageId}]`);
+          return { success: true, messageId: data.messageId };
+        } else {
+          console.error(`[EmailService:BrevoREST] API Error to ${payload.to}:`, data.message || data);
+        }
+      } catch (err: unknown) {
+        console.error(`[EmailService:BrevoREST] HTTPS dispatch error to ${payload.to}:`, err instanceof Error ? err.message : 'Email delivery error');
+      }
+    }
+
+    // 2. Secondary: SMTP Transporter (for local dev or unblocked SMTP hosts)
     const transporter = this.getTransporter();
     const from = process.env.SMTP_FROM || 'GDGOC PSIT <gdgoc.psit@gmail.com>';
-
     if (transporter) {
       try {
         const info = await transporter.sendMail({
@@ -64,13 +109,14 @@ export class EmailService {
         });
         console.log(`[EmailService] Live email dispatched to ${payload.to} [ID: ${info.messageId}]`);
         return { success: true, messageId: info.messageId };
-      } catch (err) {
-        console.error(`[EmailService] SMTP send error to ${payload.to}:`, err);
-        // Fallback to recording mock outbox
+      } catch (err: unknown) {
+        console.error(`[EmailService] SMTP send error to ${payload.to}:`, err instanceof Error ? err.message : 'Email delivery error');
       }
     }
 
-    // Fallback simulation mode (no SMTP configured or local dev)
+    if (env.NODE_ENV === 'production') throw new Error('Email delivery failed or no email provider is configured.');
+
+    // Development/test outbox only; never acknowledge a production delivery as simulated.
     this.mockOutbox.push(payload);
     console.log(`[EmailService:Simulated] Email sent to: ${payload.to} | Subject: "${payload.subject}"`);
     return { success: true, simulated: true };
@@ -126,7 +172,7 @@ export class EmailService {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 24px; color: #202124; }
     .card { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #dadce0; overflow: hidden; box-shadow: 0 1px 3px rgba(60,64,67,0.1); }
@@ -157,18 +203,18 @@ export class EmailService {
     <div class="content">
       <div class="badge">${urgencyHeadline}</div>
       <h2 style="font-size: 20px; font-weight: 800; color: #202124; margin: 0 0 12px 0;">
-        Hi ${assignee.name || 'Member'},
+        Hi ${escapeHtml(assignee.name || 'Member')},
       </h2>
       <p style="font-size: 14px; color: #3c4043; line-height: 1.5; margin: 0 0 16px 0;">
         This is an automated daily reminder that the deadline for your assigned milestone is approaching in <strong>${daysRemaining <= 0 ? 'less than 24 hours' : daysRemaining + (daysRemaining === 1 ? ' day' : ' days')}</strong>.
       </p>
 
       <div class="task-card">
-        <div class="task-title">📌 ${task.title}</div>
+        <div class="task-title">📌 ${escapeHtml(task.title)}</div>
         <div class="task-meta">
-          <div><strong>Squad Domain:</strong> ${task.teamName || 'Chapter Project'}</div>
+          <div><strong>Squad Domain:</strong> ${escapeHtml(task.teamName || 'Chapter Project')}</div>
           <div><strong>Milestone Deadline:</strong> <span style="color: #c5221f; font-weight: 600;">${formattedDeadline}</span></div>
-          ${task.description ? `<div style="margin-top: 6px; font-size: 12px; color: #5f6368;">"${task.description.slice(0, 160)}${task.description.length > 160 ? '...' : ''}"</div>` : ''}
+          ${task.description ? `<div style="margin-top: 6px; font-size: 12px; color: #5f6368;">"${escapeHtml(task.description.slice(0, 160))}${task.description.length > 160 ? '...' : ''}"</div>` : ''}
         </div>
       </div>
 
@@ -177,7 +223,7 @@ export class EmailService {
       </p>
 
       <div style="text-align: center; margin: 28px 0 12px;">
-        <a href="${workspaceUrl}" class="cta-btn" target="_blank">
+        <a href="${escapeHtml(workspaceUrl)}" class="cta-btn" target="_blank">
           🚀 Open Workspace & Submit Deliverable
         </a>
       </div>
@@ -224,7 +270,7 @@ export class EmailService {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 24px; color: #202124; }
     .card { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #dadce0; overflow: hidden; box-shadow: 0 1px 3px rgba(60,64,67,0.1); }
@@ -255,19 +301,18 @@ export class EmailService {
     <div class="content">
       <div class="badge">🎯 NEW DELIVERABLE ASSIGNED</div>
       <h2 style="font-size: 20px; font-weight: 800; color: #202124; margin: 0 0 12px 0;">
-        Hi ${assignee.name || 'Member'},
+        Hi ${escapeHtml(assignee.name || 'Member')},
       </h2>
       <p style="font-size: 14px; color: #3c4043; line-height: 1.5; margin: 0 0 16px 0;">
-        A new milestone deliverable has just been assigned to you by <strong>${assigner.name || 'Leadership'}</strong> (${assigner.position || 'Lead Officer'}).
+        A new milestone deliverable has just been assigned to you by <strong>${escapeHtml(assigner.name || 'Leadership')}</strong> (${escapeHtml(assigner.position || 'Lead Officer')}).
       </p>
 
       <div class="task-card">
-        <div class="task-title">📌 ${task.title}</div>
+        <div class="task-title">📌 ${escapeHtml(task.title)}</div>
         <div class="task-meta">
-          <div><strong>Squad Domain:</strong> ${task.teamName || 'Chapter Project'}</div>
+          <div><strong>Squad Domain:</strong> ${escapeHtml(task.teamName || 'Chapter Project')}</div>
           <div><strong>Milestone Cutoff:</strong> <span style="color: #1a73e8; font-weight: 600;">${formattedDeadline}</span></div>
-          ${task.priority ? `<div><strong>Priority:</strong> ${task.priority}</div>` : ''}
-          ${task.description ? `<div style="margin-top: 8px; font-size: 12px; color: #5f6368; border-top: 1px dashed #dadce0; padding-top: 8px;">"${task.description}"</div>` : ''}
+          ${task.description ? `<div style="margin-top: 8px; font-size: 12px; color: #5f6368; border-top: 1px dashed #dadce0; padding-top: 8px;">"${escapeHtml(task.description)}"</div>` : ''}
         </div>
       </div>
 
@@ -276,7 +321,7 @@ export class EmailService {
       </p>
 
       <div style="text-align: center; margin: 28px 0 12px;">
-        <a href="${workspaceUrl}" class="cta-btn" target="_blank">
+        <a href="${escapeHtml(workspaceUrl)}" class="cta-btn" target="_blank">
           🚀 Open Workspace & Start Deliverable
         </a>
       </div>
@@ -307,6 +352,7 @@ export class EmailService {
   ) {
     const clientUrl = env.CLIENT_ORIGIN || 'http://localhost:5173';
     const reviewUrl = `${clientUrl}/leader/overview`;
+    prUrl = httpUrl(prUrl);
     const subject = `📥 Deliverable Ready for Review: "${task.title}" — GDGOC PSIT`;
 
     const html = `
@@ -314,7 +360,7 @@ export class EmailService {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 24px; color: #202124; }
     .card { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #dadce0; overflow: hidden; box-shadow: 0 1px 3px rgba(60,64,67,0.1); }
@@ -333,23 +379,23 @@ export class EmailService {
     <div style="padding: 32px;">
       <div class="badge">📥 WORK SUBMITTED FOR REVIEW</div>
       <h2 style="font-size: 18px; font-weight: 800; margin: 12px 0;">
-        Hi ${lead.name || 'Lead Officer'},
+        Hi ${escapeHtml(lead.name || 'Lead Officer')},
       </h2>
       <p style="font-size: 14px; color: #3c4043; line-height: 1.5;">
-        <strong>${member.name}</strong> has completed their work on <strong>"${task.title}"</strong> and submitted it for squad review.
+        <strong>${escapeHtml(member.name)}</strong> has completed their work on <strong>"${escapeHtml(task.title)}"</strong> and submitted it for squad review.
       </p>
 
       <div class="task-card">
-        <div style="font-weight: 700; font-size: 15px;">📌 ${task.title}</div>
+        <div style="font-weight: 700; font-size: 15px;">📌 ${escapeHtml(task.title)}</div>
         <div style="font-size: 13px; color: #5f6368; margin-top: 6px;">
-          <div><strong>Squad:</strong> ${task.teamName || 'Chapter Team'}</div>
-          ${submissionNote ? `<div style="margin-top: 6px;"><strong>Note:</strong> "${submissionNote}"</div>` : ''}
-          ${prUrl ? `<div style="margin-top: 6px;"><strong>PR / Deliverable Link:</strong> <a href="${prUrl}" target="_blank">${prUrl}</a></div>` : ''}
+          <div><strong>Squad:</strong> ${escapeHtml(task.teamName || 'Chapter Team')}</div>
+          ${submissionNote ? `<div style="margin-top: 6px;"><strong>Note:</strong> "${escapeHtml(submissionNote)}"</div>` : ''}
+          ${prUrl ? `<div style="margin-top: 6px;"><strong>PR / Deliverable Link:</strong> <a href="${escapeHtml(prUrl)}" target="_blank">${escapeHtml(prUrl)}</a></div>` : ''}
         </div>
       </div>
 
       <div style="text-align: center; margin: 24px 0 12px;">
-        <a href="${reviewUrl}" class="cta-btn" target="_blank">
+        <a href="${escapeHtml(reviewUrl)}" class="cta-btn" target="_blank">
           🔍 Review & Sign-Off Deliverable
         </a>
       </div>
@@ -385,7 +431,7 @@ export class EmailService {
 <html>
 <head>
   <meta charset="utf-8">
-  <title>${subject}</title>
+  <title>${escapeHtml(subject)}</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8f9fa; margin: 0; padding: 24px; color: #202124; }
     .card { max-width: 580px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; border: 1px solid #dadce0; overflow: hidden; }
@@ -398,24 +444,24 @@ export class EmailService {
     <div style="padding: 32px;">
       <div class="badge">${approved ? '🎉 DELIVERABLE APPROVED' : '⚠️ CHANGES REQUESTED'}</div>
       <h2 style="font-size: 18px; font-weight: 800; margin: 12px 0;">
-        Hi ${member.name || 'Member'},
+        Hi ${escapeHtml(member.name || 'Member')},
       </h2>
       <p style="font-size: 14px; color: #3c4043; line-height: 1.5;">
         ${approved
-          ? `Congratulations! Your deliverables for <strong>"${task.title}"</strong> have been approved and marked complete by <strong>${reviewer.name}</strong>.`
-          : `<strong>${reviewer.name}</strong> reviewed your submission for <strong>"${task.title}"</strong> and requested some revisions.`
+          ? `Congratulations! Your deliverables for <strong>"${escapeHtml(task.title)}"</strong> have been approved and marked complete by <strong>${escapeHtml(reviewer.name)}</strong>.`
+          : `<strong>${escapeHtml(reviewer.name)}</strong> reviewed your submission for <strong>"${escapeHtml(task.title)}"</strong> and requested some revisions.`
         }
       </p>
 
       ${comment ? `
         <div style="background-color: #f8f9fa; border-left: 4px solid ${approved ? '#34a853' : '#ea4335'}; padding: 16px; margin: 16px 0; font-size: 13px;">
-          <strong>Feedback from ${reviewer.name}:</strong><br>
-          "${comment}"
+          <strong>Feedback from ${escapeHtml(reviewer.name)}:</strong><br>
+          "${escapeHtml(comment)}"
         </div>
       ` : ''}
 
       <div style="text-align: center; margin: 24px 0 12px;">
-        <a href="${workspaceUrl}" class="cta-btn" target="_blank">
+        <a href="${escapeHtml(workspaceUrl)}" class="cta-btn" target="_blank">
           🚀 Open Member Workspace
         </a>
       </div>

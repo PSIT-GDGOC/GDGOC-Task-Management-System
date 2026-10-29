@@ -67,8 +67,8 @@ export const AssignWorkPlaceholder: React.FC = () => {
             <div className="p-3 rounded-lg border border-gdgoc-gray-100 bg-gdgoc-gray-50 flex items-start gap-2.5">
               <CheckCircle2 className="w-4 h-4 text-gdgoc-green flex-shrink-0 mt-0.5" />
               <div>
-                <strong className="text-gdgoc-gray-900 block font-semibold">Priority & Milestones</strong>
-                <span className="text-gdgoc-gray-500">Configure High, Medium, or Low sprint urgency levels.</span>
+                <strong className="text-gdgoc-gray-900 block font-semibold">Deadlines & Milestones</strong>
+                <span className="text-gdgoc-gray-500">Configure target milestone dates and delivery timelines.</span>
               </div>
             </div>
 

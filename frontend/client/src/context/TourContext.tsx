@@ -1,3 +1,4 @@
+import { localPreferences } from '../utils/storage';
 /**
  * TourContext.tsx
  * Central state management for the onboarding tour system.
@@ -63,12 +64,12 @@ export function tourStorageKey(userId: string, suffix: string): string {
 
 export function getTourPref(userId: string, suffix: string): string | null {
   if (!userId) return null;
-  return localStorage.getItem(tourStorageKey(userId, suffix));
+  return localPreferences.getItem(tourStorageKey(userId, suffix));
 }
 
 export function setTourPref(userId: string, suffix: string, value: string): void {
   if (!userId) return;
-  localStorage.setItem(tourStorageKey(userId, suffix), value);
+  localPreferences.setItem(tourStorageKey(userId, suffix), value);
 }
 
 /** Returns true if the welcome popup should be shown to this user */

@@ -99,6 +99,35 @@ describe('Task Board lifecycle through the HTTP API', () => {
     );
   });
 
+  it('returns a description error for the reported input and lets a team head assign corrected work', async () => {
+    const input = {
+      title: 'New Task',
+      description: 'asdasd',
+      scope: 'TEAM',
+      teamId: teamA,
+      assigneeId: users.memberA,
+    };
+    const before = await db.task.count();
+    const invalid = await agents.headA.post('/api/v1/tasks').send(input);
+    expect(invalid.status).toBe(400);
+    expect(invalid.body.error.details.description).toEqual([
+      'Task description must be at least 10 characters.',
+    ]);
+    expect(invalid.body.error.details.title).toBeUndefined();
+    expect(await db.task.count()).toBe(before);
+    const assigned = await agents.headA
+      .post('/api/v1/tasks')
+      .send({ ...input, description: 'Build a UI' });
+    expect(assigned.status).toBe(201);
+    expect(assigned.body.data).toMatchObject({
+      title: 'New Task',
+      status: 'ASSIGNED',
+      assigneeId: users.memberA,
+      teamId: teamA,
+      creatorId: users.headA,
+    });
+  });
+
   it('edits metadata, tracks before/after values, and ignores no-op changes', async () => {
     const created = await createTask();
     const path = `/api/v1/tasks/${created.id}`;
@@ -472,4 +501,24 @@ describe('Task Board lifecycle through the HTTP API', () => {
     expect((await agents.memberA.get('/api/v1/tasks?limit=0')).status).toBe(400);
     expect((await agents.memberA.get('/api/v1/tasks?status=INVALID')).status).toBe(400);
   });
+});
+
+it('notifies only active reviewers with access to the submitted team task',async()=>{
+  const task=await submitTask();
+  const recipients=await db.notification.findMany({where:{taskId:task.id,kind:'TASK_SUBMITTED'}});
+  expect(recipients.map(notification=>notification.userId).sort()).toEqual([users.owner,users.president,users.adminA,users.headA].sort());
+  await db.user.update({where:{id:users.headA},data:{isActive:false}});
+  try {
+    const second=await submitTask();
+    const inactive=await db.notification.findMany({where:{taskId:second.id,userId:users.headA}});
+    expect(inactive).toHaveLength(0);
+  } finally {await db.user.update({where:{id:users.headA},data:{isActive:true}});}
+});
+it('does not expose legacy notifications for tasks outside the recipient team scope',async()=>{
+  const hidden=await task(teamB);
+  const notification=await db.notification.create({data:{userId:users.memberA,taskId:hidden.id,kind:'TASK_SUBMITTED'}});
+  const response=await agents.memberA.get('/api/v1/notifications');
+  expect(response.status).toBe(200);
+  expect(response.body.data.some((item:{id:string})=>item.id===notification.id)).toBe(false);
+  expect((await agents.memberA.post(`/api/v1/notifications/${notification.id}/read`).send({})).status).toBe(404);
 });

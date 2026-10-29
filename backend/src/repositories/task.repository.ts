@@ -20,7 +20,7 @@ export class TaskRepository {
           include: taskSummaryInclude,
           skip: (page - 1) * limit,
           take: limit,
-          orderBy: [{ priority: 'desc' }, { createdAt: 'desc' }, { id: 'desc' }],
+          orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
         }),
         prisma.task.count({ where }),
       ],

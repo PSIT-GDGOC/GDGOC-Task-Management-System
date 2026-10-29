@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { QueueEvents } from 'bullmq';
 import { rateLimit } from 'express-rate-limit';
-import { RedisStore } from 'rate-limit-redis';
+import { RecoveringRedisStore as RedisStore } from '../../src/security/recovering-redis-store';
 import express from 'express';
 import request from 'supertest';
 import type Redis from 'ioredis';
@@ -167,14 +167,25 @@ describe('Real Redis, BullMQ, caching and notifications', () => {
     expect((await request(b).get('/')).status).toBe(200);
     expect((await request(a).get('/')).status).toBe(429);
   });
-  it('registers both recurring jobs and preserves one schedule each across worker restarts', async () => {
+  it('reloads rate-limit scripts after Redis clears its script cache while preserving counters', async () => {
+    const store = new RedisStore({
+      prefix: prefix + ':reload-test:',
+      sendCommand: async (...args) => (await client.call(args[0], ...args.slice(1))) as never,
+    });
+    await store.init({windowMs:60000} as Parameters<RedisStore['init']>[0]);
+    expect((await store.increment('member')).totalHits).toBe(1);
+    await client.script('FLUSH');
+    expect((await store.increment('member')).totalHits).toBe(2);
+  });
+  it('registers all recurring jobs and preserves one schedule each across worker restarts', async () => {
     const start = (await import('../../src/jobs/runtime.js')).startJobs;
     for (let restart = 0; restart < 2; restart++) {
       await jobs.close();
       jobs = await start({ url: process.env.TEST_REDIS_URL, prefix, database: fixture.db });
-      expect(await jobs.queue.getJobSchedulersCount()).toBe(2);
+      expect(await jobs.queue.getJobSchedulersCount()).toBe(3);
       expect(await jobs.queue.getJobScheduler('overdue-scan')).toBeDefined();
       expect(await jobs.queue.getJobScheduler('cleanup')).toBeDefined();
+      expect(await jobs.queue.getJobScheduler('deadline-reminders')).toBeDefined();
     }
   });
   it('reports readiness and fails closed if distributed limits lose Redis', async () => {

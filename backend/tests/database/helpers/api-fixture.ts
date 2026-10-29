@@ -1,10 +1,16 @@
 import 'dotenv/config';
-import { randomUUID } from 'node:crypto';
+import { randomUUID, randomBytes, scryptSync } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { PrismaClient, SystemRole } from '@prisma/client';
 import type { Express } from 'express';
 import request from 'supertest';
+
+export const fixturePassword = 'Fixture-only-password-2026';
+export function fixturePasswordHash() {
+  const salt = randomBytes(16).toString('hex');
+  return `${salt}:${scryptSync(fixturePassword, salt, 64).toString('hex')}`;
+}
 
 /** API suites use a fresh schema and actual middleware/session login, never permission mocks. */
 export async function createApiFixture() {
@@ -81,11 +87,14 @@ export async function createApiFixture() {
     };
     const users: Record<string, string> = {};
     const agents: Record<string, ReturnType<typeof request.agent>> = {};
+    const passwordHash = fixturePasswordHash();
     for (const [name, role] of Object.entries(roles)) {
       const email = name === 'owner' ? 'gdgoc.psit@gmail.com' : `${name.toLowerCase()}@example.com`;
-      users[name] = (await db.user.create({ data: { email, name, role } })).id;
+      users[name] = (await db.user.create({ data: { email, name, role, passwordHash } })).id;
       agents[name] = request.agent(app);
-      const login = await agents[name].post('/api/v1/auth/dev-login').send({ email });
+      const login = await agents[name]
+        .post('/api/v1/auth/dev-login')
+        .send({ email, password: fixturePassword });
       if (login.status !== 200) throw new Error('API test fixture login failed');
       const csrf = await agents[name].get('/api/v1/auth/csrf');
       agents[name].set('X-CSRF-Token', csrf.body.csrfToken);
@@ -108,7 +117,9 @@ export async function createApiFixture() {
 export type ApiFixture = Awaited<ReturnType<typeof createApiFixture>>;
 
 export async function loginWithCsrf(agent: ReturnType<typeof request.agent>, email: string) {
-  const login = await agent.post('/api/v1/auth/dev-login').send({ email });
+  const login = await agent
+    .post('/api/v1/auth/dev-login')
+    .send({ email, password: fixturePassword });
   if (login.status !== 200) throw new Error('Fixture login failed');
   const csrf = await agent.get('/api/v1/auth/csrf');
   agent.set('X-CSRF-Token', csrf.body.csrfToken);

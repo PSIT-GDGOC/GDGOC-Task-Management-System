@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { TEAMS, getTeamMetrics } from '../../data/mockData';
+import { getTeamMetrics } from '../../data/mockData';
+import { useTeams } from '../../hooks/useTeams';
 import { useTasks } from '../../context/TaskContext';
-import { TeamId, Task } from '../../types/task';
+import { Task } from '../../types/task';
 import { TaskRow } from '../../components/common/TaskRow';
 import { TaskDetailsModal } from '../../components/common/TaskDetailsModal';
 import { 
@@ -16,14 +17,18 @@ import {
 } from 'lucide-react';
 
 export const TeamDetailPage: React.FC = () => {
+  const { teams: TEAMS, isLoading: teamsLoading, error: teamsError } = useTeams();
   const { teamId } = useParams<{ teamId: string }>();
   const navigate = useNavigate();
   const { tasks } = useTasks();
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
-  // Find team by id or fallback to first team
-  const currentTeam = TEAMS.find((t) => t.id === teamId) || TEAMS[0];
-  const metrics = getTeamMetrics(currentTeam.id as TeamId, tasks);
+  // Resolve the requested team without silently substituting another squad.
+  const currentTeam = TEAMS.find((t) => t.id === teamId || t.databaseId === teamId);
+  const metrics = getTeamMetrics(currentTeam?.id || '', tasks);
+  if (teamsLoading) return <p role="status">Loading team…</p>;
+  if (teamsError) return <p role="alert">Unable to load the team directory. Please reload to retry.</p>;
+  if (!currentTeam) return <p role="alert">Team not found or you do not have access to this team.</p>;
 
   const getAccentColorBadge = () => {
     switch (currentTeam.accent) {
@@ -128,7 +133,7 @@ export const TeamDetailPage: React.FC = () => {
 
             {/* Team Task Metrics Grid */}
             <div className="mt-6 pt-5 border-t border-gdgoc-gray-100 grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
-              <div className="p-3 rounded-lg card-bb-sm" style={{ backgroundColor: '#FDECEC' }}>
+              <div className="p-3 rounded-lg card-bb-sm" style={{ backgroundColor: 'var(--surface-red)' }}>
                 <div className="flex items-center justify-between text-gdgoc-gray-500 mb-1">
                   <span className="text-[11px] font-semibold uppercase tracking-wider">Assigned</span>
                   <FolderKanban className="w-3.5 h-3.5 text-gdgoc-gray-400" />
@@ -136,7 +141,7 @@ export const TeamDetailPage: React.FC = () => {
                 <div className="text-xl font-bold text-gdgoc-gray-900">{metrics.totalTasks}</div>
               </div>
 
-              <div className="p-3 rounded-lg card-bb-sm" style={{ backgroundColor: '#E8F7EE' }}>
+              <div className="p-3 rounded-lg card-bb-sm" style={{ backgroundColor: 'var(--surface-green)' }}>
                 <div className="flex items-center justify-between text-amber-700 mb-1">
                   <span className="text-[11px] font-semibold uppercase tracking-wider">In Progress</span>
                   <Clock className="w-3.5 h-3.5 text-amber-500" />
@@ -144,7 +149,7 @@ export const TeamDetailPage: React.FC = () => {
                 <div className="text-xl font-bold text-amber-900">{metrics.inProgressTasks}</div>
               </div>
 
-              <div className="p-3 rounded-lg card-bb-sm" style={{ backgroundColor: '#EAF3FF' }}>
+              <div className="p-3 rounded-lg card-bb-sm" style={{ backgroundColor: 'var(--surface-blue)' }}>
                 <div className="flex items-center justify-between text-blue-700 mb-1">
                   <span className="text-[11px] font-semibold uppercase tracking-wider">Review</span>
                   <AlertCircle className="w-3.5 h-3.5 text-gdgoc-blue" />
@@ -152,7 +157,7 @@ export const TeamDetailPage: React.FC = () => {
                 <div className="text-xl font-bold text-blue-900">{metrics.pendingReviewTasks}</div>
               </div>
 
-              <div className="p-3 rounded-lg card-bb-sm" style={{ backgroundColor: '#FDECEC' }}>
+              <div className="p-3 rounded-lg card-bb-sm" style={{ backgroundColor: 'var(--surface-red)' }}>
                 <div className="flex items-center justify-between text-emerald-700 mb-1">
                   <span className="text-[11px] font-semibold uppercase tracking-wider">Completed</span>
                   <CheckCircle2 className="w-3.5 h-3.5 text-gdgoc-green" />
@@ -224,7 +229,6 @@ export const TeamDetailPage: React.FC = () => {
                     <tr className="bg-gdgoc-gray-50/70 border-b border-gdgoc-gray-200 text-[11px] font-bold uppercase tracking-wider text-gdgoc-gray-600">
                       <th className="py-2.5 px-4">Task</th>
                       <th className="py-2.5 px-4">Assigned Member</th>
-                      <th className="py-2.5 px-4">Priority</th>
                       <th className="py-2.5 px-4">Deadline</th>
                       <th className="py-2.5 px-4 text-right sm:text-left">Status</th>
                     </tr>

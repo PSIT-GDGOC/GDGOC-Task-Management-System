@@ -5,7 +5,7 @@ import { AppError } from '../middleware/errorHandler';
 import { taskSummaryInclude } from '../repositories/task.repository';
 import { HistoryFilters, HistoryListFilters } from '../schemas/history';
 import { AuthenticatedUser } from '../types/auth';
-import { managedTeamIds } from '../utils/permissions';
+import { isClubManager, managedTeamIds } from '../utils/permissions';
 
 function predicates(actor: AuthenticatedUser, filters: HistoryFilters, personal: boolean) {
   const where: Prisma.TaskWhereInput = { status: 'DONE', isDeleted: false };
@@ -15,7 +15,7 @@ function predicates(actor: AuthenticatedUser, filters: HistoryFilters, personal:
       throw new AppError('Personal history is limited to your own work', 403);
     where.completedById = actor.id;
     sql.push(Prisma.sql`t."completedById" = ${actor.id}`);
-  } else if (!['ADMIN', 'PRESIDENT', 'SYSTEM_OWNER'].includes(actor.role)) {
+  } else if (!isClubManager(actor)) {
     const teams = managedTeamIds(actor);
     if (!teams.length) throw new AppError('History audit permission required', 403);
     if (filters.teamId && !teams.includes(filters.teamId))
@@ -62,6 +62,11 @@ export class HistoryService {
           where,
           include: {
             ...taskSummaryInclude,
+            activities: {
+              orderBy: [{ timestamp: 'desc' }, { id: 'desc' }],
+              take: 50,
+              select: { id: true, action: true, timestamp: true, details: true },
+            },
             completedBy: { select: { id: true, name: true } },
             approvedBy: { select: { id: true, name: true } },
           },

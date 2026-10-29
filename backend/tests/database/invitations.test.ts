@@ -170,3 +170,14 @@ describe('Admin invitation lifecycle', () => {
     }
   });
 });
+
+it('rejects weak or duplicate reusable leadership keys and audits rotation without storing the key in the event',async()=>{
+  const first=await fixture.db.roleKey.create({data:{position:'Audit Events Lead',keyCode:'AUDIT-ORIGINAL-KEY-12345'}});
+  const second=await fixture.db.roleKey.create({data:{position:'Audit Operations Lead',keyCode:'AUDIT-SECOND-KEY-12345'}});
+  const endpoint='/api/v1/invitations/role-keys/'+second.id;
+  expect((await fixture.agents.owner.patch(endpoint).send({keyCode:'AA'})).status).toBe(400);
+  expect((await fixture.agents.owner.patch(endpoint).send({keyCode:first.keyCode})).status).toBe(409);
+  expect((await fixture.agents.owner.patch(endpoint).send({keyCode:'AUDIT-ROTATED-KEY-12345'})).status).toBe(200);
+  const events=await fixture.db.adminEvent.findMany({where:{resourceId:second.id,action:'ROLE_KEY_ROTATED'}});
+  expect(events).toHaveLength(1);expect(JSON.stringify(events)).not.toContain('AUDIT-ROTATED-KEY');
+});

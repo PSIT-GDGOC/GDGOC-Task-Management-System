@@ -22,9 +22,11 @@ export const MemberSidebar: React.FC<MemberSidebarProps> = ({ onCloseMobile }) =
   const navigate = useNavigate();
   const [profileOpen, setProfileOpen] = React.useState(false);
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login', { replace: true });
+  const handleLogout = async () => {
+    try {
+      await logout();
+      navigate('/login', { replace: true });
+    } catch { /* AuthProvider displays the server error. */ }
   };
 
   return (
