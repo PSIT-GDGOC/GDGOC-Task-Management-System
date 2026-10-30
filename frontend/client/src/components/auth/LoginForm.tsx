@@ -12,7 +12,6 @@ import {
   Loader2,
   Info,
   ShieldCheck,
-  Shield,
   Crown,
   Users,
 } from 'lucide-react';
@@ -192,23 +191,18 @@ export const LoginForm: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-[440px] mx-auto">
-      {/* Form Header with Google 4-Color Brackets Emblem */}
-      <div className="mb-5 text-left flex items-start gap-3">
-        <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-200/80 p-2 flex items-center justify-center flex-shrink-0 mt-0.5 shadow-2xs">
-          <svg viewBox="0 0 40 40" className="w-full h-full" fill="none">
-            <path d="M12 20L19 13L16 10L6 20L16 30L19 27L12 20Z" fill="#EA4335" />
-            <path d="M28 20L21 27L24 30L34 20L24 10L21 13L28 20Z" fill="#4285F4" />
-            <circle cx="20" cy="9" r="2.5" fill="#34A853" />
-            <circle cx="20" cy="31" r="2.5" fill="#FBBC04" />
-          </svg>
+    <div className="login-form-content w-full max-w-[450px] mx-auto">
+      {/* Form Header */}
+      <div className="mb-6 text-left flex items-center gap-3.5">
+        <div className="w-11 h-11 rounded-xl bg-blue-50 border border-blue-100 p-2 flex items-center justify-center flex-shrink-0">
+          <Users className="w-5 h-5 text-blue-600" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-gdgoc-gray-900 tracking-tight leading-snug">
-            Welcome to TaskHub
+          <h2 className="text-2xl font-black text-stone-900 tracking-[-0.02em] leading-tight">
+            Welcome Back
           </h2>
-          <p className="text-xs text-gdgoc-gray-500 mt-0.5">
-            GDG on Campus PSIT • Chapter Task Operations
+          <p className="text-xs text-stone-500 font-medium mt-0.5">
+            Sign in to continue to GDGOC.
           </p>
         </div>
       </div>
@@ -217,7 +211,7 @@ export const LoginForm: React.FC = () => {
       {forgotPasswordNotice && (
         <div
           role="status"
-          className="mb-4 flex items-start gap-2.5 p-3 rounded-xl border border-blue-200 bg-blue-50/90 text-xs text-blue-900 shadow-2xs"
+          className="mb-4 flex items-start gap-2.5 p-3.5 rounded-2xl border border-blue-200 bg-blue-50/90 text-xs text-blue-900 shadow-2xs"
         >
           <Info className="w-4 h-4 text-gdgoc-blue flex-shrink-0 mt-0.5" />
           <div>
@@ -232,7 +226,7 @@ export const LoginForm: React.FC = () => {
       {formError && (
         <div
           role="alert"
-          className="mb-4 flex items-start gap-2.5 p-3 rounded-xl border border-red-200 bg-red-50 text-xs text-gdgoc-red shadow-2xs animate-shake"
+          className="mb-4 flex items-start gap-2.5 p-3.5 rounded-2xl border border-red-200 bg-red-50 text-xs text-gdgoc-red shadow-2xs animate-shake"
         >
           <AlertCircle className="w-4 h-4 text-gdgoc-red flex-shrink-0 mt-0.5" />
           <div className="flex-1 font-medium">{formError}</div>
@@ -277,40 +271,35 @@ export const LoginForm: React.FC = () => {
       </button>
 
       {/* Divider */}
-      <div className="relative my-4">
-        <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-gray-200" />
-        </div>
-        <div className="relative flex justify-center text-xs">
-          <span className="bg-[#FAFAFC] px-2 text-gray-400 font-medium uppercase tracking-wider">
-            or sign in with password
-          </span>
-        </div>
+      <div className="my-4 flex items-center gap-3 text-xs" role="separator">
+        <span className="h-px flex-1 bg-current opacity-20" />
+        <span className="font-medium uppercase tracking-wider opacity-60">
+          or sign in with password
+        </span>
+        <span className="h-px flex-1 bg-current opacity-20" />
       </div>
 
-      <form noValidate onSubmit={handleSubmit} className="space-y-3.5 text-left">
+      <form noValidate onSubmit={handleSubmit} className="space-y-4 text-left">
         {/* Tier Hierarchy Selection */}
         <div>
-          <label className="block text-xs font-semibold text-gdgoc-gray-800 mb-1.5 uppercase tracking-wider">
+          <label className="block text-[11px] font-bold text-stone-500 uppercase tracking-wider font-mono mb-2">
             Joining As <span className="text-gdgoc-red">*</span>
           </label>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2.5">
             {/* Tier 1: Crew */}
             <button
               type="button"
               onClick={() => {
                 selectTier('CREW');
               }}
-              className={`px-2.5 py-2 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1 ${
+              className={`px-3 py-3 rounded-2xl border-2 text-left transition-all duration-200 flex flex-col items-center justify-center gap-1.5 ${
                 tier === 'CREW'
-                  ? 'border-gdgoc-green bg-green-50/70 text-green-900 ring-2 ring-green-500/30 font-semibold'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                  ? 'border-emerald-500 bg-emerald-50/80 text-emerald-950 shadow-xs ring-4 ring-emerald-500/10 font-bold'
+                  : 'border-stone-200/80 bg-stone-50/50 hover:bg-white hover:border-stone-300 text-stone-600'
               }`}
             >
-              <Users
-                className={`w-4 h-4 ${tier === 'CREW' ? 'text-gdgoc-green' : 'text-gray-400'}`}
-              />
-              <span className="text-xs">Team Crew</span>
+              <Users className="w-4 h-4" />
+              <span className="text-xs tracking-tight">Team Crew</span>
             </button>
 
             {/* Tier 2: Lead */}
@@ -319,16 +308,14 @@ export const LoginForm: React.FC = () => {
               onClick={() => {
                 selectTier('LEAD');
               }}
-              className={`px-2.5 py-2 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1 ${
+              className={`px-3 py-3 rounded-2xl border-2 text-left transition-all duration-200 flex flex-col items-center justify-center gap-1.5 ${
                 tier === 'LEAD'
-                  ? 'border-gdgoc-blue bg-blue-50/70 text-blue-900 ring-2 ring-blue-500/30 font-semibold'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                  ? 'border-blue-500 bg-blue-50/80 text-blue-950 shadow-xs ring-4 ring-blue-500/10 font-bold'
+                  : 'border-stone-200/80 bg-stone-50/50 hover:bg-white hover:border-stone-300 text-stone-600'
               }`}
             >
-              <Shield
-                className={`w-4 h-4 ${tier === 'LEAD' ? 'text-gdgoc-blue' : 'text-gray-400'}`}
-              />
-              <span className="text-xs">Team Lead</span>
+              <ShieldCheck className="w-4 h-4" />
+              <span className="text-xs tracking-tight">Team Lead</span>
             </button>
 
             {/* Tier 3: President */}
@@ -338,37 +325,35 @@ export const LoginForm: React.FC = () => {
                 selectTier('PRESIDENT');
                 setEmail('paneertikkadedo@gmail.com');
               }}
-              className={`px-2.5 py-2 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1 ${
+              className={`px-3 py-3 rounded-2xl border-2 text-left transition-all duration-200 flex flex-col items-center justify-center gap-1.5 ${
                 tier === 'PRESIDENT'
-                  ? 'border-amber-400 bg-amber-50/70 text-amber-900 ring-2 ring-amber-500/30 font-semibold'
-                  : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                  ? 'border-amber-400 bg-amber-50/80 text-amber-950 shadow-xs ring-4 ring-amber-500/10 font-bold'
+                  : 'border-stone-200/80 bg-stone-50/50 hover:bg-white hover:border-stone-300 text-stone-600'
               }`}
             >
-              <Crown
-                className={`w-4 h-4 ${tier === 'PRESIDENT' ? 'text-amber-600' : 'text-gray-400'}`}
-              />
-              <span className="text-xs">President</span>
+              <Crown className="w-4 h-4" />
+              <span className="text-xs tracking-tight">President</span>
             </button>
           </div>
         </div>
 
         {/* Dynamic Context Fields */}
         {tier === 'CREW' && (
-          <div className="p-3 bg-gray-50/80 rounded-xl border border-gray-200/70 space-y-2">
+          <div className="p-3.5 bg-stone-50/80 rounded-2xl border border-stone-200/80 space-y-2">
             <div className="flex items-center justify-between">
               <label
                 htmlFor="team-crew-select"
-                className="text-xs font-semibold text-gdgoc-gray-700"
+                className="text-xs font-bold text-stone-700"
               >
                 Select Your Team
               </label>
-              <span className="text-[10px] text-gdgoc-gray-500">View & work on assigned tasks</span>
+              <span className="text-[10px] text-stone-500 font-medium">View & work on assigned tasks</span>
             </div>
             <select
               id="team-crew-select"
               value={selectedTeam}
               onChange={(e) => setSelectedTeam(e.target.value)}
-              className="w-full px-3 py-2 text-xs bg-white border border-gray-200 rounded-lg text-gdgoc-gray-900 focus:outline-none focus:ring-2 focus:ring-gdgoc-blue"
+              className="w-full px-3.5 py-2.5 text-xs font-semibold bg-white border border-stone-200 rounded-xl text-stone-900 shadow-2xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all cursor-pointer auth-team-select"
             >
               <option value="tech">💻 Tech Team (Web, Cloud, AI)</option>
               <option value="media">🎨 Media Team (Design, Video, Branding)</option>
@@ -378,11 +363,11 @@ export const LoginForm: React.FC = () => {
         )}
 
         {tier === 'LEAD' && (
-          <div className="p-3 bg-blue-50/50 rounded-xl border border-blue-100 space-y-2.5">
+          <div className="p-3.5 bg-blue-50/50 rounded-2xl border border-blue-200/80 space-y-2.5">
             <div>
               <label
                 htmlFor="lead-position-select"
-                className="block text-xs font-semibold text-gdgoc-gray-800 mb-1"
+                className="block text-xs font-bold text-blue-950 mb-1"
               >
                 Leadership Position
               </label>
@@ -390,7 +375,7 @@ export const LoginForm: React.FC = () => {
                 id="lead-position-select"
                 value={leadPosition}
                 onChange={(e) => { setLeadPosition(e.target.value); setEmail(''); setPassword(''); setFormError(null); }}
-                className="w-full px-3 py-2 text-xs bg-white border border-blue-200 rounded-lg text-gdgoc-gray-900 focus:outline-none focus:ring-2 focus:ring-gdgoc-blue"
+                className="w-full px-3.5 py-2.5 text-xs font-semibold bg-white border border-blue-200 rounded-xl text-stone-900 shadow-2xs focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all cursor-pointer"
               >
                 <option value="Tech Lead">💻 Tech Lead (Creates & Assigns Tech Tasks)</option>
                 <option value="Media Lead">🎨 Media Lead (Oversees Design & Media)</option>
@@ -401,25 +386,24 @@ export const LoginForm: React.FC = () => {
               </select>
             </div>
 
-            <div className="p-3 bg-blue-50/80 rounded-xl border border-blue-200/90 text-xs text-blue-900 flex items-start gap-2.5 shadow-2xs">
+            <div className="p-3 bg-blue-50/90 rounded-xl border border-blue-200/90 text-xs text-blue-900 flex items-start gap-2.5 shadow-2xs">
               <ShieldCheck className="w-4 h-4 text-gdgoc-blue flex-shrink-0 mt-0.5" />
               <div className="text-[11px] leading-relaxed">
                 <span className="font-semibold text-blue-950">Verified Leadership Access:</span>{' '}
-                Leads and Officers who signed up with their President Key log in directly with their registered email & password.
+                Leads and Officers log in directly with their registered email & password.
               </div>
             </div>
           </div>
         )}
 
         {tier === 'PRESIDENT' && (
-          <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200/80 text-xs text-amber-900 space-y-1">
-            <div className="font-semibold flex items-center gap-1.5">
+          <div className="p-3.5 bg-amber-50/70 rounded-2xl border border-amber-200/90 text-xs text-amber-950 space-y-1">
+            <div className="font-bold flex items-center gap-1.5">
               <Crown className="w-3.5 h-3.5 text-amber-700" />
               <span>Executive Root of Trust</span>
             </div>
-            <p className="text-[11px] text-amber-800/90 leading-relaxed">
-              Authorized President emails have root executive access, can generate lead keys, and
-              manage chapter deliverables.
+            <p className="text-[11px] text-amber-900/90 leading-relaxed font-normal">
+              Authorized President accounts have full root access to manage chapter deliverables, invite leads, and review contributions.
             </p>
           </div>
         )}
@@ -428,12 +412,12 @@ export const LoginForm: React.FC = () => {
         <div>
           <label
             htmlFor="email-input"
-            className="block text-xs font-semibold text-gdgoc-gray-700 uppercase tracking-wider mb-1"
+            className="block text-[11px] font-bold text-stone-500 uppercase tracking-wider font-mono mb-1.5"
           >
             Email Address
           </label>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gdgoc-gray-400">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
               <Mail className="w-4 h-4" />
             </div>
             <input
@@ -446,10 +430,10 @@ export const LoginForm: React.FC = () => {
               placeholder="you@gmail.com"
               aria-invalid={!!emailError}
               aria-describedby={emailError ? 'email-error-text' : undefined}
-              className={`w-full pl-9 pr-3 py-2.5 text-sm bg-white border rounded-xl transition-all placeholder:text-gdgoc-gray-400 focus:outline-none focus:ring-4 ${
+              className={`w-full pl-10 pr-3.5 py-3 text-sm bg-stone-50/60 hover:bg-stone-50 focus:bg-white border rounded-xl transition-all placeholder:text-stone-400 focus:outline-none focus:ring-4 shadow-2xs ${
                 emailError
                   ? 'border-red-300 focus:border-red-500 focus:ring-red-100/70'
-                  : 'border-gray-200 hover:border-gray-300 focus:border-[#4285F4] focus:ring-blue-100/70'
+                  : 'border-stone-200 hover:border-stone-300 focus:border-[#4285F4] focus:ring-blue-100/70'
               }`}
             />
           </div>
@@ -467,23 +451,23 @@ export const LoginForm: React.FC = () => {
 
         {/* Password Field */}
         <div>
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-1.5">
             <label
               htmlFor="password-input"
-              className="block text-xs font-semibold text-gdgoc-gray-700 uppercase tracking-wider"
+              className="block text-[11px] font-bold text-stone-500 uppercase tracking-wider font-mono"
             >
               Password
             </label>
             <button
               type="button"
               onClick={() => setForgotPasswordNotice(true)}
-              className="text-xs font-medium text-gdgoc-blue hover:text-blue-700 transition-colors focus:outline-none focus:underline"
+              className="text-xs font-semibold text-gdgoc-blue hover:text-blue-700 transition-colors focus:outline-none focus:underline"
             >
               Forgot password?
             </button>
           </div>
           <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gdgoc-gray-400">
+            <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-stone-400">
               <Lock className="w-4 h-4" />
             </div>
             <input
@@ -496,17 +480,17 @@ export const LoginForm: React.FC = () => {
               placeholder="Enter your password"
               aria-invalid={!!passwordError}
               aria-describedby={passwordError ? 'password-error-text' : undefined}
-              className={`w-full pl-9 pr-10 py-2.5 text-sm bg-white border rounded-xl transition-all placeholder:text-gdgoc-gray-400 focus:outline-none focus:ring-4 ${
+              className={`w-full pl-10 pr-11 py-3 text-sm bg-stone-50/60 hover:bg-stone-50 focus:bg-white border rounded-xl transition-all placeholder:text-stone-400 focus:outline-none focus:ring-4 shadow-2xs ${
                 passwordError
                   ? 'border-red-300 focus:border-red-500 focus:ring-red-100/70'
-                  : 'border-gray-200 hover:border-gray-300 focus:border-[#4285F4] focus:ring-blue-100/70'
+                  : 'border-stone-200 hover:border-stone-300 focus:border-[#4285F4] focus:ring-blue-100/70'
               }`}
             />
             <button
               type="button"
               aria-label={showPassword ? 'Hide password' : 'Show password'}
               onClick={() => setShowPassword(!showPassword)}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-gdgoc-gray-400 hover:text-gdgoc-gray-600 transition-colors focus:outline-none"
+              className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-stone-400 hover:text-stone-600 transition-colors focus:outline-none"
             >
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -527,7 +511,7 @@ export const LoginForm: React.FC = () => {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full mt-2 py-2.5 px-4 rounded-xl bg-[#1A73E8] hover:bg-blue-600 active:bg-blue-700 text-white font-semibold text-sm transition-all shadow-xs hover:shadow focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="login-submit w-full mt-3 py-3 px-5 rounded-xl bg-gradient-to-r from-[#1A73E8] to-[#1557B0] hover:from-[#1557B0] hover:to-[#0D47A1] text-white font-bold text-sm transition-all shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/30 active:scale-[0.99] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           {isSubmitting ? (
             <>
@@ -543,10 +527,10 @@ export const LoginForm: React.FC = () => {
       </form>
 
       {/* Clean Brand Footnote */}
-      <div className="mt-6 pt-3 border-t border-gdgoc-gray-100 text-center text-xs text-gdgoc-gray-400">
+      <div className="mt-6 pt-3 border-t border-stone-100 text-center text-xs text-stone-400 font-medium">
         <span>GDGoC PSIT Kanpur</span>
-        <span className="mx-2 text-gdgoc-gray-300">•</span>
-        <span className="font-medium text-gdgoc-gray-500">TaskHub</span>
+        <span className="mx-2 text-stone-300">•</span>
+        <span className="font-semibold text-stone-500">TaskHub</span>
       </div>
     </div>
   );
