@@ -11,8 +11,15 @@ export const DevAccountSelector: React.FC<DevAccountSelectorProps> = ({
   onSelectAccount, 
   selectedEmail 
 }) => {
-  // Only render in development mode
-  if (!import.meta.env.DEV) {
+  // Render in development mode or when staging test mode is enabled
+  const isEnabled = import.meta.env.DEV || 
+    import.meta.env.VITE_ENABLE_DEV_LOGIN === 'true' || 
+    (typeof window !== 'undefined' && (
+      window.location.hostname.includes('vercel.app') || 
+      new URLSearchParams(window.location.search).get('dev') === 'true'
+    ));
+
+  if (!isEnabled) {
     return null;
   }
 
