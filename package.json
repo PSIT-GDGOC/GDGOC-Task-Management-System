@@ -9,7 +9,7 @@
     "backend"
   ],
   "scripts": {
-    "dev": "npm run dev --workspaces --if-present",
+    "dev": "node scripts/dev.mjs",
     "dev:client": "npm run dev --workspace=frontend/client",
     "dev:admin": "npm run dev --workspace=frontend/admin",
     "dev:backend": "npm run dev --workspace=backend",

@@ -4,12 +4,14 @@ interface LogoProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
   showSubtitle?: boolean;
+  subtitleText?: string;
 }
 
 export const Logo: React.FC<LogoProps> = ({ 
   className = '', 
   size = 'md',
-  showSubtitle = true 
+  showSubtitle = true,
+  subtitleText = 'PSIT Kanpur Chapter',
 }) => {
   const iconSizeClasses = {
     sm: 'w-7 h-7 rounded-lg p-1',
@@ -71,8 +73,8 @@ export const Logo: React.FC<LogoProps> = ({
           </span>
         </div>
         {showSubtitle && (
-          <span className={`${subtitleSizeClasses[size]} text-gdgoc-gray-600 dark:text-gray-400 uppercase pt-0.5`}>
-            PSIT Kanpur Chapter
+          <span className={`${subtitleSizeClasses[size]} text-gdgoc-gray-600 dark:text-gray-400 uppercase pt-0.5 font-medium tracking-wide`}>
+            {subtitleText}
           </span>
         )}
       </div>

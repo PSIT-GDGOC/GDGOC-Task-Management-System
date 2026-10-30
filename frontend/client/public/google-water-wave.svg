@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="140" viewBox="0 0 600 140" fill="none">
+  <defs>
+    <linearGradient id="google-water" x1="0" y1="0" x2="600" y2="0" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4285F4" />
+      <stop offset=".28" stop-color="#EA4335" />
+      <stop offset=".53" stop-color="#FBBC04" />
+      <stop offset=".76" stop-color="#34A853" />
+      <stop offset="1" stop-color="#4285F4" />
+    </linearGradient>
+  </defs>
+  <path d="M0 77C48 41 93 112 148 78s91-37 146 1 96 26 147-3 99-29 159 3v61H0V77Z" fill="url(#google-water)" fill-opacity=".82" />
+  <path d="M0 54c49 30 93-30 148 1s92 31 146 0 97-25 147 1 99 30 159-1" stroke="url(#google-water)" stroke-opacity=".95" stroke-width="12" />
+  <path d="M0 37c48 16 94-17 148 0s92 18 146 0 98-14 147 0 99 18 159 0" stroke="#fff" stroke-opacity=".62" stroke-width="3" />
+</svg>

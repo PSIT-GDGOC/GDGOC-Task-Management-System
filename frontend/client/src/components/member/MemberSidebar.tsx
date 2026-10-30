@@ -31,15 +31,15 @@ export const MemberSidebar: React.FC<MemberSidebarProps> = ({ onCloseMobile }) =
 
   return (
     <>
-    <aside data-tour="member-sidebar" className="w-64 h-full bg-[#E9EDF2] border-r-2 border-[#111111] flex flex-col justify-between select-none">
+    <aside data-tour="member-sidebar" className="member-sidebar w-64 h-full border-r-2 flex flex-col justify-between select-none">
       {/* Top Branding Section */}
       <div>
-        <div className="p-4 sm:p-5 border-b border-[#111111] flex items-center justify-between">
-          <Logo size="sm" showSubtitle={true} />
+        <div className="p-4 sm:p-5 border-b flex items-center justify-between">
+          <Logo size="sm" showSubtitle={true} className="member-sidebar-logo" />
           {onCloseMobile && (
             <button
               onClick={onCloseMobile}
-              className="lg:hidden p-1.5 rounded-lg text-gdgoc-gray-400 hover:text-gdgoc-gray-700 hover:bg-[#DEE3EA]"
+              className="lg:hidden p-1.5 rounded-lg text-gdgoc-gray-400 hover:text-gdgoc-gray-700 member-sidebar-close"
             >
               <X className="w-4 h-4" />
             </button>
@@ -58,7 +58,7 @@ export const MemberSidebar: React.FC<MemberSidebarProps> = ({ onCloseMobile }) =
           <NavLink
             to="/history"
             onClick={onCloseMobile}
-            className={({ isActive }) => `flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${isActive ? 'bg-[#DDE8F8] text-gdgoc-blue font-semibold shadow-2xs' : 'text-gdgoc-gray-700 hover:bg-[#DEE3EA] hover:text-gdgoc-gray-900'}`}
+            className={({ isActive }) => `member-nav-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${isActive ? 'is-active text-gdgoc-blue font-semibold shadow-2xs' : 'text-gdgoc-gray-700'}`}
           >
             <History className="w-4 h-4 flex-shrink-0" />
             <span>My Work History</span>
@@ -68,10 +68,10 @@ export const MemberSidebar: React.FC<MemberSidebarProps> = ({ onCloseMobile }) =
             end
             onClick={onCloseMobile}
             className={({ isActive }) =>
-              `flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
+              `member-nav-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                 isActive
-                  ? 'bg-[#DDE8F8] text-gdgoc-blue font-semibold shadow-2xs'
-                  : 'text-gdgoc-gray-700 hover:bg-[#DEE3EA] hover:text-gdgoc-gray-900'
+                  ? 'is-active text-gdgoc-blue font-semibold shadow-2xs'
+                  : 'text-gdgoc-gray-700'
               }`
             }
           >
@@ -82,7 +82,7 @@ export const MemberSidebar: React.FC<MemberSidebarProps> = ({ onCloseMobile }) =
       </div>
 
       {/* Bottom Profile and Logout Section */}
-      <div className="p-3 border-t border-[#111111] bg-[#E9EDF2] space-y-2">
+      <div className="member-sidebar-footer p-3 border-t space-y-2">
         <div className="px-1 text-[10px] font-bold uppercase tracking-wider text-gdgoc-gray-400">
           Profile
         </div>
@@ -96,7 +96,7 @@ export const MemberSidebar: React.FC<MemberSidebarProps> = ({ onCloseMobile }) =
             <p className="text-[10px] text-gdgoc-gray-500 truncate font-mono">
               {user?.email || 'Not provided'}
             </p>
-            <span className="inline-block mt-0.5 text-[9px] font-bold uppercase tracking-wider text-gdgoc-blue bg-blue-50 px-1.5 py-0.2 rounded border border-[#111111]">
+            <span className="member-role-chip inline-block mt-0.5 text-[9px] font-bold uppercase tracking-wider text-gdgoc-blue bg-blue-50 px-1.5 py-0.2 rounded border">
               Regular Member
             </span>
           </div>

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 250" fill="none">
+  <!-- Reuse the supplied, transparent Google Developer Groups mark at full color. -->
+  <image href="/gdg-google-developer-group-mark.svg" x="0" y="0" width="160" height="250"
+    transform="translate(320 0) scale(-1 1)"/>
+  <image href="/gdg-google-developer-group-mark.svg" x="160" y="0" width="160" height="250"/>
+</svg>

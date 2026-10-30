@@ -4,11 +4,11 @@
 
 @layer base {
   html {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 
   body {
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     font-weight: 400;
   }
 
@@ -295,7 +295,14 @@
   }
 }
 
-input, button, select, textarea { font: inherit; }
+/* Use a clean, neutral sans-serif throughout the workspace. */
+*,
+*::before,
+*::after,
+input::placeholder,
+textarea::placeholder {
+  font-family: 'Plus Jakarta Sans', Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
 
 main h1,
 main h2 {

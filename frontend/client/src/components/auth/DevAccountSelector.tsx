@@ -51,7 +51,7 @@ export const DevAccountSelector: React.FC<DevAccountSelectorProps> = ({
         <button
           type="button"
           onClick={() => setIsOpen(true)}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-xs border border-gdgoc-gray-300 text-xs font-medium text-gdgoc-gray-700 shadow-sm hover:border-gdgoc-blue hover:text-gdgoc-blue hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-gdgoc-blue"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/90 backdrop-blur-xs border border-gdgoc-gray-300 text-xs font-medium text-gdgoc-gray-700 shadow-sm hover:border-gdgoc-blue hover:text-gdgoc-blue hover:bg-white transition-all focus:outline-none focus:ring-2 focus:ring-gdgoc-blue auth-dev-profile-toggle"
           title="Open Development Test Accounts"
         >
           <Wrench className="w-3.5 h-3.5 text-amber-600" />
@@ -62,10 +62,10 @@ export const DevAccountSelector: React.FC<DevAccountSelectorProps> = ({
 
       {/* Developer Profiles Modal / Slide-over */}
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/30 backdrop-blur-xs">
-          <div className="w-full max-w-md bg-white rounded-2xl border border-gdgoc-gray-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs auth-dev-profile-overlay">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-gdgoc-gray-200 shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-150 auth-dev-profile-modal">
             {/* Modal Header */}
-            <div className="px-5 py-4 border-b border-gdgoc-gray-100 flex items-center justify-between bg-gdgoc-gray-50/70">
+            <div className="px-5 py-4 border-b border-gdgoc-gray-100 flex items-center justify-between bg-gdgoc-gray-50/70 auth-dev-profile-header">
               <div className="flex items-center gap-2">
                 <span className="p-1 rounded-md bg-amber-100 text-amber-800">
                   <Wrench className="w-4 h-4" />
@@ -89,7 +89,7 @@ export const DevAccountSelector: React.FC<DevAccountSelectorProps> = ({
             </div>
 
             {/* Account List */}
-            <div className="p-4 space-y-2.5 max-h-[70vh] overflow-y-auto">
+            <div className="p-4 space-y-2.5 max-h-[70vh] overflow-y-auto auth-dev-profile-list">
               {DEV_TEST_ACCOUNTS.map((account) => {
                 const isSelected = selectedEmail?.toLowerCase() === account.user.email.toLowerCase() ||
                   account.aliases.some(a => a.toLowerCase() === selectedEmail?.toLowerCase());
@@ -102,7 +102,7 @@ export const DevAccountSelector: React.FC<DevAccountSelectorProps> = ({
                       onSelectAccount(account);
                       setIsOpen(false);
                     }}
-                    className={`w-full p-3 rounded-xl border text-left transition-all flex items-start justify-between gap-3 ${
+                    className={`auth-dev-profile-account w-full p-3 rounded-xl border text-left transition-all flex items-start justify-between gap-3 ${
                       isSelected
                         ? 'border-gdgoc-blue bg-blue-50/50 shadow-xs ring-1 ring-gdgoc-blue'
                         : 'border-gdgoc-gray-200 hover:border-gdgoc-gray-300 hover:bg-gdgoc-gray-50'
@@ -143,7 +143,7 @@ export const DevAccountSelector: React.FC<DevAccountSelectorProps> = ({
             </div>
 
             {/* Modal Footer Note */}
-            <div className="px-5 py-3 border-t border-gdgoc-gray-100 bg-gdgoc-gray-50 text-[11px] text-gdgoc-gray-500 flex items-center justify-between">
+            <div className="px-5 py-3 border-t border-gdgoc-gray-100 bg-gdgoc-gray-50 text-[11px] text-gdgoc-gray-500 flex items-center justify-between auth-dev-profile-footer">
               <span>Local test only • Never saved to storage</span>
               <button
                 type="button"
