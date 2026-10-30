@@ -7,7 +7,7 @@
     <script>
       try {
         const saved = localStorage.getItem('taskhub-theme');
-        const dark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        const dark = saved !== 'light';
         document.documentElement.classList.toggle('dark', dark);
         document.documentElement.style.colorScheme = dark ? 'dark' : 'light';
       } catch {}

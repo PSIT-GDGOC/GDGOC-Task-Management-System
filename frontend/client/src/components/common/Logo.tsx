@@ -2,7 +2,7 @@ import React from 'react';
 
 interface LogoProps {
   className?: string;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   showSubtitle?: boolean;
 }
 
@@ -12,21 +12,30 @@ export const Logo: React.FC<LogoProps> = ({
   showSubtitle = true 
 }) => {
   const iconSizeClasses = {
-    sm: 'w-7 h-7',
-    md: 'w-9 h-9',
-    lg: 'w-11 h-11',
+    sm: 'w-7 h-7 rounded-lg p-1',
+    md: 'w-9 h-9 rounded-lg p-1',
+    lg: 'w-12 h-12 rounded-xl p-1.5',
+    xl: 'w-14 h-14 rounded-2xl p-2',
   };
 
   const titleSizeClasses = {
     sm: 'text-base font-bold',
     md: 'text-lg font-extrabold',
-    lg: 'text-2xl font-extrabold',
+    lg: 'text-2xl sm:text-3xl font-black',
+    xl: 'text-3xl sm:text-4xl font-black',
+  };
+
+  const subtitleSizeClasses = {
+    sm: 'text-[11px]',
+    md: 'text-[11px]',
+    lg: 'text-xs sm:text-[13px] tracking-wider font-semibold',
+    xl: 'text-xs sm:text-sm tracking-widest font-bold',
   };
 
   return (
-    <div className={`flex items-center gap-2.5 select-none ${className}`}>
+    <div className={`flex items-center gap-3 select-none ${className}`}>
       {/* Google 4-Color Geometric Brackets / Emblem */}
-      <div className={`relative ${iconSizeClasses[size]} flex items-center justify-center rounded-lg bg-white shadow-2xs border border-gdgoc-gray-200 p-1 flex-shrink-0`}>
+      <div className={`relative ${iconSizeClasses[size]} flex items-center justify-center bg-white dark:bg-white/10 shadow-2xs border border-gdgoc-gray-200 dark:border-white/15 flex-shrink-0 transition-colors`}>
         <svg viewBox="0 0 48 48" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
           {/* Left bracket: Red */}
           <path d="M14 24L22 16L18.5 12.5L7 24L18.5 35.5L22 32L14 24Z" fill="#EA4335" />
@@ -40,7 +49,7 @@ export const Logo: React.FC<LogoProps> = ({
       </div>
 
       <div className="flex flex-col leading-tight">
-        <div className={`flex items-center gap-1.5 tracking-tight font-extrabold ${titleSizeClasses[size]}`}>
+        <div className={`flex items-center gap-1.5 tracking-tight ${titleSizeClasses[size]}`}>
           {/* GDGoC with Google Brand Colors */}
           <span className="inline-flex">
             <span style={{ color: '#4285F4' }}>G</span>
@@ -62,7 +71,7 @@ export const Logo: React.FC<LogoProps> = ({
           </span>
         </div>
         {showSubtitle && (
-          <span className="text-[11px] text-gdgoc-gray-600 font-medium tracking-wide uppercase">
+          <span className={`${subtitleSizeClasses[size]} text-gdgoc-gray-600 dark:text-gray-400 uppercase pt-0.5`}>
             PSIT Kanpur Chapter
           </span>
         )}

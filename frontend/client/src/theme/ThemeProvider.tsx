@@ -10,7 +10,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } catch {
       /* Storage may be disabled. */
     }
-    return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    return 'dark';
   });
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
