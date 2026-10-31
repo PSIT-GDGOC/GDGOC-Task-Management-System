@@ -5,6 +5,7 @@ import { prisma } from '../lib/prisma';
 import { env } from '../config/env';
 import { AppError } from '../middleware/errorHandler';
 import { userProfileSelect } from '../repositories/user.repository';
+import { isClubManager } from '../utils/permissions';
 
 export const passwordLoginSchema = z
   .object({
@@ -63,9 +64,8 @@ export async function passwordLogin(input: LoginInput) {
           );
         }
         const isSuperAdmin =
-          existing.role === SystemRole.SYSTEM_OWNER ||
-          existing.role === SystemRole.ADMIN ||
-          ['president', 'vice president', 'secretary', 'organizer', 'system owner', 'super admin', 'admin'].includes(
+          isClubManager(existing) ||
+          ['president', 'vice president', 'secretary', 'organizer', 'system owner', 'super admin'].includes(
             (existing.position || '').trim().toLowerCase(),
           );
 
@@ -118,7 +118,7 @@ export async function passwordLogin(input: LoginInput) {
             throw new AppError('Leadership key does not match the selected team.', 400);
           role = SystemRole.ADMIN;
           position = roleKey.position;
-          teamSlug = roleKey.teamSlug ?? undefined;
+          teamSlug = roleKey.teamSlug ?? teamSlug;
           isTeamHead = Boolean(roleKey.teamSlug);
         } else {
           invitation = await tx.adminInvitation.findFirst({
@@ -145,15 +145,17 @@ export async function passwordLogin(input: LoginInput) {
             throw new AppError('Invitation does not match the selected team.', 400);
           role = invitation.intendedRole;
           position = invitation.intendedPosition || 'Team Member';
-          teamSlug = invitation.intendedTeam?.slug ?? undefined;
+          teamSlug = invitation.intendedTeam?.slug ?? teamSlug;
           isTeamHead = Boolean(invitation.intendedTeamId);
         }
       }
 
+      const team = teamSlug ? await tx.team.findUnique({ where: { slug: teamSlug } }) : null;
+      if (teamSlug && !team) throw new AppError('Selected team not found.', 400);
+
       const isSuperAdminRole =
-        role === SystemRole.SYSTEM_OWNER ||
-        role === SystemRole.ADMIN ||
-        ['president', 'vice president', 'secretary', 'organizer', 'system owner', 'super admin', 'admin'].includes(
+        isClubManager({ role, position }) ||
+        ['president', 'vice president', 'secretary', 'organizer', 'system owner', 'super admin'].includes(
           position.trim().toLowerCase(),
         );
 
@@ -161,9 +163,6 @@ export async function passwordLogin(input: LoginInput) {
         teamSlug = undefined;
         isTeamHead = false;
       }
-
-      const team = teamSlug ? await tx.team.findUnique({ where: { slug: teamSlug } }) : null;
-      if (teamSlug && !team) throw new AppError('Selected team not found.', 400);
       if (['President', 'Vice President', 'Secretary', 'Organizer'].includes(position)) {
         if (
           await tx.user.findFirst({
