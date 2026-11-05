@@ -4,33 +4,14 @@ import { MemberSidebar } from '../components/member/MemberSidebar';
 import { Menu, Moon, Sun, UserCheck } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
 import { NotificationBell } from '../components/common/NotificationBell';
+import { useTheme } from '../theme/ThemeProvider';
 import './member-theme.css';
 
-const MEMBER_THEME_STORAGE_KEY = 'gdgoc-login-theme';
-
-const getInitialTheme = (): 'dark' | 'light' => {
-  try {
-    const savedTheme = localStorage.getItem(MEMBER_THEME_STORAGE_KEY);
-    if (savedTheme === 'dark' || savedTheme === 'light') return savedTheme;
-  } catch (error) {
-    console.warn('[Member] Could not read the saved theme preference:', error);
-  }
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-};
 
 export const MemberLayout: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [theme, setTheme] = useState<'dark' | 'light'>(getInitialTheme);
+  const { theme, toggleTheme } = useTheme();
 
-  const toggleTheme = () => {
-    const nextTheme = theme === 'dark' ? 'light' : 'dark';
-    setTheme(nextTheme);
-    try {
-      localStorage.setItem(MEMBER_THEME_STORAGE_KEY, nextTheme);
-    } catch (error) {
-      console.warn('[Member] Could not save the theme preference:', error);
-    }
-  };
 
   return (
     <div className={`member-workspace theme-${theme} min-h-screen flex text-gdgoc-gray-900`} data-theme={theme}>
