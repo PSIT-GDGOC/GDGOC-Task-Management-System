@@ -268,7 +268,7 @@ export const LoginForm: React.FC = () => {
               type="button"
               onClick={() => {
                 selectTier('PRESIDENT');
-                setEmail('paneertikkadedo@gmail.com');
+
               }}
               className={`px-2.5 py-2 rounded-xl border text-left transition-all flex flex-col items-center justify-center gap-1 ${
                 tier === 'PRESIDENT'
