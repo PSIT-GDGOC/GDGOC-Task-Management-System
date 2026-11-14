@@ -7,6 +7,7 @@ import { TaskProvider } from './context/TaskContext';
 import { TourProvider } from './context/TourContext';
 import { TourManager } from './components/tour/TourManager';
 import { FullNameModal } from './components/common/FullNameModal';
+import { TaskHubLoadingScreen } from './components/common/TaskHubLoadingScreen';
 import { ProtectedRoute } from './auth/ProtectedRoute';
 import { LoginPage } from './pages/LoginPage';
 const AdminLayout = lazy(() => import('./layouts/AdminLayout').then(module => ({ default: module.AdminLayout })));
@@ -57,6 +58,7 @@ export const App: React.FC = () => {
             <TaskProvider>
               <TourManager />
               <FullNameModal />
+              <TaskHubLoadingScreen />
               <Suspense fallback={<div role="status" className="min-h-screen p-6 flex items-center justify-center text-gdgoc-gray-900">Loading workspace…</div>}>
               <Routes>
                 {/* Root */}
